@@ -349,3 +349,13 @@ select, .entry input {
 }
 .errors ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
 .errors li { color: #a03024; }
+
+.decree {
+  margin: 2rem 0;
+  font-family: var(--display);
+  font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+  font-style: italic;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--ink);
+}

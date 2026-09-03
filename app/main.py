@@ -564,6 +564,11 @@ async def admin_scores_save(request: Request):
         status_code=303)
 
 
+@app.get("/rules", response_class=HTMLResponse)
+def rules(request: Request):
+    return templates.TemplateResponse(request=request, name="rules.html")
+
+
 @app.get("/health")
 def health():
     with get_db() as conn:
@@ -571,6 +576,7 @@ def health():
             cur.execute("select 1")
             cur.fetchone()
     return {"status": "ok", "database": "connected"}
+
 
 
 

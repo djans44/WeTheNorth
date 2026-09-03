@@ -30,6 +30,7 @@
           <li class="sep"><a href="/teams">All managers</a></li>
         </ul>
       </li>
+      <li><a href="/rules" {% if path == '/rules' %}class="on"{% endif %}>Rules</a></li>
       {% if request.session.get("is_admin") %}
       <li class="has-menu">
         <a href="/admin/scores" {% if path.startswith('/admin') %}class="on"{% endif %}>Admin</a>
