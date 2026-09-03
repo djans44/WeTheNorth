@@ -1,10 +1,14 @@
 :root {
-  --board:    #cfc0a4;
-  --paper:    #f4efe4;
-  --ink:      #23201a;
-  --ink-soft: #5c554a;
-  --hazard:   #f0b429;
-  --orange:   #d1521f;
+  --night:      #1b1f27;
+  --stone:      #ccd2d7;
+  --stone-edge: #9aa4ad;
+  --ink:        #171a20;
+  --ink-soft:   #4b535d;
+  --hazard:     #d9a12b;
+  --frost:      #5d87a1;
+
+  --display: Georgia, "Palatino Linotype", "Book Antiqua", serif;
+  --body: "Segoe UI", system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -12,59 +16,69 @@
 body {
   margin: 0;
   padding: 3rem 1.25rem;
-  background: var(--board);
+  background: var(--night);
   color: var(--ink);
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--body);
   line-height: 1.55;
 }
 
-.hoarding {
+.gatepost {
   max-width: 40rem;
   margin: 0 auto;
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  box-shadow: 6px 6px 0 rgba(35, 32, 26, 0.35);
+  border: 3px solid var(--ink);
+  box-shadow: 0 0 0 1px var(--stone-edge), 8px 8px 0 rgba(0, 0, 0, 0.45);
+  background:
+    radial-gradient(circle at 15px 15px, var(--ink) 0 3px, transparent 4px),
+    radial-gradient(circle at calc(100% - 15px) 15px, var(--ink) 0 3px, transparent 4px),
+    radial-gradient(circle at 15px calc(100% - 15px), var(--ink) 0 3px, transparent 4px),
+    radial-gradient(circle at calc(100% - 15px) calc(100% - 15px), var(--ink) 0 3px, transparent 4px),
+    linear-gradient(180deg, #d6dbdf 0%, var(--stone) 55%, #bcc4ca 100%);
 }
 
+.proclamation { padding: 2.75rem 2.25rem 2rem; }
+
 .tape {
-  height: 16px;
+  height: 14px;
   background: repeating-linear-gradient(
     -45deg,
-    var(--hazard) 0 20px,
-    var(--ink) 20px 40px
+    var(--hazard) 0 18px,
+    var(--ink) 18px 36px
   );
 }
 
-.sign { padding: 2.5rem 2rem 2rem; }
-
-h1 { margin: 0; }
+h1 { margin: 0; padding: 1.5rem 0; text-align: center; }
 
 .mark {
   display: block;
-  font-family: Haettenschweiler, "Arial Narrow", Impact, sans-serif;
-  font-size: clamp(2.75rem, 11vw, 5rem);
-  line-height: 0.9;
-  letter-spacing: 0.01em;
+  font-family: var(--display);
+  font-size: clamp(2.25rem, 9vw, 4rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5), 0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 
 .sub {
   display: block;
-  margin-top: 0.75rem;
-  font-size: clamp(0.95rem, 3vw, 1.15rem);
-  font-weight: 600;
+  margin-top: 0.9rem;
+  font-family: var(--display);
+  font-size: clamp(0.9rem, 2.6vw, 1.05rem);
+  font-style: italic;
   color: var(--ink-soft);
-  border-top: 2px solid var(--ink);
-  padding-top: 0.75rem;
 }
 
 .status {
-  margin: 1.5rem 0 0;
-  max-width: 34ch;
+  margin: 1.75rem auto 0;
+  max-width: 38ch;
+  text-align: center;
   color: var(--ink-soft);
 }
 
-.gate { padding: 2rem; }
+.gate {
+  padding: 1.75rem 2.25rem 2.25rem;
+  border-top: 1px solid var(--stone-edge);
+}
 
 label {
   display: block;
@@ -80,21 +94,22 @@ input {
   padding: 0.7rem 0.8rem;
   font: inherit;
   color: var(--ink);
-  background: #fff;
+  background: #f2f5f6;
   border: 2px solid var(--ink);
 }
 
 input:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--orange);
+  outline: 3px solid var(--frost);
   outline-offset: 2px;
 }
 
 button {
-  padding: 0.7rem 1.4rem;
+  padding: 0.7rem 1.5rem;
   font: inherit;
   font-weight: 700;
-  color: var(--paper);
+  letter-spacing: 0.03em;
+  color: var(--stone);
   background: var(--ink);
   border: 2px solid var(--ink);
   cursor: pointer;
@@ -107,11 +122,15 @@ button[disabled] {
 }
 
 .note {
-  margin: 0.75rem 0 0;
+  margin: 0.8rem 0 0;
+  font-family: var(--display);
+  font-style: italic;
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
 
 @media (max-width: 30rem) {
   .row { flex-direction: column; }
+  .proclamation { padding: 2rem 1.25rem 1.5rem; }
+  .gate { padding: 1.5rem 1.25rem 1.75rem; }
 }
