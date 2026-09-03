@@ -11,19 +11,19 @@
     </h1>
     <div class="tape"></div>
     <p class="status">
-      This hall is under construction. Five seasons of standings, drafts
-      and regrettable trades are being carted in and hung, one at a time.
+      Under construction. Four seasons of standings, drafts and regrettable
+      trades are being carted in and hung, one at a time.
     </p>
   </div>
 
-  <div class="gate">
+  <form class="gate" method="post" action="/login">
     <label for="email">Enter your email to be admitted</label>
     <div class="row">
-      <input id="email" type="email" name="email"
+      <input id="email" type="email" name="email" required
              placeholder="you@example.com" autocomplete="email">
-      <button type="button" disabled>Sign in</button>
+      <button type="submit">Sign in</button>
     </div>
-    <p class="note">The gates open once the records are hung.</p>
-  </div>
+    <p class="note">Any address will do for now. The gate is not yet locked.</p>
+  </form>
 </div>
 {% endblock %}

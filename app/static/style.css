@@ -1,4 +1,5 @@
 :root {
+  --paper:      #e9edf0;
   --night:      #1b1f27;
   --stone:      #ccd2d7;
   --stone-edge: #9aa4ad;
@@ -134,3 +135,71 @@ button[disabled] {
   .proclamation { padding: 2rem 1.25rem 1.5rem; }
   .gate { padding: 1.5rem 1.25rem 1.75rem; }
 }
+
+/* ---- interior pages ---- */
+
+.page {
+  max-width: 56rem;
+  margin: 0 auto;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+}
+
+.page-head { padding-bottom: 1.5rem; border-bottom: 1px solid var(--stone-edge); }
+.page-head h1 {
+  margin: 1.5rem 2rem 0.5rem;
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 6vw, 3rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.lede { margin: 0 2rem; max-width: 46ch; color: var(--ink-soft); }
+.crumbs { margin: 1rem 2rem 0; }
+.crumbs a { color: var(--ink-soft); }
+
+section { padding: 2rem; border-bottom: 1px solid var(--stone-edge); }
+section:last-child { border-bottom: 0; }
+
+h2 {
+  margin: 0 0 1rem;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+h3 {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 0.5rem 0.6rem; text-align: right; border-bottom: 1px solid var(--stone-edge); }
+thead th {
+  border-bottom: 2px solid var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+th:first-child, td:first-child, td.name, .year { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+
+.tm { display: block; font-size: 0.78rem; color: var(--ink-soft); }
+.year { font-family: var(--display); font-size: 1.05rem; }
+.win  { color: #1d6b33; font-weight: 700; }
+.loss { color: #a03024; }
+
+.scroller { overflow-x: auto; }
+.grid { font-size: 0.85rem; min-width: 42rem; }
+.grid th { font-weight: 700; }
+.grid tbody th { text-align: left; white-space: nowrap; }
+.grid td { text-align: center; }
+.grid .self { background: repeating-linear-gradient(-45deg,
+  transparent 0 4px, rgba(35,32,26,0.12) 4px 8px); }
+
+.records { margin: 0; padding-left: 1.4rem; }
+.records li { margin-bottom: 0.3rem; }
+.records b { font-variant-numeric: tabular-nums; }
+

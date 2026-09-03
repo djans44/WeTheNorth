@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}League History | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>League History</h1>
+    <p class="lede">Four seasons, 392 games, and not one won by the team that finished first.</p>
+    <nav class="crumbs"><a href="/">Home</a></nav>
+  </header>
+
+  <section>
+    <h2>Champions</h2>
+    <table>
+      <thead>
+        <tr><th>Season</th><th>Champion</th><th>Runner-up</th><th>Third</th><th>Best record</th></tr>
+      </thead>
+      <tbody>
+      {% for s in seasons %}
+        <tr>
+          <td class="year">{{ s.season_year }}</td>
+          <td class="win">{{ s.champion }}<span class="tm">{{ s.champion_team }}</span></td>
+          <td>{{ s.runner_up }}<span class="tm">{{ s.runner_up_team }}</span></td>
+          <td>{{ s.third_place }}<span class="tm">{{ s.third_place_team }}</span></td>
+          <td>{{ s.regular_season_leader }}<span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>All-time standings</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Owner</th><th>Sea</th><th>W</th><th>L</th><th>Pct</th>
+          <th>PF</th><th>PPG</th><th>Playoffs</th><th>Titles</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for o in standings %}
+        <tr>
+          <td class="name">{{ o.username }}</td>
+          <td>{{ o.seasons_played }}</td>
+          <td>{{ o.wins }}</td>
+          <td>{{ o.losses }}</td>
+          <td>{{ "%.3f"|format(o.win_pct) }}</td>
+          <td>{{ "%.1f"|format(o.points_for) }}</td>
+          <td>{{ "%.1f"|format(o.points_per_game) }}</td>
+          <td>{{ o.playoff_appearances }}</td>
+          <td class="{% if o.titles %}win{% endif %}">{{ o.titles }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Head to head</h2>
+    <p class="note">Rows are the owner, columns the opponent. All games, playoffs included.</p>
+    <div class="scroller">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th></th>
+            {% for o in order %}<th>{{ o[:4] }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for a in order %}
+          <tr>
+            <th>{{ a }}</th>
+            {% for b in order %}
+              {% if a == b %}
+                <td class="self"></td>
+              {% else %}
+                {% set r = grid.get((a, b)) %}
+                {% if r %}
+                  <td class="{% if r.wins > r.losses %}win{% elif r.wins < r.losses %}loss{% endif %}">{{ r.wins }}-{{ r.losses }}</td>
+                {% else %}
+                  <td class="self">&ndash;</td>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Records</h2>
+
+    <h3>Highest single week</h3>
+    <ol class="records">
+    {% for r in high %}
+      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }}, {{ r.season_year }} week {{ r.week }}</li>
+    {% endfor %}
+    </ol>
+
+    <h3>Lowest single week</h3>
+    <ol class="records">
+    {% for r in low %}
+      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }}, {{ r.season_year }} week {{ r.week }}</li>
+    {% endfor %}
+    </ol>
+
+    <h3>Biggest blowouts</h3>
+    <ol class="records">
+    {% for r in blowouts %}
+      <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }},
+        {{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }}, {{ r.season_year }} week {{ r.week }}</li>
+    {% endfor %}
+    </ol>
+
+    <h3>Closest games</h3>
+    <ol class="records">
+    {% for r in nailbiters %}
+      <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }},
+        {{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }}, {{ r.season_year }} week {{ r.week }}</li>
+    {% endfor %}
+    </ol>
+
+    <h3>Highest combined</h3>
+    <ol class="records">
+    {% for r in shootouts %}
+      <li><b>{{ "%.2f"|format(r.combined) }}</b> {{ r.username }} and {{ r.opponent_username }},
+        {{ r.season_year }} week {{ r.week }}</li>
+    {% endfor %}
+    </ol>
+  </section>
+
+  <section>
+    <h2>Against the projection</h2>
+    <p class="note">Regular season only. How much each owner beat or missed Yahoo's projection, per game.</p>
+    <table>
+      <thead>
+        <tr><th>Owner</th><th>Games</th><th>Per game</th><th>Total</th><th>Beat it</th></tr>
+      </thead>
+      <tbody>
+      {% for p in projections %}
+        <tr>
+          <td class="name">{{ p.username }}</td>
+          <td>{{ p.games }}</td>
+          <td class="{% if p.avg_vs_projection > 0 %}win{% else %}loss{% endif %}">
+            {{ "%+.2f"|format(p.avg_vs_projection) }}</td>
+          <td>{{ "%+.1f"|format(p.total_vs_projection) }}</td>
+          <td>{{ p.games_over_projection }}/{{ p.games }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}
+
