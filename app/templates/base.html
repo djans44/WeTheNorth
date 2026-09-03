@@ -11,6 +11,15 @@
   <nav class="sitenav">
     <a class="brand" href="/">We the North</a>
     <ul>
+      <li class="has-menu">
+        <a href="/seasons" {% if path.startswith('/season') %}class="on"{% endif %}>Seasons</a>
+        <ul class="submenu">
+          {% for s in nav_seasons() %}
+            <li><a href="/season/{{ s.season_year }}">{{ s.season_year }}</a></li>
+          {% endfor %}
+          <li class="sep"><a href="/seasons">All seasons</a></li>
+        </ul>
+      </li>
       <li><a href="/history" {% if path == '/history' %}class="on"{% endif %}>League history</a></li>
       <li class="has-menu">
         <a href="/teams" {% if path.startswith('/team') %}class="on"{% endif %}>Managers</a>
@@ -27,3 +36,4 @@
   {% block content %}{% endblock %}
 </body>
 </html>
+

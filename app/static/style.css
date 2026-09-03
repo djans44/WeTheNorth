@@ -302,3 +302,13 @@ body > .gatepost { margin-top: 0.5rem; }
 
 .submenu .sep a { font-weight: 700; }
 
+
+/* ---- weekly scores ---- */
+
+.scores { margin-bottom: 1rem; }
+.scores td { border-bottom: 1px solid rgba(35, 32, 26, 0.12); padding: 0.35rem 0.5rem; }
+.scores .gt { width: 7rem; font-size: 0.75rem; color: var(--ink-soft); text-align: left; }
+.scores .pts { width: 5rem; font-variant-numeric: tabular-nums; }
+.scores .vs { width: 2.5rem; text-align: center; font-size: 0.8rem; color: var(--ink-soft); }
+.scores td:nth-child(2) { text-align: right; }
+.scores td:last-child { text-align: left; }

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Seasons | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Seasons</h1>
+    <p class="lede">Every year the league has run.</p>
+  </header>
+
+  <section>
+    <table>
+      <thead>
+        <tr><th>Season</th><th>Teams</th><th>Keepers</th><th>Champion</th><th>Best record</th><th>Games</th></tr>
+      </thead>
+      <tbody>
+      {% for s in seasons %}
+        <tr>
+          <td class="year"><a href="/season/{{ s.season_year }}">{{ s.season_year }}</a></td>
+          <td>{{ s.team_count }}</td>
+          <td>{{ s.keeper_count if s.keeper_count is not none else "&mdash;"|safe }}</td>
+          <td class="{% if s.champion %}win{% endif %}">
+            {% if s.champion %}{{ s.champion }}<span class="tm">{{ s.champion_team }}</span>
+            {% elif s.games %}in progress{% else %}not started{% endif %}
+          </td>
+          <td>{% if s.regular_season_leader %}{{ s.regular_season_leader }}
+              <span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span>{% endif %}</td>
+          <td>{{ s.games }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

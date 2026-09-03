@@ -51,6 +51,25 @@ def nav_owners():
 
 templates.env.globals["nav_owners"] = nav_owners
 
+_season_cache = {"at": 0.0, "rows": []}
+
+
+def nav_seasons():
+    now = time.time()
+    if now - _season_cache["at"] > 300:
+        try:
+            with get_db() as conn:
+                _season_cache["rows"] = query(conn, """
+                    select season_year from seasons order by season_year desc
+                """)
+                _season_cache["at"] = now
+        except Exception:
+            pass
+    return _season_cache["rows"]
+
+
+templates.env.globals["nav_seasons"] = nav_seasons
+
 
 def get_db():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
@@ -203,6 +222,85 @@ def team(request: Request, name: str):
     )
 
 
+@app.get("/seasons", response_class=HTMLResponse)
+def seasons_index(request: Request):
+    with get_db() as conn:
+        rows = query(conn, """
+            select s.season_year, s.is_complete, s.team_count, s.keeper_count,
+                   sr.champion, sr.champion_team, sr.runner_up,
+                   sr.regular_season_leader, sr.leader_wins, sr.leader_losses,
+                   (select count(*) from matchups m
+                     where m.season_year = s.season_year
+                       and m.team_a_points is not null) as games
+            from seasons s
+            left join season_results sr on sr.season_year = s.season_year
+            order by s.season_year desc
+        """)
+    return templates.TemplateResponse(
+        request=request, name="seasons.html", context={"seasons": rows},
+    )
+
+
+@app.get("/current")
+def current_season():
+    with get_db() as conn:
+        rows = query(conn, "select max(season_year) as y from seasons")
+    return RedirectResponse(url=f"/season/{rows[0]["y"]}", status_code=307)
+
+
+@app.get("/season/{year}", response_class=HTMLResponse)
+def season(request: Request, year: int):
+    with get_db() as conn:
+        head = query(conn, """
+            select s.*, sr.champion, sr.champion_team, sr.runner_up,
+                   sr.runner_up_team, sr.third_place, sr.regular_season_leader
+            from seasons s
+            left join season_results sr on sr.season_year = s.season_year
+            where s.season_year = %s
+        """, (year,))
+        if not head:
+            raise HTTPException(status_code=404, detail="No such season")
+
+        standings = query(conn, """
+            select * from team_season_stats
+            where season_year = %s
+            order by games_played = 0, wins desc, points_for desc
+        """, (year,))
+
+        games = query(conn, """
+            select m.week, m.game_type,
+                   ta.team_name as team_a, oa.username as owner_a,
+                   m.team_a_points as points_a, m.team_a_projected as proj_a,
+                   tb.team_name as team_b, ob.username as owner_b,
+                   m.team_b_points as points_b, m.team_b_projected as proj_b
+            from matchups m
+            join teams  ta on ta.team_id  = m.team_a_id
+            join owners oa on oa.owner_id = ta.owner_id
+            left join teams  tb on tb.team_id  = m.team_b_id
+            left join owners ob on ob.owner_id = tb.owner_id
+            where m.season_year = %s
+            order by m.week, m.game_type, m.matchup_id
+        """, (year,))
+
+        records = query(conn, """
+            select username, week, points_for, opponent_username
+            from game_log where season_year = %s
+            order by points_for desc limit 3
+        """, (year,))
+
+    weeks = []
+    for g in games:
+        if not weeks or weeks[-1]["week"] != g["week"]:
+            weeks.append({"week": g["week"], "games": []})
+        weeks[-1]["games"].append(g)
+
+    return templates.TemplateResponse(
+        request=request, name="season.html",
+        context={"s": head[0], "standings": standings,
+                 "weeks": weeks, "records": records},
+    )
+
+
 @app.get("/health")
 def health():
     with get_db() as conn:
@@ -210,4 +308,7 @@ def health():
             cur.execute("select 1")
             cur.fetchone()
     return {"status": "ok", "database": "connected"}
+
+
+
 

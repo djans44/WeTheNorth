@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ s.season_year }} | We the North{% endblock %}
+
+{% set labels = {"regular": "Regular season", "quarterfinal": "Quarterfinal",
+                 "semifinal": "Semifinal", "championship": "Championship",
+                 "third_place": "Third place", "consolation": "Consolation"} %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>{{ s.season_year }}</h1>
+    <p class="lede">
+      {% if s.champion %}
+        {{ s.champion }} won it with {{ s.champion_team }}, beating {{ s.runner_up }} in the final.
+      {% elif weeks %}
+        In progress. {{ s.team_count }} teams, {{ s.keeper_count }} keepers.
+      {% else %}
+        Not yet under way. {{ s.team_count }} teams are entered
+        {%- if s.keeper_count %} with {{ s.keeper_count }} keepers each{% endif %}.
+      {% endif %}
+    </p>
+  </header>
+
+  <section>
+    <h2>{% if s.champion %}Final standings{% else %}Standings{% endif %}</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Owner</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr>
+      </thead>
+      <tbody>
+      {% for t in standings %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td class="name"><a href="/team/{{ t.username|lower }}">{{ t.username }}</a></td>
+          <td class="name">{{ t.team_name }}</td>
+          <td>{{ t.wins }}</td>
+          <td>{{ t.losses }}</td>
+          <td>{{ "%.1f"|format(t.points_for) }}</td>
+          <td>{{ "%.1f"|format(t.points_against) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if not weeks %}
+      <p class="note">No results recorded yet, so the order above is just the entry list.</p>
+    {% endif %}
+  </section>
+
+  {% if records %}
+  <section>
+    <h2>Biggest weeks</h2>
+    <ol class="records">
+    {% for r in records %}
+      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }} vs {{ r.opponent_username }}, week {{ r.week }}</li>
+    {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  {% if weeks %}
+  <section>
+    <h2>Results</h2>
+    {% for w in weeks %}
+      <h3>Week {{ w.week }}</h3>
+      <table class="scores">
+        <tbody>
+        {% for g in w.games %}
+          <tr>
+            <td class="gt">{% if g.game_type != "regular" %}{{ labels[g.game_type] }}{% endif %}</td>
+            <td class="name {% if g.team_b and g.points_a > g.points_b %}win{% endif %}">{{ g.team_a }}</td>
+            <td class="pts">{{ "%.2f"|format(g.points_a) if g.points_a is not none }}</td>
+            <td class="vs">{% if g.team_b %}vs{% else %}bye{% endif %}</td>
+            <td class="pts">{{ "%.2f"|format(g.points_b) if g.points_b is not none }}</td>
+            <td class="name {% if g.team_b and g.points_b > g.points_a %}win{% endif %}">{{ g.team_b or "" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
