@@ -1,0 +1,735 @@
+ 
+Week 17
+ 
+Faith + 1 
+
+Pos	Player
+QB	
+Trevor Lawrence
+Trevor Lawrence
+Final W 31-3 @ Hou
+WR	
+DK Metcalf
+DK Metcalf
+Final W 16-13 @ Bal
+WR	
+Michael Pittman Jr.
+Michael Pittman Jr.
+Final W 16-13 @ Bal
+RB	
+Saquon Barkley
+Saquon Barkley
+Final L 10-20 vs NO
+RB	
+Christian McCaffrey
+Christian McCaffrey
+Final W 37-34 @ LV
+W/T	
+Zay Jones
+Zay Jones
+Final L 3-31 vs Jax
+W/R/T	
+J.K. Dobbins
+J.K. Dobbins
+Final L 24-27 @ KC
+Q/W/R/T	
+Daniel Jones
+Daniel Jones
+Final L 10-38 @ NYG
+DEF	
+49ers
+49ers
+- DEF
+Final W 37-34 @ LV
+BN	
+Brandin Cooks
+Brandin Cooks
+Final W 20-10 @ Phi
+BN	
+George Pickens
+George Pickens
+Final W 27-13 @ Ten
+BN	
+Treylon Burks
+Treylon Burks
+Final L 10-24 vs Cle
+BN	
+Gus Edwards
+Gus Edwards
+Final W 31-10 vs LAR
+IR	
+Kyler Murray
+Kyler Murray
+Final L 17-41 @ GB
+IR	
+Deebo Samuel Sr.
+Deebo Samuel Sr.
+Final W 37-34 @ LV
+Tua for the Show 
+
+Pos	Player
+QB	
+Andy Dalton
+Andy Dalton
+Final L 10-20 vs NO
+WR	
+Brandon Aiyuk
+Brandon Aiyuk
+Final W 37-34 @ LV
+WR	
+DJ Moore
+DJ Moore
+Bye
+RB	
+Kareem Hunt
+Kareem Hunt
+Final W 27-24 vs Den
+RB	
+Brian Robinson
+Brian Robinson
+Final W 20-19 vs Ari
+W/T	
+Mark Andrews
+Mark Andrews
+Final L 13-16 vs Pit
+W/R/T	
+Dalton Schultz
+Dalton Schultz
+Final L 3-31 vs Jax
+Q/W/R/T	
+Tyler Allgeier
+Tyler Allgeier
+Final L 19-20 @ Atl
+DEF	
+Eagles
+Eagles
+- DEF
+Final L 10-20 vs NO
+BN	
+Tua Tagovailoa
+Tua Tagovailoa
+Final W 20-19 vs Ari
+BN	
+Tyler Boyd
+Tyler Boyd
+Final L 13-27 vs Dal
+BN	
+Jaylen Warren
+Jaylen Warren
+Final W 16-13 @ Bal
+BN	
+Kyle Pitts Sr.
+Kyle Pitts Sr.
+Final W 20-19 vs Ari
+IR	
+Trey Lance
+Trey Lance
+Final W 31-10 vs LAR
+IR	
+Javonte Williams
+Javonte Williams
+Final W 27-13 @ Ten
+Handcuff my Cousins 
+
+Pos	Player
+QB	
+Joe Burrow
+Joe Burrow
+Bye
+WR	
+Ja'Marr Chase
+Ja'Marr Chase
+Bye
+WR	
+Chris Godwin Jr.
+Chris Godwin Jr.
+Final W 30-24 vs Car
+RB	
+James Conner
+James Conner
+Final L 19-20 @ Atl
+RB	
+David Montgomery
+David Montgomery
+Final L 3-31 vs Jax
+W/T	
+JuJu Smith-Schuster
+JuJu Smith-Schuster
+Final W 38-10 vs Ind
+W/R/T	
+Davante Adams
+Davante Adams
+Final L 10-31 @ LAC
+Q/W/R/T	
+Kirk Cousins
+Kirk Cousins
+Final L 34-37 vs SF
+DEF	
+Cowboys
+Cowboys
+- DEF
+Final W 27-13 @ Ten
+BN	
+Evan Engram
+Evan Engram
+Final L 24-27 @ KC
+BN	
+Christian Watson
+Christian Watson
+Final W 41-17 vs Min
+BN	
+Michael Carter
+Michael Carter
+Final L 13-27 vs Dal
+BN	
+Romeo Doubs
+Romeo Doubs
+Final W 23-21 vs Mia
+IR	
+DeAndre Hopkins
+DeAndre Hopkins
+Final L 13-16 vs Pit
+IR	
+Dameon Pierce
+Dameon Pierce
+Final L 10-20 vs NO
+ConcRussed 
+
+Pos	Player
+QB	
+Mike White
+Mike White
+Bye
+WR	
+Christian Kirk
+Christian Kirk
+Final W 37-34 @ LV
+WR	
+Mike Williams
+Mike Williams
+Final W 16-13 @ Bal
+RB	
+Austin Ekeler
+Austin Ekeler
+Final L 10-24 vs Cle
+RB	
+D'Onta Foreman
+D'Onta Foreman
+Final W 24-10 @ Was
+W/T	
+Allen Lazard
+Allen Lazard
+Final L 6-23 @ Sea
+W/R/T	
+Leonard Fournette
+Leonard Fournette
+Bye
+Q/W/R/T	
+Russell Wilson
+Russell Wilson
+Final W 38-10 vs Ind
+DEF	
+Buccaneers
+Buccaneers
+- DEF
+Final W 30-24 vs Car
+BN	
+Raheem Mostert
+Raheem Mostert
+Final L 34-37 vs SF
+BN	
+Jameson Williams
+Jameson Williams
+Final W 41-10 vs Chi
+BN	
+Calvin Ridley
+Calvin Ridley
+Final L 13-27 vs Dal
+BN	
+Jahan Dotson
+Jahan Dotson
+Final W 20-19 vs Ari
+Armed Rodgery 
+
+Pos	Player
+QB	
+Aaron Rodgers
+Aaron Rodgers
+Final W 16-13 @ Bal
+WR	
+Tyreek Hill
+Tyreek Hill
+Final L 21-23 @ NE
+WR	
+Jerry Jeudy
+Jerry Jeudy
+Final W 24-10 @ Was
+RB	
+Ezekiel Elliott
+Ezekiel Elliott
+Final W 27-13 @ Ten
+RB	
+Josh Jacobs
+Josh Jacobs
+Final W 41-17 vs Min
+W/T	
+Travis Kelce
+Travis Kelce
+Final W 27-24 vs Den
+W/R/T	
+DJ Chark
+DJ Chark
+Final W 20-19 vs Ari
+Q/W/R/T	
+Brock Purdy
+Brock Purdy
+Final W 37-34 @ LV
+DEF	
+Chargers
+Chargers
+- DEF
+Final W 31-10 vs LAR
+BN	
+Adam Thielen
+Adam Thielen
+Final W 16-13 @ Bal
+BN	
+Deshaun Watson
+Deshaun Watson
+Final W 24-10 @ Was
+BN	
+Deon Jackson
+Deon Jackson
+Final W 41-10 vs Chi
+BN	
+Curtis Samuel
+Curtis Samuel
+Bye
+IR	
+Lamar Jackson
+Lamar Jackson
+Final L 13-16 vs Pit
+Coach Carter 
+
+Pos	Player
+QB	
+Derek Carr
+Derek Carr
+Final W 20-10 @ Phi
+WR	
+Mike Evans
+Mike Evans
+Final W 37-34 @ LV
+WR	
+Amari Cooper
+Amari Cooper
+Bye
+RB	
+Derrick Henry
+Derrick Henry
+Final L 13-16 vs Pit
+RB	
+Najee Harris
+Najee Harris
+Final W 38-10 vs Ind
+W/T	
+George Kittle
+George Kittle
+Final W 37-34 @ LV
+W/R/T	
+AJ Dillon
+AJ Dillon
+Final L 24-30 @ TB
+Q/W/R/T	
+Justin Fields
+Justin Fields
+Final W 27-24 vs Den
+DEF	
+Bills
+Bills
+- DEF
+Bye
+BN	
+Darius Slayton
+Darius Slayton
+Final W 38-10 vs Ind
+BN	
+Bam Knight
+Bam Knight
+Final L 19-20 @ Atl
+BN	
+Davis Mills
+Davis Mills
+Final L 3-31 vs Jax
+BN	
+Jakobi Meyers
+Jakobi Meyers
+Final W 31-3 @ Hou
+IR	
+Elijah Mitchell
+Elijah Mitchell
+Final W 27-24 vs Den
+IR	
+Mecole Hardman Jr.
+Mecole Hardman Jr.
+Bye
+TEBOW MANIA!!! 
+
+Pos	Player
+QB	
+Jared Goff
+Jared Goff
+Final W 41-10 vs Chi
+WR	
+DeVonta Smith
+DeVonta Smith
+Final L 10-20 vs NO
+WR	
+Michael Gallup
+Michael Gallup
+Final L 10-24 vs Cle
+RB	
+Latavius Murray
+Latavius Murray
+Bye
+RB	
+Joe Mixon
+Joe Mixon
+Final L 3-31 vs Jax
+W/T	
+T.J. Hockenson
+T.J. Hockenson
+Final L 17-41 @ GB
+W/R/T	
+Jamaal Williams
+Jamaal Williams
+Final W 20-10 @ Phi
+Q/W/R/T	
+Kenny Pickett
+Kenny Pickett
+Final L 24-30 @ TB
+DEF	
+Patriots
+Patriots
+- DEF
+Final W 23-21 vs Mia
+BN	
+Diontae Johnson
+Diontae Johnson
+Final W 24-10 @ Was
+BN	
+Ryan Tannehill
+Ryan Tannehill
+Final L 13-27 vs Dal
+BN	
+Devin Singletary
+Devin Singletary
+Final W 38-10 vs Ind
+BN	
+Dallas Goedert
+Dallas Goedert
+Final L 10-20 vs NO
+IR	
+Matthew Stafford
+Matthew Stafford
+Final L 10-31 @ LAC
+IR	
+Cooper Kupp
+Cooper Kupp
+Final W 23-6 vs NYJ
+Sutton for Punishment 
+
+Pos	Player
+QB	
+Justin Herbert
+Justin Herbert
+Final W 31-10 vs LAR
+WR	
+Justin Jefferson
+Justin Jefferson
+Final L 17-41 @ GB
+WR	
+Stefon Diggs
+Stefon Diggs
+Final L 10-24 vs Cle
+RB	
+Aaron Jones Sr.
+Aaron Jones Sr.
+Final L 17-41 @ GB
+RB	
+Kenneth Walker III
+Kenneth Walker III
+Final W 27-24 vs Den
+W/T	
+Jaylen Waddle
+Jaylen Waddle
+Final L 24-27 @ KC
+W/R/T	
+Donovan Peoples-Jones
+Donovan Peoples-Jones
+Final W 20-10 @ Phi
+Q/W/R/T	
+Desmond Ridder
+Desmond Ridder
+Final W 41-17 vs Min
+DEF	
+Packers
+Packers
+- DEF
+Final W 41-17 vs Min
+BN	
+Tyler Huntley
+Tyler Huntley
+Final L 13-16 vs Pit
+BN	
+Cordarrelle Patterson
+Cordarrelle Patterson
+Final W 16-13 @ Bal
+BN	
+Baker Mayfield
+Baker Mayfield
+Final W 30-24 vs Car
+BN	
+James Cook III
+James Cook III
+Bye
+Questionable 
+
+Pos	Player
+QB	
+Dak Prescott
+Dak Prescott
+Final W 27-13 @ Ten
+WR	
+Keenan Allen
+Keenan Allen
+Final L 10-38 @ NYG
+WR	
+Marquez Valdes-Scantling
+M. Valdes-Scantling
+Final W 27-13 @ Ten
+RB	
+Chuba Hubbard
+Chuba Hubbard
+Final L 24-30 @ TB
+RB	
+Zack Moss
+Zack Moss
+Bye
+W/T	
+Terry McLaurin
+Terry McLaurin
+Final L 10-24 vs Cle
+W/R/T	
+Mack Hollins
+Mack Hollins
+Final W 23-21 vs Mia
+Q/W/R/T	
+Tom Brady
+Tom Brady
+Final W 30-24 vs Car
+DEF	
+Broncos
+Broncos
+- DEF
+Final L 24-27 @ KC
+BN	
+Devin Duvernay
+Devin Duvernay
+Final L 19-20 @ Atl
+BN	
+Damien Harris
+Damien Harris
+Bye
+BN	
+Drake London
+Drake London
+Final W 20-19 vs Ari
+IR	
+Jonathan Taylor
+Jonathan Taylor
+Final L 10-38 @ NYG
+IR	
+Chase Edmonds
+Chase Edmonds
+Final L 10-24 vs Cle
+Acorns 
+
+Pos	Player
+QB	
+Gardner Minshew II
+Gardner Minshew II
+Final L 19-20 @ Atl
+WR	
+A.J. Brown
+A.J. Brown
+Final W 23-21 vs Mia
+WR	
+Garrett Wilson
+Garrett Wilson
+Final L 6-23 @ Sea
+RB	
+Dalvin Cook
+Dalvin Cook
+Final W 27-13 @ Ten
+RB	
+Cam Akers
+Cam Akers
+Final W 23-6 vs NYJ
+W/T	
+Tyler Lockett
+Tyler Lockett
+Final L 34-37 vs SF
+W/R/T	
+Travis Etienne Jr.
+Travis Etienne Jr.
+Final W 20-10 @ Phi
+Q/W/R/T	
+Geno Smith
+Geno Smith
+Final L 6-23 @ Sea
+DEF	
+Giants
+Giants
+- DEF
+Final W 38-10 vs Ind
+BN	
+Courtland Sutton
+Courtland Sutton
+Final L 24-27 @ KC
+BN	
+Hollywood Brown
+Hollywood Brown
+Final L 10-20 vs NO
+BN	
+Jerick McKinnon
+Jerick McKinnon
+Final W 27-24 vs Den
+BN	
+Isiah Pacheco
+Isiah Pacheco
+Final W 41-10 vs Chi
+IR	
+Jalen Hurts
+Jalen Hurts
+Final L 10-20 vs NO
+Finkle’s the Mayor 
+
+Pos	Player
+QB	
+Josh Allen
+Josh Allen
+Bye
+WR	
+Gabe Davis
+Gabe Davis
+Bye
+WR	
+CeeDee Lamb
+CeeDee Lamb
+Final W 27-13 @ Ten
+RB	
+Nick Chubb
+Nick Chubb
+Final L 3-31 vs Jax
+RB	
+Alvin Kamara
+Alvin Kamara
+Final W 20-10 @ Phi
+W/T	
+DeAndre Carter
+DeAndre Carter
+Final W 24-10 @ Was
+W/R/T	
+Rhamondre Stevenson
+Rhamondre Stevenson
+Final W 23-21 vs Mia
+Q/W/R/T	
+Mac Jones
+Mac Jones
+Final W 37-34 @ LV
+DEF	
+Cardinals
+Cardinals
+- DEF
+Final L 19-20 @ Atl
+BN	
+Jeff Wilson Jr.
+Jeff Wilson Jr.
+Final L 21-23 @ NE
+BN	
+Chase Claypool
+Chase Claypool
+Bye
+BN	
+Taysom Hill
+Taysom Hill
+Final W 20-10 @ Phi
+BN	
+Taylor Heinicke
+Taylor Heinicke
+Final W 31-10 vs LAR
+Get Swifty 
+
+Pos	Player
+QB	
+Patrick Mahomes
+Patrick Mahomes
+Final W 27-24 vs Den
+WR	
+Amon-Ra St. Brown
+Amon-Ra St. Brown
+Final W 41-10 vs Chi
+WR	
+Tee Higgins
+Tee Higgins
+Bye
+RB	
+Miles Sanders
+Miles Sanders
+Final W 27-13 @ Ten
+RB	
+Rachaad White
+Rachaad White
+Final L 10-24 vs Cle
+W/T	
+Jeff Driskel
+Jeff Driskel
+Final L 10-24 vs Cle
+W/R/T	
+D'Andre Swift
+D'Andre Swift
+Final L 10-41 @ Det
+Q/W/R/T	
+Sam Darnold
+Sam Darnold
+Final W 23-6 vs NYJ
+DEF	
+Chiefs
+Chiefs
+- DEF
+Final W 27-24 vs Den
+BN	
+Elijah Moore
+Elijah Moore
+Final L 10-20 vs NO
+BN	
+Chris Olave
+Chris Olave
+Final W 20-10 @ Phi
+BN	
+Antonio Gibson
+Antonio Gibson
+Final W 23-21 vs Mia
+BN	
+Colt McCoy
+Colt McCoy
+Final L 19-20 @ Atl
+IR	
+Khalil Herbert
+Khalil Herbert
+Final W 37-34 @ LV
+IR	
+Breece Hall
+Breece Hall
+Final L 6-23 @ Sea

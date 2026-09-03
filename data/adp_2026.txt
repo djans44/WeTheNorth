@@ -1,0 +1,282 @@
+QB1	1	Josh Allen	BUF (7)	1.01	1.01	1.05	0.79	100%
+QB2	2	Lamar Jackson	BAL (13)	1.03	1.01	1.08	1.31	100%
+QB3	3	Joe Burrow	CIN (6)	1.05	1.02	2.04	2.54	100%
+RB1	4	Jahmyr Gibbs	DET (6)	1.05	1.01	2.02	3.24	100%
+QB4	5	Jayden Daniels	WAS (7)	1.06	1.03	2.05	2.18	100%
+QB5	6	Drake Maye	NE (11)	1.07	1.01	12.06	18.36	100%
+QB6	7	Jalen Hurts	PHI (10)	1.07	1.02	2.11	3.04	100%
+RB2	8	Bijan Robinson	ATL (11)	1.07	1.01	2.08	3.34	100%
+WR1	9	Ja'Marr Chase	CIN (6)	1.1	1.01	2.05	3.01	100%
+QB7	10	Caleb Williams	CHI (10)	1.11	1.05	4.06	6.05	100%
+WR2	11	Puka Nacua	LAR (11)	2.01	1.03	3.06	4	100%
+RB3	12	Christian McCaffrey	SF (8)	2.01	1.03	3.02	3.6	100%
+QB8	13	Justin Herbert	LAC (7)	2.03	1.06	6.06	10.23	100%
+RB4	14	Jonathan Taylor	IND (13)	2.04	1.07	3.1	4.44	100%
+WR3	15	Jaxon Smith-Njigba	SEA (11)	2.04	1.1	4.05	4.28	100%
+QB9	16	Dak Prescott	DAL (14)	2.05	1.09	6.04	7.55	100%
+QB10	17	Trevor Lawrence	JAC (7)	2.05	1.02	7.11	10.79	100%
+WR4	18	Amon-Ra St. Brown	DET (6)	2.06	1.07	3.02	3.43	100%
+RB5	19	James Cook III	BUF (7)	2.07	1.1	4.02	4.68	100%
+WR5	20	CeeDee Lamb	DAL (14)	2.11	2.01	3.09	4.32	100%
+QB11	21	Brock Purdy	SF (8)	2.11	1.05	8.02	10.94	100%
+QB12	22	Jaxson Dart	NYG (8)	3	1.08	15	22.29	100%
+WR6	23	Justin Jefferson	MIN (6)	3.01	2.02	3.1	3.82	100%
+RB6	24	De'Von Achane	MIA (6)	3.03	2.03	4.01	5.38	100%
+RB7	25	Saquon Barkley	PHI (10)	3.03	2.07	4.07	4.75	100%
+RB8	26	Chase Brown	CIN (6)	3.04	2.01	9.04	10.62	100%
+RB9	27	Ashton Jeanty	LV (13)	3.05	2.04	4.08	6.45	100%
+QB13	28	Bo Nix	DEN (10)	3.05	2.02	9.01	13.92	100%
+QB14	29	Patrick Mahomes II	KC (5)	3.06	1.11	8.04	11.34	100%
+WR7	30	A.J. Brown	NE (11)	3.06	2.04	4.06	5.29	100%
+RB10	31	Derrick Henry	BAL (13)	3.07	2.05	5.04	7.72	100%
+RB11	32	Omarion Hampton	LAC (7)	3.08	2.06	4.06	5.97	100%
+WR8	33	Drake London	ATL (11)	3.08	2.09	5.05	5.04	100%
+RB12	34	Kenneth Walker III	KC (5)	3.09	2.09	4.08	5.48	100%
+QB15	35	Jared Goff	DET (6)	4	2.03	8.07	11.31	100%
+WR9	36	Nico Collins	HOU (8)	4	2.08	4.11	4.87	100%
+QB16	37	Matthew Stafford	LAR (11)	4	2.01	10.01	18.51	100%
+TE1	38	Brock Bowers	LV (13)	4.01	2.07	5.02	4.71	100%
+TE2	39	Trey McBride	ARI (14)	4.05	3.01	6	5.37	100%
+WR10	40	George Pickens	DAL (14)	4.05	3	6.06	6.95	100%
+QB17	41	Kyler Murray	MIN (6)	4.06	2.07	8.01	11.65	100%
+RB13	42	Kyren Williams	LAR (11)	4.07	3.01	6.05	7.12	100%
+WR11	43	Chris Olave	NO (8)	4.07	3.07	7.09	7.76	100%
+WR12	44	Malik Nabers	NYG (8)	4.08	3.1	6.07	5.26	100%
+WR13	45	DeVonta Smith	PHI (10)	4.1	2.11	7.01	6.99	100%
+WR14	46	Rashee Rice	KC (5)	4.11	3.02	8.03	8.85	100%
+RB14	47	Jeremiyah Love	ARI (14)	5	1.01	6.07	10.34	100%
+RB15	48	Breece Hall	NYJ (13)	5.03	4.01	6.08	5.87	100%
+QB18	49	Jordan Love	GB (11)	5.04	3.07	9	13.37	100%
+RB16	50	Josh Jacobs	GB (11)	5.04	3.04	6.09	7.09	100%
+RB17	51	Javonte Williams	DAL (14)	5.05	3.1	10.05	14.7	100%
+WR15	52	Tee Higgins	CIN (6)	5.05	3.07	6.07	6.21	100%
+WR16	53	Zay Flowers	BAL (13)	5.05	4.02	9.02	8.83	100%
+QB19	54	Baker Mayfield	TB (10)	5.06	3.04	9.08	13.13	100%
+RB18	55	Travis Etienne Jr.	NO (8)	5.09	4.04	7.06	6.4	100%
+WR17	56	Tetairoa McMillan	CAR (5)	5.1	4.08	6.11	6.95	100%
+WR18	57	Garrett Wilson	NYJ (13)	5.1	4.03	7.06	7.79	100%
+WR19	58	Jaylen Waddle	DEN (10)	5.11	4.07	7.03	7.66	100%
+WR20	59	Ladd McConkey	LAC (7)	6.01	4.07	13.03	13.51	100%
+WR21	60	Emeka Egbuka	TB (10)	6.02	4.07	8.04	8.76	100%
+RB19	61	D'Andre Swift	CHI (10)	6.02	5.03	7.05	7.05	100%
+WR22	62	DJ Moore	BUF (7)	6.05	4.09	9.02	8.83	100%
+RB20	63	Cam Skattebo	NYG (8)	6.05	5.03	8.08	8.59	100%
+TE3	64	Colston Loveland	CHI (10)	6.05	4.05	11.04	12.74	100%
+QB20	65	Malik Willis	MIA (6)	6.08	4.02	15.09	22.16	100%
+RB21	66	Quinshon Judkins	CLE (11)	6.09	4.05	11.1	11.88	100%
+WR23	67	Terry McLaurin	WAS (7)	6.09	5.02	8.09	7.63	100%
+RB22	68	Bucky Irving	TB (10)	6.09	5.02	15.08	16.04	100%
+WR24	69	Davante Adams	LAR (11)	6.1	5.05	8.01	6.83	100%
+QB21	70	Tyler Shough	NO (8)	6.1	2.09	17.05	32.24	100%
+RB23	71	David Montgomery	HOU (8)	6.1	5.04	8	7.73	100%
+WR25	72	Luther Burden III	CHI (10)	7	4.08	14.03	13.79	100%
+WR26	73	Jameson Williams	DET (6)	7.02	5.06	9.09	7.57	100%
+TE4	74	Tyler Warren	IND (13)	7.03	5.07	11.04	12.47	100%
+RB24	75	Jadarian Price	SEA (11)	7.03	4.05	8.05	9.96	100%
+RB25	76	Bhayshul Tuten	JAC (7)	7.04	5.06	11.02	10.41	100%
+RB26	77	TreVeyon Henderson	NE (11)	7.04	5.03	9	9.36	100%
+WR27	78	Rome Odunze	CHI (10)	7.06	6.02	8.11	6.67	100%
+QB22	79	Sam Darnold	SEA (11)	7.07	4.01	14	23.21	100%
+WR28	80	Christian Watson	GB (11)	7.07	5.04	9.07	9.53	100%
+WR29	81	Mike Evans	SF (8)	7.08	6	9.04	7.82	100%
+RB27	82	Rhamondre Stevenson	NE (11)	7.11	5.07	8.1	7.28	100%
+RB28	83	Jaylen Warren	PIT (9)	8	6.11	8.11	5.17	100%
+WR30	84	Parker Washington	JAC (7)	8.02	6.01	17.11	17.21	100%
+WR31	85	Carnell Tate	TEN (9)	8.05	5.01	10.09	10.41	100%
+RB29	86	Tony Pollard	TEN (9)	8.05	6.1	9.09	6.01	100%
+RB30	87	Jonathon Brooks	CAR (5)	8.05	6.01	9.07	7.95	100%
+WR32	88	Marvin Harrison Jr.	ARI (14)	8.07	6.07	11	11.33	100%
+RB31	89	Rico Dowdle	PIT (9)	8.08	6.1	11	8.38	100%
+TE5	90	Tucker Kraft	GB (11)	8.11	5	13.02	20.28	100%
+RB32	91	J.K. Dobbins	DEN (10)	9	7.1	10.09	6.8	100%
+RB33	92	RJ Harvey	DEN (10)	9.01	6.11	11.09	10.11	100%
+RB34	93	Chuba Hubbard	CAR (5)	9.01	7.03	10.09	8.24	100%
+QB23	94	C.J. Stroud	HOU (8)	9.02	4.09	16.03	32.89	100%
+RB35	95	Blake Corum	LAR (11)	9.03	6.08	12.11	9.28	100%
+WR33	96	Brian Thomas Jr.	JAC (7)	9.03	7	11.08	10.8	100%
+RB36	97	Jordan Mason	MIN (6)	9.04	7	10.06	8.19	100%
+WR34	98	DK Metcalf	PIT (9)	9.05	7.03	11.1	10.34	100%
+RB37	99	Jacory Croskey-Merritt	WAS (7)	9.05	7.07	12.09	10.48	100%
+RB38	100	Kyle Monangai	CHI (10)	9.07	8.03	11.11	8.34	100%
+WR35	101	Chris Godwin Jr.	TB (10)	9.08	7.04	12.04	11.97	100%
+RB39	102	Kenny Gainwell	TB (10)	9.09	7.1	14.01	11.54	100%
+WR36	103	Courtland Sutton	DEN (10)	9.09	7.06	12	11.15	100%
+RB40	104	Rachaad White	WAS (7)	9.11	8.03	13.09	10.86	100%
+WR37	105	Michael Wilson	ARI (14)	10.01	7.08	13.04	13.66	100%
+QB24	106	Daniel Jones	IND (13)	10.02	5.09	17.06	32.85	100%
+RB41	107	Aaron Jones Sr.	MIN (6)	10.04	8.05	14.05	11.91	100%
+WR38	108	Wan'Dale Robinson	TEN (9)	10.04	8.01	15	20.25	100%
+WR39	109	Alec Pierce	IND (13)	10.06	7.11	13.08	15.15	100%
+RB42	110	Chris Rodriguez Jr.	JAC (7)	10.07	9.02	16.07	13.67	100%
+TE6	111	Harold Fannin Jr.	CLE (11)	10.07	6.05	16.1	24.75	100%
+WR40	112	Michael Pittman Jr.	PIT (9)	10.11	7.11	13.04	16.4	100%
+RB43	113	Tyler Allgeier	ARI (14)	10.11	9.05	14.1	13.51	100%
+RB44	114	Woody Marks	HOU (8)	10.11	9.04	16.04	14.95	100%
+WR41	115	Jordyn Tyson	NO (8)	11	7.09	16	17.82	100%
+TE7	116	Sam LaPorta	DET (6)	11.02	7.02	21	26.06	98%
+WR42	117	Quentin Johnston	LAC (7)	11.03	7.09	14	15.35	100%
+WR43	118	Stefon Diggs	WAS (7)	11.04	8.09	14.01	15.78	100%
+RB45	119	Zach Charbonnet	SEA (11)	11.06	9.07	21	19.3	98%
+RB46	120	Tyjae Spears	TEN (9)	11.06	9.06	21	22.08	98%
+RB47	121	MarShawn Lloyd	GB (11)	11.07	9.06	21	20.79	98%
+RB48	122	Jonah Coleman	DEN (10)	11.07	9.06	21	19.9	98%
+WR44	123	Josh Downs	IND (13)	11.08	8.06	14.01	15.9	100%
+RB49	124	Keaton Mitchell	LAC (7)	11.08	9.06	21	25	96%
+QB25	125	Cam Ward	TEN (9)	11.09	4.1	21	42.19	94%
+WR45	126	Makai Lemon	PHI (10)	11.11	7.11	16.05	19.62	100%
+TE8	127	Kyle Pitts Sr.	ATL (11)	12	8.01	21	27.81	96%
+RB50	128	Alvin Kamara	NO (8)	12.01	9.1	16.11	16.39	100%
+RB51	129	Mike Washington Jr.	LV (13)	12.01	10.02	16.07	14.17	100%
+RB52	130	Tank Bigsby	PHI (10)	12.01	9.1	21	19.81	98%
+RB53	131	Tyrone Tracy Jr.	NYG (8)	12.02	9.11	21	26	96%
+WR46	132	Jordan Addison	MIN (6)	12.02	7.07	21	20.86	98%
+RB54	133	Brian Robinson Jr.	ATL (11)	12.03	9.05	21	25.08	96%
+QB26	134	Fernando Mendoza	LV (13)	12.05	2.11	21	51.28	89%
+WR47	135	De'Zhaun Stribling	SF (8)	12.05	9.09	21	23.42	98%
+WR48	136	Jakobi Meyers	JAC (7)	12.06	9.08	21	26.46	96%
+QB27	137	Aaron Rodgers	PIT (9)	12.06	4.08	21	58.9	86%
+TE9	138	George Kittle	SF (8)	12.07	5.05	21	23.86	98%
+WR49	139	Jayden Reed	GB (11)	12.08	9.08	21	20.28	98%
+RB55	140	Dylan Sampson	CLE (11)	12.08	9.11	21	27.69	94%
+RB56	141	Isiah Pacheco	DET (6)	12.09	10.03	21	27.51	94%
+RB57	142	Braelon Allen	NYJ (13)	13	10.02	21	29.94	93%
+TE10	143	Travis Kelce	KC (5)	13.04	7.08	21	28.74	94%
+QB28	144	Bryce Young	CAR (5)	13.04	5.02	21	46.84	88%
+TE11	145	Dalton Kincaid	BUF (7)	13.06	7.03	21	26.91	94%
+DST1	146	Houston Texans	HOU (8)	13.08	7.08	21	45.37	81%
+DST2	147	Los Angeles Rams	LAR (11)	13.1	9.03	21	45.78	81%
+RB58	148	Emmett Johnson	KC (5)	14.02	11.07	21	34.89	86%
+QB29	149	Jacoby Brissett	ARI (14)	14.03	7.07	21	40.61	86%
+TE12	150	Isaiah Likely	NYG (8)	14.04	7.07	21	34.23	88%
+WR50	151	KC Concepcion	CLE (11)	14.04	11.01	21	32.34	88%
+RB59	152	Ray Davis	BUF (7)	14.07	10.1	21	37.58	83%
+TE13	153	Dallas Goedert	PHI (10)	14.09	11.02	21	31.24	88%
+DST3	154	Denver Broncos	DEN (10)	14.09	10.02	21	38.38	81%
+WR51	155	Romeo Doubs	NE (11)	15	11	21	37.03	81%
+WR52	156	Matthew Golden	GB (11)	15.01	9.1	21	41.44	77%
+DST4	157	Seattle Seahawks	SEA (11)	15.05	10.05	21	35.37	81%
+WR53	158	Xavier Worthy	KC (5)	15.05	10.06	21	39	77%
+RB60	159	Kimani Vidal	LAC (7)	15.05	12	21	39.17	76%
+WR54	160	Deebo Samuel Sr.	SF (8)	15.06	10.02	21	37.57	79%
+RB61	161	Nicholas Singleton	TEN (9)	15.07	12.02	21	37.68	77%
+QB30	162	Geno Smith	NYJ (13)	15.09	5.08	21	49.57	71%
+WR55	163	Khalil Shakir	BUF (7)	15.09	9.11	21	38.62	76%
+WR56	164	Jalen Coker	CAR (5)	15.11	3	21	44.96	71%
+DST5	165	Philadelphia Eagles	PHI (10)	15.11	10.08	21	32.34	81%
+RB62	166	Jaydon Blue	DAL (14)	16	11.07	21	38.36	72%
+DST6	167	New England Patriots	NE (11)	16.04	11.02	21	30.98	81%
+RB63	168	James Conner	ARI (14)	16.05	11.08	21	35.94	72%
+RB64	169	Sean Tucker	TB (10)	16.06	12.07	21	40.68	66%
+K1	170	Brandon Aubrey	DAL (14)	16.07	9.05	21	43.78	64%
+DST7	171	Jacksonville Jaguars	JAC (7)	16.08	11.03	21	32.11	76%
+DST8	172	Pittsburgh Steelers	PIT (9)	16.08	10.09	21	31.34	77%
+RB65	173	Kaelon Black	SF (8)	16.08	11.11	21	37.17	69%
+TE14	174	Jake Ferguson	DAL (14)	16.09	9.11	21	42.9	61%
+TE15	175	Mark Andrews	BAL (13)	16.11	10.07	21	43.43	59%
+DST9	176	Minnesota Vikings	MIN (6)	17.01	12.1	21	31.57	74%
+RB66	177	Kaytron Allen	WAS (7)	17.02	13.02	21	37.14	62%
+RB67	178	Emanuel Wilson	SEA (11)	17.03	11.09	21	37.29	62%
+K2	179	Cameron Dicker	LAC (7)	17.04	9.08	21	37.62	64%
+K3	180	Ka'imi Fairbairn	HOU (8)	17.05	11	21	36.68	64%
+DST10	181	Baltimore Ravens	BAL (13)	17.07	12.04	21	31.4	69%
+WR57	182	Rashid Shaheed	SEA (11)	17.07	11.06	21	42.28	50%
+K4	183	Jason Myers	SEA (11)	17.08	13	21	34.05	64%
+K5	184	Cam Little	JAC (7)	17.09	11.08	21	32.9	64%
+RB68	185	George Holani	SEA (11)	17.11	13.08	21	35.9	52%
+QB31	186	Tua Tagovailoa	ATL (11)	18	7.11	21	46.05	44%
+QB32	187	Michael Penix Jr.	ATL (11)	18	6.05	21	44.84	44%
+DST11	188	Los Angeles Chargers	LAC (7)	18.01	14	21	31.43	59%
+TE16	189	Juwan Johnson	NO (8)	18.02	12.09	21	39.23	45%
+K6	190	Tyler Loop	BAL (13)	18.02	13.05	21	30.77	61%
+K7	191	Eddy Pineiro	SF (8)	18.04	12	21	30.45	59%
+K8	192	Jake Bates	DET (6)	18.06	14.02	21	29.33	55%
+WR58	193	Denzel Boston	CLE (11)	18.08	12.1	21	36.02	40%
+WR59	194	Adonai Mitchell	NYJ (13)	18.1	12.1	21	35.02	38%
+QB33	195	Kirk Cousins	LV (13)	19	9	21	41.34	30%
+WR60	196	Jauan Jennings	MIN (6)	19	11.01	21	35.73	33%
+RB69	197	Justice Hill	BAL (13)	19	12.03	21	35.9	33%
+K9	198	Harrison Mevis	LAR (11)	19.01	12.11	21	30.94	40%
+TE17	199	Hunter Henry	NE (11)	19.04	12.07	21	31.42	30%
+RB70	200	Jaylen Wright	MIA (6)	19.05	15.05	21	27.82	33%
+WR61	201	Keenan Allen	IND (13)	19.05	12	21	34.48	25%
+K10	202	Evan McPherson	CIN (6)	19.06	14.03	21	27.44	35%
+QB34	203	Deshaun Watson	CLE (11)	19.06	10.02	21	35.29	23%
+WR62	204	Jalen Nailor	LV (13)	19.06	13	21	31.68	25%
+WR63	205	Tre Tucker	LV (13)	19.07	12.08	21	30.34	27%
+WR64	206	Jalen McMillan	TB (10)	19.07	12.08	21	31.93	23%
+RB71	207	Najee Harris	NYG (8)	19.08	13.01	21	29.81	25%
+K11	208	Cairo Santos	CHI (10)	19.08	14.11	21	25.53	32%
+TE18	209	Oronde Gadsden II	LAC (7)	19.08	11.08	21	32.76	20%
+TE19	210	Chig Okonkwo	WAS (7)	19.09	12.11	21	28.39	25%
+WR65	211	Kayshon Boutte	HOU (8)	19.11	14.01	21	27.53	20%
+WR66	212	Ja'Kobi Lane	BAL (13)	19.11	11.01	21	27.17	20%
+DST12	213	Green Bay Packers	GB (11)	20	11.06	21	28.23	16%
+TE20	214	Dalton Schultz	HOU (8)	20.01	13.05	21	26.53	15%
+QB35	215	Shedeur Sanders	CLE (11)	20.02	12	21	25.53	16%
+WR67	216	Cooper Kupp	SEA (11)	20.02	11.1	21	26.14	15%
+QB36	217	J.J. McCarthy	MIN (6)	20.02	10.05	21	26.19	15%
+K12	218	Chris Boswell	PIT (9)	20.03	13.07	21	22.39	16%
+DST13	219	Kansas City Chiefs	KC (5)	20.03	15.03	21	20.4	18%
+DST14	220	San Francisco 49ers	SF (8)	20.03	13.01	21	24.58	11%
+RB72	221	Austin Ekeler		20.03	14.03	21	22.84	13%
+WR68	222	Dontayvion Wicks	PHI (10)	20.03	13.02	21	23.51	13%
+TE21	223	Brenton Strange	JAC (7)	20.04	14.02	21	20.63	15%
+WR69	224	Pat Bryant	DEN (10)	20.04	14.09	21	21.05	13%
+K13	225	Harrison Butker	KC (5)	20.04	14.05	21	20.76	15%
+WR70	226	Calvin Ridley	TEN (9)	20.04	13.05	21	22.49	11%
+WR71	227	Tre' Harris	LAC (7)	20.04	13.01	21	21.56	13%
+K14	228	Jake Elliott	PHI (10)	20.04	14.03	21	19.87	13%
+DST15	229	Detroit Lions	DET (6)	20.05	15	21	18.76	15%
+WR72	230	Travis Hunter	JAC (7)	20.05	12.02	21	24.69	8%
+K15	231	Will Reichard	MIN (6)	20.05	14.05	21	19.61	13%
+K16	232	Andy Borregales	NE (11)	20.05	14.11	21	18.55	11%
+TE22	233	Terrance Ferguson	LAR (11)	20.06	13.05	21	21.28	8%
+WR73	234	Omar Cooper Jr.	NYJ (13)	20.06	14	21	19.59	8%
+WR74	235	Caleb Douglas	MIA (6)	20.06	13.04	21	19.25	8%
+WR75	236	Jerry Jeudy	CLE (11)	20.07	13.08	21	20.53	6%
+RB73	237	Demond Claiborne	MIN (6)	20.07	14.03	21	17.52	10%
+QB37	238	Carson Beck	ARI (14)	20.07	13.04	21	18.85	8%
+WR76	239	Malik Washington	MIA (6)	20.07	15.01	21	16.62	8%
+TE23	240	T.J. Hockenson	MIN (6)	20.07	13.03	21	18.43	6%
+K17	241	Chase McLaughlin	TB (10)	20.07	15.11	21	14.72	10%
+QB38	242	Felix Harper		20.08	6.04	21	24.38	3%
+K18	243	Nick Folk	ATL (11)	20.08	14.03	21	16.33	6%
+TE24	244	AJ Barner	SEA (11)	20.08	14	21	17.25	5%
+WR77	245	Ryan Flournoy	DAL (14)	20.08	14.06	21	16.48	5%
+RB74	246	Jordan James	SF (8)	20.09	14.08	21	13.71	6%
+WR78	247	Isaac TeSlaa	DET (6)	20.09	13.09	21	14.37	5%
+RB75	248	Chris Brooks	GB (11)	20.09	16.02	21	11.75	6%
+RB76	249	Devin Neal	NO (8)	20.09	13.06	21	15.04	3%
+WR79	250	Jaylin Noel	HOU (8)	20.09	13.1	21	14.81	3%
+RB77	251	Samaje Perine	CIN (6)	20.09	15.07	21	10.91	6%
+DST16	252	Chicago Bears	CHI (10)	20.1	14.06	21	13.36	3%
+K19	253	Wil Lutz	DEN (10)	20.1	15.07	21	10.83	3%
+DST17	254	Dallas Cowboys	DAL (14)	20.1	15.05	21	10.79	3%
+WR80	255	Cyrus Allen	KC (5)	20.1	15	21	10.71	3%
+DST18	256	Buffalo Bills	BUF (7)	20.1	15.1	21	10.2	3%
+WR81	257	Malachi Fields	NYG (8)	20.1	16.03	21	10.05	3%
+WR82	258	Tank Dell	HOU (8)	20.1	13.01	21	12.49	3%
+TE25	259	Cade Otton	TB (10)	20.1	16.06	21	9.07	3%
+RB78	260	Trey Benson	ARI (14)	20.1	16.11	21	8.76	3%
+TE26	261	Kenyon Sadiq	NYJ (13)	20.1	16.02	21	8.75	3%
+QB39	262	Mac Jones	SF (8)	20.11	14.1	21	9.77	3%
+TE27	263	Gunnar Helm	TEN (9)	20.11	14.01	21	10.81	1%
+QB40	264	AJ McCarron		20.11	14.04	21	10.42	1%
+WR83	265	Zachariah Branch	ATL (11)	20.11	14.08	21	9.89	1%
+WR84	266	Tyreek Hill		20.11	14.09	21	9.76	1%
+QB41	267	Jake Browning	TB (10)	20.11	14.1	21	9.63	1%
+QB42	268	Justin Fields	KC (5)	20.11	15.07	21	8.46	1%
+DST19	269	New York Giants	NYG (8)	20.11	15.09	21	8.2	1%
+QB43	270	Ty Simpson	LAR (11)	20.11	15.09	21	8.2	1%
+TE28	271	Pat Freiermuth	PIT (9)	20.11	15.1	21	8.07	1%
+K20	272	Trey Smack	GB (11)	20.11	16.01	21	7.68	1%
+RB79	273	Ollie Gordon II	MIA (6)	20.11	18.11	21	4.47	3%
+QB44	274	Marcus Mariota	WAS (7)	20.11	17.03	21	5.86	1%
+WR85	275	Troy Franklin	DEN (10)	20.11	17.04	21	5.73	1%
+TE29	276	Jack Westover	NE (11)	20.11	17.09	21	5.08	1%
+QB45	277	J'mar Smith		20.11	17.09	21	5.08	1%
+TE30	278	Greg Dulcich	MIA (6)	20.11	17.1	21	4.95	1%
+RB80	279	Malik Davis	DAL (14)	20.11	18	21	4.69	1%
+WR86	280	Keon Coleman	BUF (7)	20.11	18.03	21	4.3	1%
+WR87	281	Chris Bell	MIA (6)	21	18.08	21	3.65	1%
+RB81	282	Isaiah Davis	NYJ (13)	21	18.08	21	3.65	1%

@@ -1,0 +1,775 @@
+ 
+Week 17
+ 
+Faith + 1 
+
+Pos	Player
+QB	
+Jayden Daniels
+Jayden DanielsVideo Forecast
+Final W 30-24 vs Atl
+WR	
+Puka Nacua
+Puka NacuaVideo Forecast
+
+Final W 13-9 vs Ari
+WR	
+Tee Higgins
+Tee HigginsVideo Forecast
+Final W 30-24 vs Den
+RB	
+Chuba Hubbard
+Chuba HubbardVideo Forecast
+Final L 14-48 @ TB
+RB	
+Rachaad White
+Rachaad WhiteVideo Forecast
+Final W 30-24 vs Atl
+W/T	
+Jaxon Smith-Njigba
+Jaxon Smith-NjigbaVideo Forecast
+Final W 6-3 @ Chi
+W/R/T	
+Deebo Samuel Sr.
+Deebo Samuel Sr.Video Forecast
+Final L 34-40 vs Det
+Q/W/R/T	
+Kyler Murray
+Kyler MurrayVideo Forecast
+
+Final W 27-25 vs GB
+DEF	
+Broncos
+Broncos
+- DEF
+Final L 24-30 @ Cin
+BN	
+Jaylen Waddle
+Jaylen WaddleVideo Forecast
+
+Final L 24-30 @ Cin
+BN	
+Josh Downs
+Josh DownsVideo Forecast
+Final L 33-45 @ NYG
+BN	
+Isaiah Davis
+Isaiah Davis
+Final L 14-40 @ Buf
+BN	
+Cedric Tillman
+Cedric Tillman
+Final L 10-25 vs LV
+IR	
+Jonathon Brooks
+Jonathon BrooksVideo Forecast
+Final L 14-48 @ TB
+IR	
+Christian McCaffrey
+Christian McCaffreyVideo Forecast
+
+Final L 34-40 vs Det
+Acorns 
+
+Pos	Player
+QB	
+Bryce Young
+Bryce YoungVideo Forecast
+Final L 14-48 @ TB
+WR	
+A.J. Brown
+A.J. BrownVideo Forecast
+
+Final L 7-40 vs LAC
+WR	
+Calvin Ridley
+Calvin Ridley
+Final L 13-20 @ Jax
+RB	
+D'Andre Swift
+D'Andre SwiftVideo Forecast
+Final L 3-6 vs Sea
+RB	
+Bucky Irving
+Bucky IrvingVideo Forecast
+Final W 48-14 vs Car
+W/T	
+Trey McBride
+Trey McBrideVideo Forecast
+Final L 9-13 @ LAR
+W/R/T	
+Chig Okonkwo
+Chig OkonkwoVideo Forecast
+Final W 30-24 vs Atl
+Q/W/R/T	
+Kenny Pickett
+Kenny Pickett
+Final L 14-48 @ TB
+DEF	
+Dolphins
+Dolphins
+- DEF
+Final W 20-3 @ Cle
+BN	
+Ameer Abdullah
+Ameer Abdullah
+Final W 20-13 vs Ten
+BN	
+Anthony Richardson Sr.
+Anthony Richardson Sr.
+
+Final L 33-45 @ NYG
+BN	
+Jalen Hurts
+Jalen HurtsVideo Forecast
+
+Final W 41-7 vs Dal
+BN	
+Ricky Pearsall
+Ricky PearsallVideo Forecast
+Final L 34-40 vs Det
+IR	
+David Njoku
+David Njoku
+Final W 40-7 @ NE
+IR	
+Rashee Rice
+Rashee RiceVideo Forecast
+Final W 29-10 @ Pit
+One Tyreek Hill 
+
+Pos	Player
+QB	
+Lamar Jackson
+Lamar JacksonVideo Forecast
+
+Final W 31-2 @ Hou
+WR	
+Tyreek Hill
+Tyreek Hill
+
+Final W 20-3 @ Cle
+WR	
+Adam Thielen
+Adam Thielen
+Final L 10-29 vs KC
+RB	
+Jahmyr Gibbs
+Jahmyr GibbsVideo Forecast
+Final W 40-34 @ SF
+RB	
+Tony Pollard
+Tony PollardVideo Forecast
+Final L 13-20 @ Jax
+W/T	
+Travis Kelce
+Travis KelceVideo Forecast
+Final W 29-10 @ Pit
+W/R/T	
+George Kittle
+George KittleVideo Forecast
+Final L 34-40 vs Det
+Q/W/R/T	
+Russell Wilson
+Russell Wilson
+Final W 45-33 vs Ind
+DEF	
+Cardinals
+Cardinals
+- DEF
+Final L 9-13 @ LAR
+BN	
+Geno Smith
+Geno Smith
+Final L 14-40 @ Buf
+BN	
+Nick Westbrook-Ikhine
+Nick Westbrook-Ikhine
+Final L 33-45 @ NYG
+BN	
+Tank Dell
+Tank DellVideo Forecast
+Final L 2-31 vs Bal
+BN	
+Travis Etienne Jr.
+Travis Etienne Jr.Video Forecast
+
+Final L 10-25 vs LV
+IR	
+J.J. McCarthy
+J.J. McCarthyVideo Forecast
+Final W 27-25 vs GB
+Re-Mixon a thing called Love 
+
+Pos	Player
+QB	
+Jordan Love
+Jordan LoveVideo Forecast
+Final L 25-27 @ Min
+WR	
+Nico Collins
+Nico CollinsVideo Forecast
+
+Final L 2-31 vs Bal
+WR	
+Michael Pittman Jr.
+Michael Pittman Jr.Video Forecast
+Final L 10-29 vs KC
+RB	
+Kareem Hunt
+Kareem Hunt
+Final W 29-10 @ Pit
+RB	
+Derrick Henry
+Derrick HenryVideo Forecast
+
+Final W 31-2 @ Hou
+W/T	
+Tucker Kraft
+Tucker KraftVideo Forecast
+Final L 25-27 @ Min
+W/R/T	
+Joe Mixon
+Joe Mixon
+Final L 2-31 vs Bal
+Q/W/R/T	
+Aaron Rodgers
+Aaron RodgersVideo Forecast
+
+Final L 10-29 vs KC
+DEF	
+Chargers
+Chargers
+- DEF
+Final W 40-7 @ NE
+BN	
+Elijah Moore
+Elijah Moore
+Final W 41-7 vs Dal
+BN	
+Alexander Mattison
+Alexander Mattison
+Final W 20-3 @ Cle
+BN	
+George Pickens
+George PickensVideo Forecast
+Final L 7-41 @ Phi
+BN	
+Raheem Mostert
+Raheem Mostert
+Final W 25-10 @ NO
+IR	
+Austin Ekeler
+Austin Ekeler
+Final W 30-24 vs Atl
+Big Penix Energy 
+
+Pos	Player
+QB	
+C.J. Stroud
+C.J. StroudVideo Forecast
+
+Final L 2-31 vs Bal
+WR	
+Garrett Wilson
+Garrett WilsonVideo Forecast
+Final L 14-40 @ Buf
+WR	
+Rome Odunze
+Rome OdunzeVideo Forecast
+Final L 3-6 vs Sea
+RB	
+Breece Hall
+Breece HallVideo Forecast
+
+Final L 14-40 @ Buf
+RB	
+Tyrone Tracy Jr.
+Tyrone Tracy Jr.
+Final W 45-33 vs Ind
+W/T	
+Malik Nabers
+Malik NabersVideo Forecast
+Final W 45-33 vs Ind
+W/R/T	
+Darnell Mooney
+Darnell Mooney
+Final W 45-33 vs Ind
+Q/W/R/T	
+Sam Darnold
+Sam DarnoldVideo Forecast
+Final W 6-3 @ Chi
+DEF	
+Buccaneers
+Buccaneers
+- DEF
+Final W 48-14 vs Car
+BN	
+CeeDee Lamb
+CeeDee LambVideo Forecast
+
+Final L 7-41 @ Phi
+BN	
+Michael Penix Jr.
+Michael Penix Jr.Video Forecast
+Final L 24-30 @ Was
+BN	
+Najee Harris
+Najee HarrisVideo Forecast
+Final W 45-33 vs Ind
+BN	
+Blake Corum
+Blake CorumVideo Forecast
+Final W 13-9 vs Ari
+IR	
+Trevor Lawrence
+Trevor LawrenceVideo Forecast
+Final W 20-13 vs Ten
+IR	
+Brandon Aiyuk
+Brandon AiyukVideo Forecast
+Final L 34-40 vs Det
+Finkle is the Mayor 
+
+Pos	Player
+QB	
+Josh Allen
+Josh AllenVideo Forecast
+
+Final W 40-14 vs NYJ
+WR	
+DeAndre Hopkins
+DeAndre Hopkins
+Final W 31-2 @ Hou
+WR	
+Jordan Addison
+Jordan AddisonVideo Forecast
+Final W 27-25 vs GB
+RB	
+Isiah Pacheco
+Isiah PachecoVideo Forecast
+
+Final W 40-34 @ SF
+RB	
+Jaylen Warren
+Jaylen WarrenVideo Forecast
+Final L 10-29 vs KC
+W/T	
+Mike Evans
+Mike EvansVideo Forecast
+Final L 34-40 vs Det
+W/R/T	
+Cooper Kupp
+Cooper KuppVideo Forecast
+Final W 6-3 @ Chi
+Q/W/R/T	
+Justin Herbert
+Justin HerbertVideo Forecast
+Final W 40-7 @ NE
+DEF	
+Lions
+Lions
+- DEF
+Final W 40-34 @ SF
+BN	
+David Montgomery
+David MontgomeryVideo Forecast
+Final L 2-31 vs Bal
+BN	
+Jameis Winston
+Jameis Winston
+Final W 45-33 vs Ind
+BN	
+Khalil Shakir
+Khalil ShakirVideo Forecast
+Final W 40-14 vs NYJ
+BN	
+Marquez Valdes-Scantling
+M. Valdes-Scantling
+Final L 7-41 @ Phi
+Caleb Will-yum-yums 
+
+Pos	Player
+QB	
+Jared Goff
+Jared GoffVideo Forecast
+Final W 40-34 @ SF
+WR	
+Amon-Ra St. Brown
+Amon-Ra St. BrownVideo Forecast
+
+Final W 40-34 @ SF
+WR	
+Justin Jefferson
+Justin JeffersonVideo Forecast
+
+Final W 27-25 vs GB
+RB	
+James Cook III
+James Cook IIIVideo Forecast
+Final W 40-14 vs NYJ
+RB	
+Zach Charbonnet
+Zach CharbonnetVideo Forecast
+Final W 6-3 @ Chi
+W/T	
+Brian Thomas Jr.
+Brian Thomas Jr.Video Forecast
+Final W 20-13 vs Ten
+W/R/T	
+Aaron Jones Sr.
+Aaron Jones Sr.Video Forecast
+Final W 27-25 vs GB
+Q/W/R/T	
+Caleb Williams
+Caleb WilliamsVideo Forecast
+Final L 3-6 vs Sea
+DEF	
+Saints
+Saints
+- DEF
+Final L 10-25 vs LV
+BN	
+James Conner
+James ConnerVideo Forecast
+Final L 9-13 @ LAR
+BN	
+Brock Bowers
+Brock BowersVideo Forecast
+Final W 25-10 @ NO
+BN	
+Tyjae Spears
+Tyjae SpearsVideo Forecast
+Final L 13-20 @ Jax
+BN	
+Jalen McMillan
+Jalen McMillanVideo Forecast
+Final W 48-14 vs Car
+IR	
+J.K. Dobbins
+J.K. DobbinsVideo Forecast
+Final L 24-30 @ Cin
+IR	
+Chris Olave
+Chris OlaveVideo Forecast
+
+Final L 10-25 vs LV
+Scary Terry 
+
+Pos	Player
+QB	
+Joe Burrow
+Joe BurrowVideo Forecast
+
+Final W 30-24 vs Den
+WR	
+Ja'Marr Chase
+Ja'Marr ChaseVideo Forecast
+
+Final W 30-24 vs Den
+WR	
+Xavier Worthy
+Xavier WorthyVideo Forecast
+Final W 29-10 @ Pit
+RB	
+Kyren Williams
+Kyren WilliamsVideo Forecast
+
+Final W 13-9 vs Ari
+RB	
+Nick Chubb
+Nick Chubb
+Final L 2-31 vs Bal
+W/T	
+Quentin Johnston
+Quentin JohnstonVideo Forecast
+Final W 40-7 @ NE
+W/R/T	
+Sam LaPorta
+Sam LaPortaVideo Forecast
+Final W 40-34 @ SF
+Q/W/R/T	
+Kirk Cousins
+Kirk CousinsVideo Forecast
+Final W 25-10 @ NO
+DEF	
+Vikings
+Vikings
+- DEF
+Final W 27-25 vs GB
+BN	
+Terry McLaurin
+Terry McLaurinVideo Forecast
+Final W 30-24 vs Atl
+BN	
+Javonte Williams
+Javonte WilliamsVideo Forecast
+Final L 7-41 @ Phi
+BN	
+Will Levis
+Will LevisVideo Forecast
+Final L 13-20 @ Jax
+BN	
+Keon Coleman
+Keon ColemanVideo Forecast
+Final W 40-14 vs NYJ
+Go Long London 
+
+Pos	Player
+QB	
+Baker Mayfield
+Baker MayfieldVideo Forecast
+Final W 48-14 vs Car
+WR	
+Drake London
+Drake LondonVideo Forecast
+
+Final L 24-30 @ Was
+WR	
+Keenan Allen
+Keenan AllenVideo Forecast
+Final L 33-45 @ NYG
+RB	
+Saquon Barkley
+Saquon BarkleyVideo Forecast
+Final W 41-7 vs Dal
+RB	
+Josh Jacobs
+Josh JacobsVideo Forecast
+
+Final L 25-27 @ Min
+W/T	
+Ladd McConkey
+Ladd McConkeyVideo Forecast
+Final W 40-7 @ NE
+W/R/T	
+Jauan Jennings
+Jauan JenningsVideo Forecast
+Final W 27-25 vs GB
+Q/W/R/T	
+Mason Rudolph
+Mason Rudolph
+Final L 10-29 vs KC
+DEF	
+Colts
+Colts
+- DEF
+Final L 33-45 @ NYG
+BN	
+Drew Lock
+Drew Lock
+Final W 6-3 @ Chi
+BN	
+Amari Cooper
+Amari Cooper
+Final W 40-14 vs NYJ
+BN	
+Devin Singletary
+Devin Singletary
+Final W 45-33 vs Ind
+BN	
+Tyler Lockett
+Tyler Lockett
+Final W 25-10 @ NO
+IR	
+Chris Godwin Jr.
+Chris Godwin Jr.Video Forecast
+Final W 48-14 vs Car
+IR	
+Dak Prescott
+Dak PrescottVideo Forecast
+
+Final L 7-41 @ Phi
+Work from Mahomes 
+
+Pos	Player
+QB	
+Patrick Mahomes
+Patrick MahomesVideo Forecast
+
+Final W 29-10 @ Pit
+WR	
+Courtland Sutton
+Courtland SuttonVideo Forecast
+Final L 24-30 @ Cin
+WR	
+DK Metcalf
+DK MetcalfVideo Forecast
+Final L 10-29 vs KC
+RB	
+De'Von Achane
+De'Von AchaneVideo Forecast
+
+Final W 20-3 @ Cle
+RB	
+Chase Brown
+Chase BrownVideo Forecast
+Final W 30-24 vs Den
+W/T	
+Davante Adams
+Davante AdamsVideo Forecast
+Final W 13-9 vs Ari
+W/R/T	
+Brian Robinson
+Brian RobinsonVideo Forecast
+Final L 24-30 @ Was
+Q/W/R/T	
+Drake Maye
+Drake MayeVideo Forecast
+Final L 7-40 vs LAC
+DEF	
+Eagles
+Eagles
+- DEF
+Final W 41-7 vs Dal
+BN	
+Jayden Reed
+Jayden ReedVideo Forecast
+Final L 25-27 @ Min
+BN	
+Isaac Guerendo
+Isaac Guerendo
+Final L 34-40 vs Det
+BN	
+Cooper Rush
+Cooper Rush
+Final L 24-30 @ Was
+IR	
+Alvin Kamara
+Alvin KamaraVideo Forecast
+Final L 10-25 vs LV
+IR	
+Stefon Diggs
+Stefon DiggsVideo Forecast
+Final W 30-24 vs Atl
+BN	
+Falcons
+Falcons
+- DEF
+Final L 24-30 @ Was
+Niall's Fraud Team 
+
+Pos	Player
+QB	
+Matthew Stafford
+Matthew StaffordVideo Forecast
+
+Final W 13-9 vs Ari
+WR	
+Jakobi Meyers
+Jakobi MeyersVideo Forecast
+Final W 20-13 vs Ten
+WR	
+DeVonta Smith
+DeVonta SmithVideo Forecast
+
+Final W 41-7 vs Dal
+RB	
+Jonathan Taylor
+Jonathan TaylorVideo Forecast
+Final L 33-45 @ NYG
+RB	
+Jerome Ford
+Jerome Ford
+Final W 30-24 vs Atl
+W/T	
+Hollywood Brown
+Hollywood Brown
+Final W 41-7 vs Dal
+W/R/T	
+Dontayvion Wicks
+Dontayvion WicksVideo Forecast
+Final W 41-7 vs Dal
+Q/W/R/T	
+Brock Purdy
+Brock PurdyVideo Forecast
+
+Final L 34-40 vs Det
+DEF	
+Ravens
+Ravens
+- DEF
+Final W 31-2 @ Hou
+BN	
+Jonnu Smith
+Jonnu Smith
+Final L 25-27 @ Min
+BN	
+Jerry Jeudy
+Jerry JeudyVideo Forecast
+Final L 3-20 vs Mia
+BN	
+Marvin Harrison Jr.
+Marvin Harrison Jr.Video Forecast
+Final L 9-13 @ LAR
+BN	
+Rhamondre Stevenson
+Rhamondre StevensonVideo Forecast
+Final L 7-40 vs LAC
+IR	
+Kenneth Walker III
+Kenneth Walker IIIVideo Forecast
+Final W 29-10 @ Pit
+Tua Salad with Bijan Mustard 
+
+Pos	Player
+QB	
+Tua Tagovailoa
+Tua TagovailoaVideo Forecast
+
+Final L 24-30 @ Was
+WR	
+DJ Moore
+DJ MooreVideo Forecast
+
+Final W 40-14 vs NYJ
+WR	
+Zay Flowers
+Zay FlowersVideo Forecast
+Final W 31-2 @ Hou
+RB	
+Rico Dowdle
+Rico DowdleVideo Forecast
+Final L 10-29 vs KC
+RB	
+Bijan Robinson
+Bijan RobinsonVideo Forecast
+
+Final L 24-30 @ Was
+W/T	
+Jameson Williams
+Jameson WilliamsVideo Forecast
+Final W 40-34 @ SF
+W/R/T	
+Tank Bigsby
+Tank Bigsby
+Final W 41-7 vs Dal
+Q/W/R/T	
+Bo Nix
+Bo NixVideo Forecast
+Final L 24-30 @ Cin
+DEF	
+Bengals
+Bengals
+- DEF
+Final W 30-24 vs Den
+BN	
+Braelon Allen
+Braelon Allen
+Final L 14-40 @ Buf
+BN	
+Will Dissly
+Will Dissly
+Final W 40-7 @ NE
+BN	
+Derek Carr
+Derek Carr
+Final L 10-25 vs LV
+BN	
+Devaughn Vele
+Devaughn Vele
+Final L 10-25 vs LV
+IR	
+Romeo Doubs
+Romeo DoubsVideo Forecast
+Final L 7-40 vs LAC
