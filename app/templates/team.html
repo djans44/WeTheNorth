@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ owner.username }} | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>{{ owner.username }}</h1>
+    <p class="lede">
+      {{ owner.wins }}&ndash;{{ owner.losses }} across {{ owner.seasons_played }} season{{ "s" if owner.seasons_played != 1 }},
+      {{ owner.playoff_appearances }} playoff appearance{{ "s" if owner.playoff_appearances != 1 }},
+      {{ owner.titles }} title{{ "s" if owner.titles != 1 }}.
+      {% if owner.is_retired %}No longer in the league.{% endif %}
+    </p>
+  </header>
+
+  <section>
+    <h2>Season by season</h2>
+    <table>
+      <thead>
+        <tr><th>Season</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Finish</th></tr>
+      </thead>
+      <tbody>
+      {% for s in seasons %}
+        <tr>
+          <td class="year">{{ s.season_year }}</td>
+          <td class="name">{{ s.team_name }}</td>
+          <td>{{ s.wins }}</td>
+          <td>{{ s.losses }}</td>
+          <td>{{ "%.1f"|format(s.points_for) }}</td>
+          <td>{{ "%.1f"|format(s.points_against) }}</td>
+          <td class="{% if s.finish == 'Champion' %}win{% endif %}">{{ s.finish }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Against each manager</h2>
+    <table>
+      <thead>
+        <tr><th>Opponent</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr>
+      </thead>
+      <tbody>
+      {% for r in h2h %}
+        <tr>
+          <td class="name"><a href="/team/{{ r.opponent_username|lower }}">{{ r.opponent_username }}</a></td>
+          <td class="{% if r.wins > r.losses %}win{% elif r.wins < r.losses %}loss{% endif %}">{{ r.wins }}</td>
+          <td>{{ r.losses }}</td>
+          <td>{{ "%.1f"|format(r.points_for) }}</td>
+          <td>{{ "%.1f"|format(r.points_against) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Best and worst weeks</h2>
+    <h3>Highest</h3>
+    <ol class="records">
+    {% for r in best %}
+      <li><b>{{ "%.2f"|format(r.points_for) }}</b> vs {{ r.opponent_username }},
+        {{ r.season_year }} week {{ r.week }} ({{ r.result }})</li>
+    {% endfor %}
+    </ol>
+    <h3>Lowest</h3>
+    <ol class="records">
+    {% for r in worst %}
+      <li><b>{{ "%.2f"|format(r.points_for) }}</b> vs {{ r.opponent_username }},
+        {{ r.season_year }} week {{ r.week }} ({{ r.result }})</li>
+    {% endfor %}
+    </ol>
+  </section>
+
+  {% if projection %}
+  <section>
+    <h2>Against the projection</h2>
+    <p>
+      Over {{ projection.games }} regular season games,
+      <b class="{% if projection.avg_vs_projection > 0 %}win{% else %}loss{% endif %}">{{ "%+.2f"|format(projection.avg_vs_projection) }}</b>
+      points per game against Yahoo&rsquo;s projection,
+      {{ "%+.1f"|format(projection.total_vs_projection) }} in total.
+      Beat the number {{ projection.games_over_projection }} times.
+    </p>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+

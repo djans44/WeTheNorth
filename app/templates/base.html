@@ -7,6 +7,23 @@
   <link rel="stylesheet" href="{{ static_url('style.css') }}">
 </head>
 <body>
+  {% set path = request.url.path %}
+  <nav class="sitenav">
+    <a class="brand" href="/">We the North</a>
+    <ul>
+      <li><a href="/history" {% if path == '/history' %}class="on"{% endif %}>League history</a></li>
+      <li class="has-menu">
+        <a href="/teams" {% if path.startswith('/team') %}class="on"{% endif %}>Managers</a>
+        <ul class="submenu">
+          {% for o in nav_owners() %}
+            <li><a href="/team/{{ o.username|lower }}">{{ o.username }}</a></li>
+          {% endfor %}
+          <li class="sep"><a href="/teams">All managers</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+
   {% block content %}{% endblock %}
 </body>
 </html>

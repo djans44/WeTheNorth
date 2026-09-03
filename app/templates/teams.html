@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Managers | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Managers</h1>
+    <p class="lede">Every owner who has fielded a team, ordered by all-time win percentage.</p>
+  </header>
+
+  <section>
+    <table>
+      <thead>
+        <tr><th>Owner</th><th>Sea</th><th>W</th><th>L</th><th>Pct</th><th>Titles</th></tr>
+      </thead>
+      <tbody>
+      {% for o in owners %}
+        <tr>
+          <td class="name">
+            <a href="/team/{{ o.username|lower }}">{{ o.username }}</a>
+            {% if o.is_retired %}<span class="tm">retired</span>{% endif %}
+          </td>
+          <td>{{ o.seasons_played }}</td>
+          <td>{{ o.wins }}</td>
+          <td>{{ o.losses }}</td>
+          <td>{{ "%.3f"|format(o.win_pct) }}</td>
+          <td class="{% if o.titles %}win{% endif %}">{{ o.titles }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}
+

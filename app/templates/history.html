@@ -7,7 +7,6 @@
     <div class="tape"></div>
     <h1>League History</h1>
     <p class="lede">Four seasons, 392 games, and not one won by the team that finished first.</p>
-    <nav class="crumbs"><a href="/">Home</a></nav>
   </header>
 
   <section>
@@ -65,7 +64,7 @@
         <thead>
           <tr>
             <th></th>
-            {% for o in order %}<th>{{ o[:4] }}</th>{% endfor %}
+            {% for o in order %}<th>{{ o }}</th>{% endfor %}
           </tr>
         </thead>
         <tbody>
@@ -156,4 +155,7 @@
   </section>
 </div>
 {% endblock %}
+
+
+
 
