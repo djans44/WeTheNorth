@@ -1,0 +1,14 @@
+:root { --ink: #1a1a1a; --muted: #666; --accent: #ce1141; }
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  line-height: 1.6;
+}
+header { border-bottom: 3px solid var(--accent); margin-bottom: 2rem; }
+h1 { margin-bottom: 0.25rem; }
+nav a { color: var(--muted); text-decoration: none; margin-right: 1rem; }
+nav a:hover { color: var(--accent); }
