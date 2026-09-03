@@ -31,9 +31,13 @@
         </ul>
       </li>
     </ul>
+    {% if request.session.get("username") %}
+      <span class="who">{{ request.session["username"] }} &middot; <a href="/logout">Sign out</a></span>
+    {% endif %}
   </nav>
 
   {% block content %}{% endblock %}
 </body>
 </html>
+
 

@@ -9,12 +9,35 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.rows import dict_row
+from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv()
 
 STATIC_DIR = pathlib.Path("app/static")
+PUBLIC_PATHS = {"/", "/login", "/logout", "/health"}
 
 app = FastAPI()
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    path = request.url.path
+    if path in PUBLIC_PATHS or path.startswith("/static"):
+        return await call_next(request)
+    if not request.session.get("owner_id"):
+        return RedirectResponse(url="/", status_code=303)
+    return await call_next(request)
+
+
+# Added after the middleware above so it sits outside it in the stack,
+# which is what makes request.session available inside it.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SECRET_KEY", "dev-only-insecure-key"),
+    max_age=60 * 60 * 8,
+    same_site="lax",
+)
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
@@ -29,11 +52,21 @@ def static_url(path: str) -> str:
 
 templates.env.globals["static_url"] = static_url
 
+
+def get_db():
+    return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
+
+
+def query(conn, sql, params=None):
+    with conn.cursor() as cur:
+        cur.execute(sql, params or ())
+        return cur.fetchall()
+
+
 _owner_cache = {"at": 0.0, "rows": []}
 
 
 def nav_owners():
-    """Managers for the nav dropdown. Cached, since owners rarely change."""
     now = time.time()
     if now - _owner_cache["at"] > 300:
         try:
@@ -71,24 +104,40 @@ def nav_seasons():
 templates.env.globals["nav_seasons"] = nav_seasons
 
 
-def get_db():
-    return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
-
-
-def query(conn, sql, params=None):
-    with conn.cursor() as cur:
-        cur.execute(sql, params or ())
-        return cur.fetchall()
-
-
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+def home(request: Request, error: int = 0):
+    if request.session.get("owner_id"):
+        return RedirectResponse(url="/current", status_code=303)
+    return templates.TemplateResponse(
+        request=request, name="index.html", context={"error": error},
+    )
 
 
 @app.post("/login")
-def login():
-    return RedirectResponse(url="/history", status_code=303)
+async def login(request: Request):
+    form = await request.form()
+    email = (form.get("email") or "").strip()
+
+    with get_db() as conn:
+        rows = query(conn, """
+            select owner_id, username, is_admin
+            from owners
+            where email is not null and lower(email) = lower(%s)
+        """, (email,))
+
+    if not rows:
+        return RedirectResponse(url="/?error=1", status_code=303)
+
+    request.session["owner_id"] = rows[0]["owner_id"]
+    request.session["username"] = rows[0]["username"]
+    request.session["is_admin"] = rows[0]["is_admin"]
+    return RedirectResponse(url="/current", status_code=303)
+
+
+@app.get("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.get("/history", response_class=HTMLResponse)
@@ -245,7 +294,7 @@ def seasons_index(request: Request):
 def current_season():
     with get_db() as conn:
         rows = query(conn, "select max(season_year) as y from seasons")
-    return RedirectResponse(url=f"/season/{rows[0]["y"]}", status_code=307)
+    return RedirectResponse(url=f"/season/{rows[0]['y']}", status_code=307)
 
 
 @app.get("/season/{year}", response_class=HTMLResponse)
@@ -308,7 +357,3 @@ def health():
             cur.execute("select 1")
             cur.fetchone()
     return {"status": "ok", "database": "connected"}
-
-
-
-

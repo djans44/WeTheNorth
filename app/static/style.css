@@ -312,3 +312,7 @@ body > .gatepost { margin-top: 0.5rem; }
 .scores .vs { width: 2.5rem; text-align: center; font-size: 0.8rem; color: var(--ink-soft); }
 .scores td:nth-child(2) { text-align: right; }
 .scores td:last-child { text-align: left; }
+
+.sitenav .who { margin-left: auto; font-size: 0.85rem; color: var(--stone-edge); }
+.sitenav .who a { text-decoration: underline; }
+.note.error { color: #a03024; font-weight: 600; }

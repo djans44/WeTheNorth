@@ -11,8 +11,7 @@
     </h1>
     <div class="tape"></div>
     <p class="status">
-      Under construction. Four seasons of standings, drafts and regrettable
-      trades are being carted in and hung, one at a time.
+      Four seasons of standings, drafts and regrettable trades, kept in one place.
     </p>
   </div>
 
@@ -20,10 +19,15 @@
     <label for="email">Enter your email to be admitted</label>
     <div class="row">
       <input id="email" type="email" name="email" required
-             placeholder="you@example.com" autocomplete="email">
+             placeholder="you@example.com" autocomplete="email"
+             {% if error %}aria-invalid="true"{% endif %}>
       <button type="submit">Sign in</button>
     </div>
-    <p class="note">Any address will do for now. The gate is not yet locked.</p>
+    {% if error %}
+      <p class="note error">That address is not on the league roll. Try the one Yahoo has for you.</p>
+    {% else %}
+      <p class="note">Use the address attached to your Yahoo team.</p>
+    {% endif %}
   </form>
 </div>
 {% endblock %}
