@@ -20,13 +20,13 @@ def get_db():
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
+    return templates.TemplateResponse(request=request, name="index.html")
+
+
+@app.get("/health")
+def health():
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("select now()")
-            db_time = cur.fetchone()[0]
-
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={"db_time": db_time},
-    )
+            cur.execute("select 1")
+            cur.fetchone()
+    return {"status": "ok", "database": "connected"}

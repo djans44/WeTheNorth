@@ -1,14 +1,117 @@
-:root { --ink: #1a1a1a; --muted: #666; --accent: #ce1141; }
-* { box-sizing: border-box; }
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: var(--ink);
-  max-width: 60rem;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-  line-height: 1.6;
+:root {
+  --board:    #cfc0a4;
+  --paper:    #f4efe4;
+  --ink:      #23201a;
+  --ink-soft: #5c554a;
+  --hazard:   #f0b429;
+  --orange:   #d1521f;
 }
-header { border-bottom: 3px solid var(--accent); margin-bottom: 2rem; }
-h1 { margin-bottom: 0.25rem; }
-nav a { color: var(--muted); text-decoration: none; margin-right: 1rem; }
-nav a:hover { color: var(--accent); }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 3rem 1.25rem;
+  background: var(--board);
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.55;
+}
+
+.hoarding {
+  max-width: 40rem;
+  margin: 0 auto;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(35, 32, 26, 0.35);
+}
+
+.tape {
+  height: 16px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--hazard) 0 20px,
+    var(--ink) 20px 40px
+  );
+}
+
+.sign { padding: 2.5rem 2rem 2rem; }
+
+h1 { margin: 0; }
+
+.mark {
+  display: block;
+  font-family: Haettenschweiler, "Arial Narrow", Impact, sans-serif;
+  font-size: clamp(2.75rem, 11vw, 5rem);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.sub {
+  display: block;
+  margin-top: 0.75rem;
+  font-size: clamp(0.95rem, 3vw, 1.15rem);
+  font-weight: 600;
+  color: var(--ink-soft);
+  border-top: 2px solid var(--ink);
+  padding-top: 0.75rem;
+}
+
+.status {
+  margin: 1.5rem 0 0;
+  max-width: 34ch;
+  color: var(--ink-soft);
+}
+
+.gate { padding: 2rem; }
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.row { display: flex; gap: 0.5rem; }
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--ink);
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 2px;
+}
+
+button {
+  padding: 0.7rem 1.4rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+}
+
+button[disabled] {
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.note {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 30rem) {
+  .row { flex-direction: column; }
+}
