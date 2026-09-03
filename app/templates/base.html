@@ -30,6 +30,14 @@
           <li class="sep"><a href="/teams">All managers</a></li>
         </ul>
       </li>
+      {% if request.session.get("is_admin") %}
+      <li class="has-menu">
+        <a href="/admin/scores" {% if path.startswith('/admin') %}class="on"{% endif %}>Admin</a>
+        <ul class="submenu">
+          <li><a href="/admin/scores">Enter scores</a></li>
+        </ul>
+      </li>
+      {% endif %}
     </ul>
     {% if request.session.get("username") %}
       <span class="who">{{ request.session["username"] }} &middot; <a href="/logout">Sign out</a></span>
@@ -39,5 +47,3 @@
   {% block content %}{% endblock %}
 </body>
 </html>
-
-

@@ -10,6 +10,7 @@
       {{ owner.wins }}&ndash;{{ owner.losses }} across {{ owner.seasons_played }} season{{ "s" if owner.seasons_played != 1 }},
       {{ owner.playoff_appearances }} playoff appearance{{ "s" if owner.playoff_appearances != 1 }},
       {{ owner.titles }} title{{ "s" if owner.titles != 1 }}.
+      Best finish {{ ordinal(owner.best_finish) }}, average {{ owner.avg_finish }}.
       {% if owner.is_retired %}No longer in the league.{% endif %}
     </p>
   </header>
@@ -18,7 +19,7 @@
     <h2>Season by season</h2>
     <table>
       <thead>
-        <tr><th>Season</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Finish</th></tr>
+        <tr><th>Season</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Pos</th><th>Finish</th></tr>
       </thead>
       <tbody>
       {% for s in seasons %}
@@ -29,6 +30,7 @@
           <td>{{ s.losses }}</td>
           <td>{{ "%.1f"|format(s.points_for) }}</td>
           <td>{{ "%.1f"|format(s.points_against) }}</td>
+          <td>{{ ordinal(s.final_rank) }}</td>
           <td class="{% if s.finish == 'Champion' %}win{% endif %}">{{ s.finish }}</td>
         </tr>
       {% endfor %}
@@ -88,4 +90,5 @@
   {% endif %}
 </div>
 {% endblock %}
+
 

@@ -53,6 +53,19 @@ def static_url(path: str) -> str:
 templates.env.globals["static_url"] = static_url
 
 
+def ordinal(n):
+    if n is None:
+        return ""
+    if 10 <= n % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+templates.env.globals["ordinal"] = ordinal
+
+
 def get_db():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -228,7 +241,7 @@ def team(request: Request, name: str):
         seasons = query(conn, """
             select
                 s.season_year, s.team_name, s.wins, s.losses, s.ties,
-                s.points_for, s.points_against, s.made_playoffs,
+                s.points_for, s.points_against, s.made_playoffs, s.final_rank,
                 case
                     when sr.champion_owner_id  = %s then 'Champion'
                     when sr.runner_up_owner_id = %s then 'Runner-up'
@@ -313,7 +326,7 @@ def season(request: Request, year: int):
         standings = query(conn, """
             select * from team_season_stats
             where season_year = %s
-            order by games_played = 0, wins desc, points_for desc
+            order by final_rank nulls last, wins desc, points_for desc
         """, (year,))
 
         games = query(conn, """
@@ -350,6 +363,207 @@ def season(request: Request, year: int):
     )
 
 
+LAYOUTS = {
+    "regular":      ["regular"] * 6,
+    "quarterfinal": ["quarterfinal"] * 4 + ["consolation"] * 4,
+    "semifinal":    ["semifinal"] * 2 + ["fifth_place"] + ["consolation"] * 2 + ["eleventh_place"],
+    "final":        ["championship", "third_place", "seventh_place", "ninth_place"],
+}
+
+MODE_LABELS = {
+    "regular": "Regular season",
+    "quarterfinal": "Quarterfinals",
+    "semifinal": "Semifinals",
+    "final": "Final",
+}
+
+WEEK_MODES = {w: {15: "quarterfinal", 16: "semifinal", 17: "final"}.get(w, "regular")
+              for w in range(1, 18)}
+
+
+def infer_mode(existing):
+    types = {r["game_type"] for r in existing}
+    if types & {"championship", "third_place", "seventh_place", "ninth_place"}:
+        return "final"
+    if types & {"semifinal", "fifth_place", "eleventh_place"}:
+        return "semifinal"
+    if "quarterfinal" in types:
+        return "quarterfinal"
+    return "regular"
+
+
+def build_rows(mode, existing):
+    by_type = {}
+    for r in existing:
+        by_type.setdefault(r["game_type"], []).append(r)
+    rows = []
+    for gt in LAYOUTS[mode]:
+        pool = by_type.get(gt) or []
+        r = pool.pop(0) if pool else None
+        rows.append({
+            "game_type": gt,
+            "team_a_id": r["team_a_id"] if r else None,
+            "team_b_id": r["team_b_id"] if r else None,
+            "pa": r["team_a_points"] if r else None,
+            "pb": r["team_b_points"] if r else None,
+            "ja": r["team_a_projected"] if r else None,
+            "jb": r["team_b_projected"] if r else None,
+        })
+    return rows
+
+
+@app.get("/admin/scores", response_class=HTMLResponse)
+def admin_scores(request: Request, season: int = 0, week: int = 0,
+                 mode: str = "", saved: int = 0):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"]
+
+        teams = query(conn, """
+            select t.team_id, t.team_name, o.username
+            from teams t join owners o on o.owner_id = t.owner_id
+            where t.season_year = %s
+            order by t.team_name
+        """, (season,))
+
+        existing = []
+        if week:
+            existing = query(conn, """
+                select week, game_type, team_a_id, team_b_id,
+                       team_a_points, team_b_points,
+                       team_a_projected, team_b_projected
+                from matchups
+                where season_year = %s and week = %s
+                order by game_type, matchup_id
+            """, (season, week))
+
+        filled = query(conn, """
+            select week from matchups where season_year = %s
+            group by week order by week
+        """, (season,))
+
+    requested = mode if mode in LAYOUTS else ""
+    if requested:
+        mode = requested
+    elif existing:
+        mode = infer_mode(existing)
+    else:
+        mode = WEEK_MODES.get(week, "regular")
+
+    return templates.TemplateResponse(
+        request=request, name="admin_scores.html",
+        context={"years": years, "season": season, "week": week, "mode": mode,
+                 "requested": requested, "week_modes": WEEK_MODES,
+                 "teams": teams, "rows": build_rows(mode, existing),
+                 "filled": filled, "saved": saved, "errors": [],
+                 "labels": MODE_LABELS},
+    )
+
+
+@app.post("/admin/scores")
+async def admin_scores_save(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    form = await request.form()
+    season = int(form["season"])
+    week = int(form["week"])
+    mode = form.get("mode") if form.get("mode") in LAYOUTS else "regular"
+    layout = LAYOUTS[mode]
+
+    def val(name):
+        v = (form.get(name) or "").strip()
+        return v or None
+
+    rows, seen = [], []
+    for i, gt in enumerate(layout):
+        a, b = val(f"r{i}_team_a"), val(f"r{i}_team_b")
+        row = {"game_type": gt,
+               "team_a_id": int(a) if a else None,
+               "team_b_id": int(b) if b else None,
+               "pa": val(f"r{i}_pa"), "pb": val(f"r{i}_pb"),
+               "ja": val(f"r{i}_ja"), "jb": val(f"r{i}_jb")}
+        rows.append(row)
+        seen += [t for t in (row["team_a_id"], row["team_b_id"]) if t]
+
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        teams = query(conn, """
+            select t.team_id, t.team_name, o.username
+            from teams t join owners o on o.owner_id = t.owner_id
+            where t.season_year = %s order by t.team_name
+        """, (season,))
+        filled = query(conn, """
+            select week from matchups where season_year = %s
+            group by week order by week
+        """, (season,))
+
+    names = {t["team_id"]: t["team_name"] for t in teams}
+    errors = []
+
+    dupes = {t for t in seen if seen.count(t) > 1}
+    for t in sorted(dupes):
+        errors.append(f"{names.get(t, t)} appears more than once.")
+
+    for i, row in enumerate(rows, start=1):
+        if row["team_b_id"] and not row["team_a_id"]:
+            errors.append(f"Row {i} has an opponent but no team.")
+        if row["team_a_id"] and row["team_a_id"] == row["team_b_id"]:
+            errors.append(f"Row {i} has a team playing itself.")
+
+    if mode in ("regular", "quarterfinal", "semifinal"):
+        missing = [n for tid, n in names.items() if tid not in seen]
+        if missing:
+            errors.append("Not entered: " + ", ".join(sorted(missing)) + ".")
+
+    if errors:
+        return templates.TemplateResponse(
+            request=request, name="admin_scores.html", status_code=400,
+            context={"years": years, "season": season, "week": week, "mode": mode,
+                     "requested": mode, "week_modes": WEEK_MODES,
+                     "teams": teams, "rows": rows, "filled": filled,
+                     "saved": 0, "errors": errors, "labels": MODE_LABELS},
+        )
+
+    prepared = []
+    for row in rows:
+        a_id, b_id = row["team_a_id"], row["team_b_id"]
+        if not a_id:
+            continue
+        a_pts, b_pts, a_proj, b_proj = row["pa"], row["pb"], row["ja"], row["jb"]
+        if b_id is None:
+            prepared.append((season, week, row["game_type"], a_id, None,
+                             a_pts, None, a_proj, None))
+            continue
+        if a_id > b_id:
+            a_id, b_id = b_id, a_id
+            a_pts, b_pts = b_pts, a_pts
+            a_proj, b_proj = b_proj, a_proj
+        prepared.append((season, week, row["game_type"], a_id, b_id,
+                         a_pts, b_pts, a_proj, b_proj))
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("delete from matchups where season_year = %s and week = %s",
+                        (season, week))
+            cur.executemany("""
+                insert into matchups
+                    (season_year, week, game_type, team_a_id, team_b_id,
+                     team_a_points, team_b_points,
+                     team_a_projected, team_b_projected)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, prepared)
+        conn.commit()
+
+    return RedirectResponse(
+        url=f"/admin/scores?season={season}&week={week}&mode={mode}&saved={len(prepared)}",
+        status_code=303)
+
+
 @app.get("/health")
 def health():
     with get_db() as conn:
@@ -357,3 +571,10 @@ def health():
             cur.execute("select 1")
             cur.fetchone()
     return {"status": "ok", "database": "connected"}
+
+
+
+
+
+
+

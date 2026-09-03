@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Enter scores | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Enter scores</h1>
+    <p class="lede">
+      Saving replaces every matchup for that week, so what you see below
+      is exactly what will be stored.
+    </p>
+  </header>
+
+  <section>
+    <form method="get" action="/admin/scores" class="picker">
+      <label for="season">Season</label>
+      <select id="season" name="season">
+        {% for y in years %}
+          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="week">Week</label>
+      <select id="week" name="week">
+        <option value="0">&mdash;</option>
+        {% for w in range(1, 18) %}
+          <option value="{{ w }}" {% if w == week %}selected{% endif %}>{{ w }}{% if week_modes[w] != "regular" %} &mdash; {{ labels[week_modes[w]] }}{% endif %}</option>
+        {% endfor %}
+      </select>
+
+      <label for="mode">Round</label>
+      <select id="mode" name="mode">
+        <option value="" {% if not requested %}selected{% endif %}>Auto</option>
+        {% for m, lab in labels.items() %}
+          <option value="{{ m }}" {% if requested == m %}selected{% endif %}>{{ lab }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit">Load</button>
+    </form>
+
+    {% if filled %}
+      <p class="note">
+        Weeks with data:
+        {% for f in filled %}<a href="/admin/scores?season={{ season }}&week={{ f.week }}">{{ f.week }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% else %}
+      <p class="note">No matchups recorded for {{ season }} yet.</p>
+    {% endif %}
+
+    {% if saved %}
+      <p class="note ok">Saved {{ saved }} matchup{{ "s" if saved != 1 }}.</p>
+    {% endif %}
+  </section>
+
+  {% if week %}
+  <section>
+    <h2>{{ season }} &mdash; week {{ week }} &mdash; {{ labels[mode] }}</h2>
+
+    {% if errors %}
+      <div class="errors">
+        <b>Nothing saved.</b>
+        <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+
+    <form method="post" action="/admin/scores">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="week" value="{{ week }}">
+      <input type="hidden" name="mode" value="{{ mode }}">
+
+      <div class="scroller">
+      <table class="entry">
+        <thead>
+          <tr><th>Game</th><th>Team</th><th>Pts</th><th>Proj</th>
+              <th>Opponent</th><th>Pts</th><th>Proj</th></tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          {% set i = loop.index0 %}
+          <tr>
+            <td class="gt">{{ r.game_type.replace("_", " ") }}</td>
+            <td>
+              <select name="r{{ i }}_team_a">
+                <option value="">&mdash;</option>
+                {% for t in teams %}
+                  <option value="{{ t.team_id }}" {% if t.team_id == r.team_a_id %}selected{% endif %}>{{ t.team_name }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td><input type="text" inputmode="decimal" name="r{{ i }}_pa" value="{{ r.pa if r.pa is not none else '' }}"></td>
+            <td><input type="text" inputmode="decimal" name="r{{ i }}_ja" value="{{ r.ja if r.ja is not none else '' }}"></td>
+            <td>
+              <select name="r{{ i }}_team_b">
+                <option value="">bye</option>
+                {% for t in teams %}
+                  <option value="{{ t.team_id }}" {% if t.team_id == r.team_b_id %}selected{% endif %}>{{ t.team_name }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td><input type="text" inputmode="decimal" name="r{{ i }}_pb" value="{{ r.pb if r.pb is not none else '' }}"></td>
+            <td><input type="text" inputmode="decimal" name="r{{ i }}_jb" value="{{ r.jb if r.jb is not none else '' }}"></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      <p class="note">
+        Scores may be left blank to record a fixture before it is played.
+        Leave the opponent on &ldquo;bye&rdquo; for a team sitting the round out.
+      </p>
+
+      <button type="submit">Save week {{ week }}</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

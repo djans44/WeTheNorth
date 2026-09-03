@@ -26,12 +26,12 @@
     <h2>{% if s.champion %}Final standings{% else %}Standings{% endif %}</h2>
     <table>
       <thead>
-        <tr><th>#</th><th>Owner</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr>
+        <tr><th>Pos</th><th>Owner</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr>
       </thead>
       <tbody>
       {% for t in standings %}
         <tr>
-          <td>{{ loop.index }}</td>
+          <td class="{% if t.final_rank == 1 %}win{% endif %}">{{ ordinal(t.final_rank) or loop.index }}</td>
           <td class="name"><a href="/team/{{ t.username|lower }}">{{ t.username }}</a></td>
           <td class="name">{{ t.team_name }}</td>
           <td>{{ t.wins }}</td>
@@ -82,3 +82,4 @@
   {% endif %}
 </div>
 {% endblock %}
+

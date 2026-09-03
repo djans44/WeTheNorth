@@ -316,3 +316,36 @@ body > .gatepost { margin-top: 0.5rem; }
 .sitenav .who { margin-left: auto; font-size: 0.85rem; color: var(--stone-edge); }
 .sitenav .who a { text-decoration: underline; }
 .note.error { color: #a03024; font-weight: 600; }
+
+/* ---- admin entry ---- */
+
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 1rem; }
+.picker label { margin: 0; }
+
+select, .entry input {
+  padding: 0.35rem 0.4rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--ink);
+}
+
+.entry { font-size: 0.9rem; min-width: 48rem; }
+.entry td { padding: 0.25rem 0.3rem; }
+.entry select { max-width: 13rem; }
+.entry input { width: 5rem; text-align: right; }
+.entry thead th { font-size: 0.75rem; }
+
+.note.ok { color: #1d6b33; font-weight: 600; }
+
+.entry .gt { width: 8rem; text-align: left; font-size: 0.75rem; color: var(--ink-soft); }
+
+.errors {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #a03024;
+  background: rgba(160, 48, 36, 0.08);
+}
+.errors ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+.errors li { color: #a03024; }
