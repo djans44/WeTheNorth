@@ -1,4 +1,3 @@
-import datetime as dt
 import os
 import sys
 
@@ -52,8 +51,7 @@ with psycopg.connect(url) as conn:
             select owner_id, phase, player_id, cost_round, origin, status
             from keeper_submissions where season_year = %s
         """, (season,))
-        subs = {}
-        taken = {}
+        subs, taken = {}, {}
         for oid, ph, pid, rd, origin, status in cur.fetchall():
             subs[(oid, ph)] = (pid, origin, status)
             if rd and ph < phase:
@@ -65,6 +63,19 @@ with psycopg.connect(url) as conn:
         """, (season,))
         plan = {(r[0], r[1]): r[2:] for r in cur.fetchall()}
 
+        cur.execute("""
+            select owner_id, player_id, term_years from keeper_plans
+            where season_year = %s and phase = %s
+        """, (season, phase))
+        plans = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+
+        cur.execute("""
+            select k.owner_id, k.player_id, k.cost_round
+            from keeper_eligibility k
+            where k.for_season = %s and k.state in ('free', 'must_sign')
+        """, (season,))
+        costs = {(r[0], r[1]): r[2] for r in cur.fetchall()}
+
         cur.execute("select owner_id, username from owners")
         names = dict(cur.fetchall())
         cur.execute("select player_id, full_name from players")
@@ -74,30 +85,50 @@ with psycopg.connect(url) as conn:
     for oid in sorted(owners, key=lambda o: names.get(o, "")):
         if (oid, phase) in subs:
             pid, origin, status = subs[(oid, phase)]
-            actions.append((oid, "leave", None, None, None,
+            actions.append((oid, "leave", None, None, None, None,
                             f"already submitted ({origin}, {status})"))
             continue
 
         entry = plan.get((oid, phase))
-        if not entry:
-            actions.append((oid, "forfeit", None, None, None,
-                            "no contract for this phase and nothing submitted"))
+        if entry:
+            pid, cid, want = entry
+            held = taken.get(oid, set())
+            rd = first_free(want, held)
+            if rd is None:
+                actions.append((oid, "error", pid, cid, None, None,
+                                f"contract wants R{want} but no free round remains"))
+                continue
+            note = f"contract at R{rd}"
+            if rd != want:
+                note += f" (moved from R{want}, taken)"
+            actions.append((oid, "auto", pid, cid, rd, None, note))
             continue
 
-        pid, cid, want = entry
-        held = taken.get(oid, set())
-        rd = first_free(want, held)
-        if rd is None:
-            actions.append((oid, "error", pid, cid, None,
-                            f"contract wants R{want} but no free round remains"))
+        planned = plans.get(oid)
+        if planned and planned[0]:
+            pid, term = planned
+            want = costs.get((oid, pid))
+            if want is None:
+                actions.append((oid, "error", pid, None, None, None,
+                                "planned player is not eligible"))
+                continue
+            held = taken.get(oid, set())
+            rd = first_free(want, held)
+            if rd is None:
+                actions.append((oid, "error", pid, None, None, None,
+                                f"planned player wants R{want}, no free round"))
+                continue
+            note = f"from plan at R{rd}"
+            if rd != want:
+                note += f" (moved from R{want}, taken)"
+            actions.append((oid, "plan", pid, None, rd, term, note))
             continue
-        note = f"contract at R{rd}"
-        if rd != want:
-            note += f" (moved from R{want}, taken)"
-        actions.append((oid, "auto", pid, cid, rd, note))
+
+        actions.append((oid, "forfeit", None, None, None, None,
+                        "no contract, no plan, nothing submitted"))
 
     print(f"{season} phase {phase} {'(dry run)' if dry else '(applying)'}\n")
-    for oid, kind, pid, cid, rd, note in actions:
+    for oid, kind, pid, cid, rd, term, note in actions:
         who = names.get(oid, oid)
         what = pnames.get(pid, "") if pid else ""
         print(f"  {who:<10} {kind:<8} {what:<24} {note}")
@@ -111,7 +142,7 @@ with psycopg.connect(url) as conn:
         raise SystemExit(0)
 
     with conn.cursor() as cur:
-        for oid, kind, pid, cid, rd, note in actions:
+        for oid, kind, pid, cid, rd, term, note in actions:
             if kind == "auto":
                 cur.execute("""
                     insert into keeper_submissions
@@ -119,12 +150,25 @@ with psycopg.connect(url) as conn:
                          contract_id, origin, status, note)
                     values (%s, %s, %s, %s, %s, %s, 'auto', 'approved', %s)
                 """, (season, phase, oid, pid, rd, cid, note))
+            elif kind == "plan":
+                cur.execute("""
+                    insert into keeper_submissions
+                        (season_year, phase, owner_id, player_id, cost_round,
+                         term_years, origin, status, note)
+                    values (%s, %s, %s, %s, %s, %s, 'plan', 'pending', %s)
+                """, (season, phase, oid, pid, rd, term, note))
             elif kind == "forfeit":
                 cur.execute("""
                     insert into keeper_submissions
                         (season_year, phase, owner_id, origin, status, note)
                     values (%s, %s, %s, 'forfeit', 'approved', %s)
                 """, (season, phase, oid, note))
+
+        if phase == 1:
+            cur.execute("""
+                update keeper_voids set confirmed_at = now()
+                where season_year = %s and confirmed_at is null
+            """, (season,))
 
         cur.execute("""
             update keeper_windows set resolved_at = now(), updated_at = now()
