@@ -359,3 +359,86 @@ select, .entry input {
   text-align: center;
   color: var(--ink);
 }
+
+/* ---- keeper selection ---- */
+
+.keepers td, .keepers th { padding: 0.4rem 0.5rem; }
+.keepers .rd { font-weight: 700; width: 4rem; }
+.keepers .name { min-width: 12rem; }
+.void { font-size: 0.85rem; color: var(--ink-soft); white-space: nowrap; }
+
+.conflict {
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 2px solid var(--hazard);
+  background: rgba(240, 180, 41, 0.14);
+}
+.choose { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem; }
+.choose label { font-weight: 400; display: flex; align-items: center; gap: 0.35rem; }
+
+.slots { font-size: 1.05rem; }
+#chosen li { margin-bottom: 0.25rem; }
+
+.term-btn {
+  padding: 0.3rem 0.7rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid var(--ink);
+}
+.term-btn.needed { background: var(--hazard); }
+.term-btn.edit { border-width: 1px; font-weight: 400; margin-left: 0.5rem; }
+.chosen-term { font-size: 0.85rem; }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 18, 24, 0.72);
+}
+.modal[hidden] { display: none; }
+
+.modal-card {
+  width: min(32rem, 100%);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+.modal-body { padding: 1.5rem; }
+.modal-body h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  color: var(--ink);
+}
+
+.opt {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--ink);
+}
+.opt:hover, .opt:focus-visible { background: var(--hazard); }
+.opt b { display: block; font-size: 1.05rem; margin-bottom: 0.2rem; }
+.opt span { display: block; font-size: 0.88rem; color: var(--ink-soft); }
+.opt:hover span, .opt:focus-visible span { color: var(--ink); }
+
+.ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--stone-edge);
+  font-weight: 400;
+}

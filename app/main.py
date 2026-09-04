@@ -569,6 +569,54 @@ def rules(request: Request):
     return templates.TemplateResponse(request=request, name="rules.html")
 
 
+@app.get("/keepers", response_class=HTMLResponse)
+def keepers(request: Request, season: int = 0, owner: int = 0):
+    with get_db() as conn:
+        years = query(conn, """
+            select distinct for_season from keeper_eligibility order by for_season desc
+        """)
+        if not season and years:
+            season = years[0]["for_season"]
+
+        owners = query(conn, """
+            select distinct o.owner_id, o.username
+            from keeper_eligibility k
+            join owners o on o.owner_id = k.owner_id
+            where k.for_season = %s
+            order by o.username
+        """, (season,))
+
+        rows = []
+        if owner:
+            rows = query(conn, """
+                select * from keeper_eligibility
+                where for_season = %s and owner_id = %s
+                order by state, cost_round nulls last, full_name
+            """, (season, owner))
+
+        who = [o for o in owners if o["owner_id"] == owner]
+
+    contracts = [r for r in rows if r["state"] == "contract"]
+    choices = [r for r in rows if r["state"] in ("free", "must_sign")]
+    blocked = [r for r in rows if r["state"].startswith("ineligible")]
+
+    payload = [{
+        "id": r["player_id"], "name": r["full_name"], "pos": r["position"],
+        "state": r["state"], "cost": r["cost_round"],
+        "later": r["contract_price_later"],
+        "penalty": r["void_penalty_round"],
+        "basis": r["basis_source"],
+    } for r in contracts + choices]
+
+    return templates.TemplateResponse(
+        request=request, name="keepers.html",
+        context={"years": years, "season": season, "owners": owners,
+                 "owner": owner, "who": who[0] if who else None,
+                 "contracts": contracts, "choices": choices,
+                 "blocked": blocked, "payload": payload},
+    )
+
+
 @app.get("/health")
 def health():
     with get_db() as conn:
@@ -576,6 +624,7 @@ def health():
             cur.execute("select 1")
             cur.fetchone()
     return {"status": "ok", "database": "connected"}
+
 
 
 

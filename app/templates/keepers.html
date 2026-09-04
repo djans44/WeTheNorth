@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Keeper selection | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Keeper selection</h1>
+    <p class="lede">Three keepers. Contracts fill slots automatically unless voided.</p>
+  </header>
+
+  <section>
+    <form method="get" action="/keepers" class="picker">
+      <label for="season">Season</label>
+      <select id="season" name="season">
+        {% for y in years %}
+          <option value="{{ y.for_season }}" {% if y.for_season == season %}selected{% endif %}>{{ y.for_season }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="owner">Manager</label>
+      <select id="owner" name="owner">
+        <option value="0">&mdash;</option>
+        {% for o in owners %}
+          <option value="{{ o.owner_id }}" {% if o.owner_id == owner %}selected{% endif %}>{{ o.username }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit">Load</button>
+    </form>
+  </section>
+
+  {% if who %}
+  <section>
+    <h2>Under contract</h2>
+    {% if contracts %}
+      <p class="note">These fill keeper slots automatically. Voiding frees the slot
+        and forces a defence pick at the round shown.</p>
+      <table class="keepers">
+        <thead>
+          <tr><th>Player</th><th>Pos</th><th>Cost</th><th>Through</th><th>Void</th></tr>
+        </thead>
+        <tbody>
+        {% for c in contracts %}
+          <tr>
+            <td class="name">{{ c.full_name }}</td>
+            <td>{{ c.position }}</td>
+            <td class="rd">R{{ c.cost_round }}</td>
+            <td>{{ c.final_season }}</td>
+            <td>
+              <label class="void">
+                <input type="checkbox" class="void-box" data-id="{{ c.player_id }}"
+                       data-penalty="{{ c.void_penalty_round }}">
+                void &rarr; DEF at R{{ c.void_penalty_round }}
+              </label>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="note">No contracts. All three slots are free choices.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Available to keep</h2>
+    <table class="keepers">
+      <thead>
+        <tr><th>Keep</th><th>Player</th><th>Pos</th><th>Cost</th><th>Basis</th><th>Contract</th></tr>
+      </thead>
+      <tbody>
+      {% for c in choices %}
+        <tr>
+          <td><input type="checkbox" class="pick-box" data-id="{{ c.player_id }}"></td>
+          <td class="name">{{ c.full_name }}</td>
+          <td>{{ c.position }}</td>
+          <td class="rd">R{{ c.cost_round }}</td>
+          <td class="tm">{{ c.basis_source }}</td>
+          <td class="term-cell" data-id="{{ c.player_id }}">
+            {% if c.state == "must_sign" %}
+              <button type="button" class="term-btn" data-id="{{ c.player_id }}">Choose term</button>
+            {% else %}
+              <span class="tm">no commitment</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section id="summary">
+    <h2>Your selection</h2>
+    <p class="slots"><b><span id="used">0</span> of 3</b> slots used.</p>
+    <div id="conflicts"></div>
+    <ul id="chosen" class="records"></ul>
+    <p id="warn" class="note"></p>
+    <button type="button" id="submit" disabled>Submit selection</button>
+    <p class="note">Submitting is not wired up yet.</p>
+  </section>
+
+  {% if blocked %}
+  <section>
+    <h2>Not eligible</h2>
+    <ul class="records">
+    {% for b in blocked %}
+      <li>{{ b.full_name }} &mdash;
+        {% if b.state == "ineligible_expired" %}contract expired{% else %}kept four seasons{% endif %}</li>
+    {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="tape"></div>
+      <div class="modal-body">
+        <h3 id="modal-title"></h3>
+        <p id="modal-sub" class="note"></p>
+        <div id="modal-options"></div>
+        <button type="button" class="ghost" id="modal-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script id="players" type="application/json">{{ payload|tojson }}</script>
+  <script id="meta" type="application/json">{{ {"season": season}|tojson }}</script>
+  <script src="{{ static_url('keepers.js') }}"></script>
+  {% endif %}
+</div>
+{% endblock %}

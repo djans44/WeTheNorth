@@ -30,6 +30,7 @@
           <li class="sep"><a href="/teams">All managers</a></li>
         </ul>
       </li>
+      <li><a href="/keepers" {% if path.startswith('/keeper') %}class="on"{% endif %}>Keeper selection</a></li>
       <li><a href="/rules" {% if path == '/rules' %}class="on"{% endif %}>Rules</a></li>
       {% if request.session.get("is_admin") %}
       <li class="has-menu">
@@ -48,3 +49,4 @@
   {% block content %}{% endblock %}
 </body>
 </html>
+
