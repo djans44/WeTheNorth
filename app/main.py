@@ -29,8 +29,6 @@ async def require_login(request: Request, call_next):
     return await call_next(request)
 
 
-# Added after the middleware above so it sits outside it in the stack,
-# which is what makes request.session available inside it.
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.environ.get("SECRET_KEY", "dev-only-insecure-key"),
@@ -50,19 +48,14 @@ def static_url(path: str) -> str:
     return f"/static/{path}?v={stamp}"
 
 
-templates.env.globals["static_url"] = static_url
-
-
 def ordinal(n):
     if n is None:
         return ""
-    if 10 <= n % 100 <= 20:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
     return f"{n}{suffix}"
 
 
+templates.env.globals["static_url"] = static_url
 templates.env.globals["ordinal"] = ordinal
 
 
@@ -77,6 +70,7 @@ def query(conn, sql, params=None):
 
 
 _owner_cache = {"at": 0.0, "rows": []}
+_season_cache = {"at": 0.0, "rows": []}
 
 
 def nav_owners():
@@ -86,18 +80,12 @@ def nav_owners():
             with get_db() as conn:
                 _owner_cache["rows"] = query(conn, """
                     select username from owner_all_time_stats
-                    where seasons_played > 0
-                    order by username
+                    where seasons_played > 0 order by username
                 """)
                 _owner_cache["at"] = now
         except Exception:
             pass
     return _owner_cache["rows"]
-
-
-templates.env.globals["nav_owners"] = nav_owners
-
-_season_cache = {"at": 0.0, "rows": []}
 
 
 def nav_seasons():
@@ -114,6 +102,7 @@ def nav_seasons():
     return _season_cache["rows"]
 
 
+templates.env.globals["nav_owners"] = nav_owners
 templates.env.globals["nav_seasons"] = nav_seasons
 
 
@@ -122,25 +111,20 @@ def home(request: Request, error: int = 0):
     if request.session.get("owner_id"):
         return RedirectResponse(url="/current", status_code=303)
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"error": error},
-    )
+        request=request, name="index.html", context={"error": error})
 
 
 @app.post("/login")
 async def login(request: Request):
     form = await request.form()
     email = (form.get("email") or "").strip()
-
     with get_db() as conn:
         rows = query(conn, """
-            select owner_id, username, is_admin
-            from owners
+            select owner_id, username, is_admin from owners
             where email is not null and lower(email) = lower(%s)
         """, (email,))
-
     if not rows:
         return RedirectResponse(url="/?error=1", status_code=303)
-
     request.session["owner_id"] = rows[0]["owner_id"]
     request.session["username"] = rows[0]["username"]
     request.session["is_admin"] = rows[0]["is_admin"]
@@ -157,19 +141,16 @@ def logout(request: Request):
 def history(request: Request):
     with get_db() as conn:
         seasons = query(conn, """
-            select * from season_results
-            where champion is not null
+            select * from season_results where champion is not null
             order by season_year desc
         """)
         standings = query(conn, """
-            select * from owner_all_time_stats
-            where seasons_played > 0
+            select * from owner_all_time_stats where seasons_played > 0
             order by win_pct desc, points_for desc
         """)
         h2h_rows = query(conn, "select * from owner_head_to_head")
         projections = query(conn, """
-            select * from owner_projection_stats
-            order by avg_vs_projection desc
+            select * from owner_projection_stats order by avg_vs_projection desc
         """)
         high = query(conn, """
             select username, team_name, season_year, week, points_for
@@ -181,14 +162,12 @@ def history(request: Request):
         """)
         blowouts = query(conn, """
             select username, opponent_username, season_year, week,
-                   points_for, points_against,
-                   points_for - points_against as margin
+                   points_for, points_against, points_for - points_against as margin
             from game_log where result = 'W' order by margin desc limit 5
         """)
         nailbiters = query(conn, """
             select username, opponent_username, season_year, week,
-                   points_for, points_against,
-                   points_for - points_against as margin
+                   points_for, points_against, points_for - points_against as margin
             from game_log where result = 'W' order by margin asc limit 5
         """)
         shootouts = query(conn, """
@@ -196,40 +175,34 @@ def history(request: Request):
                    points_for + points_against as combined
             from game_log where result = 'W' order by combined desc limit 5
         """)
-
     order = [s["username"] for s in standings]
     grid = {(r["username"], r["opponent_username"]): r for r in h2h_rows}
-
     return templates.TemplateResponse(
         request=request, name="history.html",
         context={"seasons": seasons, "standings": standings, "order": order,
                  "grid": grid, "projections": projections, "high": high,
                  "low": low, "blowouts": blowouts, "nailbiters": nailbiters,
-                 "shootouts": shootouts},
-    )
+                 "shootouts": shootouts})
 
 
 @app.get("/teams", response_class=HTMLResponse)
 def teams(request: Request):
     with get_db() as conn:
         owners = query(conn, """
-            select o.*, ow.is_retired
-            from owner_all_time_stats o
+            select o.*, ow.is_retired from owner_all_time_stats o
             join owners ow on ow.owner_id = o.owner_id
             where o.seasons_played > 0
             order by o.win_pct desc, o.points_for desc
         """)
     return templates.TemplateResponse(
-        request=request, name="teams.html", context={"owners": owners},
-    )
+        request=request, name="teams.html", context={"owners": owners})
 
 
 @app.get("/team/{name}", response_class=HTMLResponse)
 def team(request: Request, name: str):
     with get_db() as conn:
         rows = query(conn, """
-            select o.*, ow.is_retired
-            from owner_all_time_stats o
+            select o.*, ow.is_retired from owner_all_time_stats o
             join owners ow on ow.owner_id = o.owner_id
             where lower(o.username) = lower(%s)
         """, (name,))
@@ -237,51 +210,41 @@ def team(request: Request, name: str):
             raise HTTPException(status_code=404, detail="No such owner")
         owner = rows[0]
         oid = owner["owner_id"]
-
         seasons = query(conn, """
-            select
-                s.season_year, s.team_name, s.wins, s.losses, s.ties,
-                s.points_for, s.points_against, s.made_playoffs, s.final_rank,
-                case
-                    when sr.champion_owner_id  = %s then 'Champion'
-                    when sr.runner_up_owner_id = %s then 'Runner-up'
-                    when sr.third_owner_id     = %s then 'Third'
-                    when s.made_playoffs            then 'Playoffs'
-                    else ''
-                end as finish
+            select s.season_year, s.team_name, s.wins, s.losses, s.ties,
+                   s.points_for, s.points_against, s.made_playoffs, s.final_rank,
+                   case
+                       when sr.champion_owner_id  = %s then 'Champion'
+                       when sr.runner_up_owner_id = %s then 'Runner-up'
+                       when sr.third_owner_id     = %s then 'Third'
+                       when s.made_playoffs            then 'Playoffs'
+                       else ''
+                   end as finish
             from team_season_stats s
             left join season_results sr on sr.season_year = s.season_year
             where s.owner_id = %s and s.games_played > 0
             order by s.season_year desc
         """, (oid, oid, oid, oid))
-
         h2h = query(conn, """
-            select * from owner_head_to_head
-            where owner_id = %s
+            select * from owner_head_to_head where owner_id = %s
             order by wins - losses desc, opponent_username
         """, (oid,))
-
         best = query(conn, """
             select season_year, week, points_for, opponent_username, result
-            from game_log where owner_id = %s
-            order by points_for desc limit 3
+            from game_log where owner_id = %s order by points_for desc limit 3
         """, (oid,))
         worst = query(conn, """
             select season_year, week, points_for, opponent_username, result
-            from game_log where owner_id = %s
-            order by points_for asc limit 3
+            from game_log where owner_id = %s order by points_for asc limit 3
         """, (oid,))
-
         proj_rows = query(conn, """
             select * from owner_projection_stats where owner_id = %s
         """, (oid,))
-        projection = proj_rows[0] if proj_rows else None
-
     return templates.TemplateResponse(
         request=request, name="team.html",
         context={"owner": owner, "seasons": seasons, "h2h": h2h,
-                 "best": best, "worst": worst, "projection": projection},
-    )
+                 "best": best, "worst": worst,
+                 "projection": proj_rows[0] if proj_rows else None})
 
 
 @app.get("/seasons", response_class=HTMLResponse)
@@ -299,8 +262,7 @@ def seasons_index(request: Request):
             order by s.season_year desc
         """)
     return templates.TemplateResponse(
-        request=request, name="seasons.html", context={"seasons": rows},
-    )
+        request=request, name="seasons.html", context={"seasons": rows})
 
 
 @app.get("/current")
@@ -322,13 +284,10 @@ def season(request: Request, year: int):
         """, (year,))
         if not head:
             raise HTTPException(status_code=404, detail="No such season")
-
         standings = query(conn, """
-            select * from team_season_stats
-            where season_year = %s
+            select * from team_season_stats where season_year = %s
             order by final_rank nulls last, wins desc, points_for desc
         """, (year,))
-
         games = query(conn, """
             select m.week, m.game_type,
                    ta.team_name as team_a, oa.username as owner_a,
@@ -343,24 +302,194 @@ def season(request: Request, year: int):
             where m.season_year = %s
             order by m.week, m.game_type, m.matchup_id
         """, (year,))
-
         records = query(conn, """
             select username, week, points_for, opponent_username
             from game_log where season_year = %s
             order by points_for desc limit 3
         """, (year,))
-
     weeks = []
     for g in games:
         if not weeks or weeks[-1]["week"] != g["week"]:
             weeks.append({"week": g["week"], "games": []})
         weeks[-1]["games"].append(g)
-
     return templates.TemplateResponse(
         request=request, name="season.html",
         context={"s": head[0], "standings": standings,
-                 "weeks": weeks, "records": records},
-    )
+                 "weeks": weeks, "records": records})
+
+
+@app.get("/rules", response_class=HTMLResponse)
+def rules(request: Request):
+    return templates.TemplateResponse(request=request, name="rules.html")
+
+
+def keeper_context(conn, season, owner_id):
+    windows = query(conn, """
+        select phase, opens_at, closes_at, resolved_at,
+               (resolved_at is null and now() between opens_at and closes_at) as is_open
+        from keeper_windows where season_year = %s order by phase
+    """, (season,))
+    elig = query(conn, """
+        select * from keeper_eligibility
+        where for_season = %s and owner_id = %s
+        order by cost_round nulls last, full_name
+    """, (season, owner_id))
+    contract_phase = {p["phase"]: p for p in query(conn, """
+        select phase, player_id, contract_id, cost_round, years_remaining
+        from keeper_phase_plan where season_year = %s and owner_id = %s
+    """, (season, owner_id))}
+    plans = {p["phase"]: p for p in query(conn, """
+        select phase, player_id, term_years from keeper_plans
+        where season_year = %s and owner_id = %s
+    """, (season, owner_id))}
+    subs = {s["phase"]: s for s in query(conn, """
+        select s.phase, s.player_id, s.cost_round, s.term_years, s.origin,
+               s.status, p.full_name
+        from keeper_submissions s
+        left join players p on p.player_id = s.player_id
+        where s.season_year = %s and s.owner_id = %s
+    """, (season, owner_id))}
+    voids = {v["contract_id"] for v in query(conn, """
+        select contract_id from keeper_voids where season_year = %s and owner_id = %s
+    """, (season, owner_id))}
+
+    by_id = {e["player_id"]: e for e in elig}
+    phases = []
+    for w in windows:
+        n = w["phase"]
+        c = contract_phase.get(n)
+        p = plans.get(n)
+        phases.append({
+            "n": n, "opens_at": w["opens_at"], "closes_at": w["closes_at"],
+            "resolved_at": w["resolved_at"], "is_open": w["is_open"],
+            "contract": by_id.get(c["player_id"]) if c else None,
+            "submission": subs.get(n),
+            "planned_id": p["player_id"] if p else None,
+            "planned_term": p["term_years"] if p else None,
+        })
+
+    choices = [e for e in elig if e["state"] in ("free", "must_sign")]
+    return {
+        "windows": windows, "phases": phases,
+        "contracts": [e for e in elig if e["state"] == "contract"],
+        "choices": choices,
+        "blocked": [e for e in elig if e["state"].startswith("ineligible")],
+        "voids": voids,
+        "payload": [{
+            "id": e["player_id"], "name": e["full_name"], "pos": e["position"],
+            "state": e["state"], "cost": e["cost_round"],
+            "later": e["contract_price_later"], "basis": e["basis_source"],
+        } for e in choices],
+    }
+
+
+# ---------------------------------------------------------------------------
+# REPLACE the existing keepers() function in app/main.py with this whole block.
+#
+# Find this line in app/main.py:
+#
+#     @app.get("/keepers", response_class=HTMLResponse)
+#
+# Select from there down to (but NOT including) the line:
+#
+#     @app.post("/keepers/plan")
+#
+# ...and paste this in its place.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/keepers", response_class=HTMLResponse)
+def keepers(request: Request, season: int = 0, owner: int = 0,
+            error: str = "", submitted: int = 0):
+    me = request.session.get("owner_id")
+    is_admin = bool(request.session.get("is_admin"))
+
+    with get_db() as conn:
+        years = query(conn, """
+            select distinct season_year from keeper_windows order by season_year desc
+        """)
+        if not years:
+            return templates.TemplateResponse(
+                request=request, name="keepers.html",
+                context={"years": [], "season": 0, "owners": [], "owner": 0,
+                         "who": None, "is_admin": is_admin, "editable": False,
+                         "ctx": None, "error": error, "submitted": submitted})
+
+        if not season:
+            season = years[0]["season_year"]
+
+        owners = query(conn, """
+            select distinct o.owner_id, o.username
+            from keeper_eligibility k join owners o on o.owner_id = k.owner_id
+            where k.for_season = %s order by o.username
+        """, (season,))
+
+        target = owner if (is_admin and owner) else me
+        who = next((o for o in owners if o["owner_id"] == target), None)
+        ctx = keeper_context(conn, season, target) if who else None
+
+    return templates.TemplateResponse(
+        request=request, name="keepers.html",
+        context={"years": years, "season": season, "owners": owners,
+                 "owner": target, "who": who, "is_admin": is_admin,
+                 "editable": is_admin or target == me, "ctx": ctx,
+                 "error": error, "submitted": submitted})
+
+
+@app.post("/keepers/plan")
+async def save_plan(request: Request):
+    me = request.session.get("owner_id")
+    is_admin = bool(request.session.get("is_admin"))
+    form = await request.form()
+    season = int(form["season"])
+    target = int(form.get("owner") or me)
+    if target != me and not is_admin:
+        raise HTTPException(status_code=403, detail="Not your selection")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                select phase, resolved_at from keeper_windows where season_year = %s
+            """, (season,))
+            resolved = {r["phase"] for r in cur.fetchall() if r["resolved_at"]}
+
+            for n in (1, 2, 3):
+                if n in resolved:
+                    continue
+                raw = (form.get(f"p{n}_player") or "").strip()
+                term = (form.get(f"p{n}_term") or "").strip()
+                cur.execute("""
+                    delete from keeper_plans
+                    where season_year = %s and phase = %s and owner_id = %s
+                """, (season, n, target))
+                if raw:
+                    cur.execute("""
+                        insert into keeper_plans
+                            (season_year, phase, owner_id, player_id,
+                             term_years, updated_by)
+                        values (%s, %s, %s, %s, %s, %s)
+                    """, (season, n, target, int(raw),
+                          int(term) if term else None, me))
+
+            if 1 not in resolved:
+                cur.execute("""
+                    delete from keeper_voids
+                    where season_year = %s and owner_id = %s and confirmed_at is null
+                """, (season, target))
+                for cid in form.getlist("void"):
+                    cur.execute("""
+                        insert into keeper_voids
+                            (season_year, contract_id, owner_id, penalty_round)
+                        select %s, k.contract_id, k.owner_id, k.void_penalty_round
+                        from keeper_eligibility k
+                        where k.for_season = %s and k.contract_id = %s
+                          and k.owner_id = %s
+                        on conflict do nothing
+                    """, (season, season, int(cid), target))
+        conn.commit()
+
+    return RedirectResponse(
+        url=f"/keepers?season={season}&owner={target}&saved=1", status_code=303)
 
 
 LAYOUTS = {
@@ -371,10 +500,8 @@ LAYOUTS = {
 }
 
 MODE_LABELS = {
-    "regular": "Regular season",
-    "quarterfinal": "Quarterfinals",
-    "semifinal": "Semifinals",
-    "final": "Final",
+    "regular": "Regular season", "quarterfinal": "Quarterfinals",
+    "semifinal": "Semifinals", "final": "Final",
 }
 
 WEEK_MODES = {w: {15: "quarterfinal", 16: "semifinal", 17: "final"}.get(w, "regular")
@@ -417,35 +544,28 @@ def admin_scores(request: Request, season: int = 0, week: int = 0,
                  mode: str = "", saved: int = 0):
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
-
     with get_db() as conn:
         years = query(conn, "select season_year from seasons order by season_year desc")
         if not season:
             season = years[0]["season_year"]
-
-        teams = query(conn, """
+        teams_list = query(conn, """
             select t.team_id, t.team_name, o.username
             from teams t join owners o on o.owner_id = t.owner_id
-            where t.season_year = %s
-            order by t.team_name
+            where t.season_year = %s order by t.team_name
         """, (season,))
-
         existing = []
         if week:
             existing = query(conn, """
                 select week, game_type, team_a_id, team_b_id,
                        team_a_points, team_b_points,
                        team_a_projected, team_b_projected
-                from matchups
-                where season_year = %s and week = %s
+                from matchups where season_year = %s and week = %s
                 order by game_type, matchup_id
             """, (season, week))
-
         filled = query(conn, """
             select week from matchups where season_year = %s
             group by week order by week
         """, (season,))
-
     requested = mode if mode in LAYOUTS else ""
     if requested:
         mode = requested
@@ -453,22 +573,19 @@ def admin_scores(request: Request, season: int = 0, week: int = 0,
         mode = infer_mode(existing)
     else:
         mode = WEEK_MODES.get(week, "regular")
-
     return templates.TemplateResponse(
         request=request, name="admin_scores.html",
         context={"years": years, "season": season, "week": week, "mode": mode,
                  "requested": requested, "week_modes": WEEK_MODES,
-                 "teams": teams, "rows": build_rows(mode, existing),
+                 "teams": teams_list, "rows": build_rows(mode, existing),
                  "filled": filled, "saved": saved, "errors": [],
-                 "labels": MODE_LABELS},
-    )
+                 "labels": MODE_LABELS})
 
 
 @app.post("/admin/scores")
 async def admin_scores_save(request: Request):
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
-
     form = await request.form()
     season = int(form["season"])
     week = int(form["week"])
@@ -492,7 +609,7 @@ async def admin_scores_save(request: Request):
 
     with get_db() as conn:
         years = query(conn, "select season_year from seasons order by season_year desc")
-        teams = query(conn, """
+        teams_list = query(conn, """
             select t.team_id, t.team_name, o.username
             from teams t join owners o on o.owner_id = t.owner_id
             where t.season_year = %s order by t.team_name
@@ -502,19 +619,15 @@ async def admin_scores_save(request: Request):
             group by week order by week
         """, (season,))
 
-    names = {t["team_id"]: t["team_name"] for t in teams}
+    names = {t["team_id"]: t["team_name"] for t in teams_list}
     errors = []
-
-    dupes = {t for t in seen if seen.count(t) > 1}
-    for t in sorted(dupes):
+    for t in sorted({x for x in seen if seen.count(x) > 1}):
         errors.append(f"{names.get(t, t)} appears more than once.")
-
     for i, row in enumerate(rows, start=1):
         if row["team_b_id"] and not row["team_a_id"]:
             errors.append(f"Row {i} has an opponent but no team.")
         if row["team_a_id"] and row["team_a_id"] == row["team_b_id"]:
             errors.append(f"Row {i} has a team playing itself.")
-
     if mode in ("regular", "quarterfinal", "semifinal"):
         missing = [n for tid, n in names.items() if tid not in seen]
         if missing:
@@ -525,9 +638,8 @@ async def admin_scores_save(request: Request):
             request=request, name="admin_scores.html", status_code=400,
             context={"years": years, "season": season, "week": week, "mode": mode,
                      "requested": mode, "week_modes": WEEK_MODES,
-                     "teams": teams, "rows": rows, "filled": filled,
-                     "saved": 0, "errors": errors, "labels": MODE_LABELS},
-        )
+                     "teams": teams_list, "rows": rows, "filled": filled,
+                     "saved": 0, "errors": errors, "labels": MODE_LABELS})
 
     prepared = []
     for row in rows:
@@ -564,59 +676,6 @@ async def admin_scores_save(request: Request):
         status_code=303)
 
 
-@app.get("/rules", response_class=HTMLResponse)
-def rules(request: Request):
-    return templates.TemplateResponse(request=request, name="rules.html")
-
-
-@app.get("/keepers", response_class=HTMLResponse)
-def keepers(request: Request, season: int = 0, owner: int = 0):
-    with get_db() as conn:
-        years = query(conn, """
-            select distinct for_season from keeper_eligibility order by for_season desc
-        """)
-        if not season and years:
-            season = years[0]["for_season"]
-
-        owners = query(conn, """
-            select distinct o.owner_id, o.username
-            from keeper_eligibility k
-            join owners o on o.owner_id = k.owner_id
-            where k.for_season = %s
-            order by o.username
-        """, (season,))
-
-        rows = []
-        if owner:
-            rows = query(conn, """
-                select * from keeper_eligibility
-                where for_season = %s and owner_id = %s
-                order by state, cost_round nulls last, full_name
-            """, (season, owner))
-
-        who = [o for o in owners if o["owner_id"] == owner]
-
-    contracts = [r for r in rows if r["state"] == "contract"]
-    choices = [r for r in rows if r["state"] in ("free", "must_sign")]
-    blocked = [r for r in rows if r["state"].startswith("ineligible")]
-
-    payload = [{
-        "id": r["player_id"], "name": r["full_name"], "pos": r["position"],
-        "state": r["state"], "cost": r["cost_round"],
-        "later": r["contract_price_later"],
-        "penalty": r["void_penalty_round"],
-        "basis": r["basis_source"],
-    } for r in contracts + choices]
-
-    return templates.TemplateResponse(
-        request=request, name="keepers.html",
-        context={"years": years, "season": season, "owners": owners,
-                 "owner": owner, "who": who[0] if who else None,
-                 "contracts": contracts, "choices": choices,
-                 "blocked": blocked, "payload": payload},
-    )
-
-
 @app.get("/health")
 def health():
     with get_db() as conn:
@@ -624,12 +683,3 @@ def health():
             cur.execute("select 1")
             cur.fetchone()
     return {"status": "ok", "database": "connected"}
-
-
-
-
-
-
-
-
-

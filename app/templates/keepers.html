@@ -6,82 +6,69 @@
   <header class="page-head">
     <div class="tape"></div>
     <h1>Keeper selection</h1>
-    <p class="lede">Three keepers. Contracts fill slots automatically unless voided.</p>
+    <p class="lede">
+      Three phases, one keeper each. Contracts fill the earliest phases
+      automatically. Plan ahead and your picks submit themselves when a window closes.
+    </p>
   </header>
 
+  {% if not years %}
+    <section><p class="note">No keeper windows have been set up yet.</p></section>
+  {% elif not who %}
+    <section><p class="note">You have no keeper eligibility for {{ season }}.</p></section>
+  {% else %}
+
+  {% if is_admin and owners|length > 1 %}
   <section>
     <form method="get" action="/keepers" class="picker">
-      <label for="season">Season</label>
-      <select id="season" name="season">
-        {% for y in years %}
-          <option value="{{ y.for_season }}" {% if y.for_season == season %}selected{% endif %}>{{ y.for_season }}</option>
-        {% endfor %}
-      </select>
-
-      <label for="owner">Manager</label>
+      <input type="hidden" name="season" value="{{ season }}">
+      <label for="owner">Acting for</label>
       <select id="owner" name="owner">
-        <option value="0">&mdash;</option>
         {% for o in owners %}
           <option value="{{ o.owner_id }}" {% if o.owner_id == owner %}selected{% endif %}>{{ o.username }}</option>
         {% endfor %}
       </select>
-
-      <button type="submit">Load</button>
+      <button type="submit">Switch</button>
     </form>
   </section>
+  {% endif %}
 
-  {% if who %}
+  {% if error %}
+  <section><div class="errors"><b>Not submitted.</b> {{ error }}</div></section>
+  {% endif %}
+  {% if submitted %}
+  <section><p class="note ok">Keeper {{ submitted }} submitted. It is now locked
+    and waiting for admin review.</p></section>
+  {% endif %}
+
+  <form method="post" action="/keepers/plan" id="planform">
+  <input type="hidden" name="season" value="{{ season }}">
+  <input type="hidden" name="owner" value="{{ owner }}">
+
+  {% if ctx.contracts %}
   <section>
-    <h2>Under contract</h2>
-    {% if contracts %}
-      <p class="note">These fill keeper slots automatically. Voiding frees the slot
-        and forces a defence pick at the round shown.</p>
-      <table class="keepers">
-        <thead>
-          <tr><th>Player</th><th>Pos</th><th>Cost</th><th>Through</th><th>Void</th></tr>
-        </thead>
-        <tbody>
-        {% for c in contracts %}
-          <tr>
-            <td class="name">{{ c.full_name }}</td>
-            <td>{{ c.position }}</td>
-            <td class="rd">R{{ c.cost_round }}</td>
-            <td>{{ c.final_season }}</td>
-            <td>
+    <h2>Contracts</h2>
+    <p class="note">Each fills a phase automatically. Voiding frees the slot and
+      obliges a defence pick. Voids are declared in phase 1.</p>
+    <table class="keepers">
+      <thead><tr><th>Player</th><th>Cost</th><th>Through</th><th>Void</th></tr></thead>
+      <tbody>
+      {% for c in ctx.contracts %}
+        <tr>
+          <td class="name">{{ c.full_name }} <span class="tm">{{ c.position }}</span></td>
+          <td class="rd">R{{ c.cost_round }}</td>
+          <td>{{ c.final_season }}</td>
+          <td>
+            {% if ctx.phases[0].resolved_at %}
+              <span class="tm">{% if c.contract_id in ctx.voids %}voided{% else %}locked{% endif %}</span>
+            {% else %}
               <label class="void">
-                <input type="checkbox" class="void-box" data-id="{{ c.player_id }}"
-                       data-penalty="{{ c.void_penalty_round }}">
+                <input type="checkbox" name="void" value="{{ c.contract_id }}"
+                       class="void-box" data-penalty="{{ c.void_penalty_round }}"
+                       {% if c.contract_id in ctx.voids %}checked{% endif %}
+                       {% if not editable %}disabled{% endif %}>
                 void &rarr; DEF at R{{ c.void_penalty_round }}
               </label>
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="note">No contracts. All three slots are free choices.</p>
-    {% endif %}
-  </section>
-
-  <section>
-    <h2>Available to keep</h2>
-    <table class="keepers">
-      <thead>
-        <tr><th>Keep</th><th>Player</th><th>Pos</th><th>Cost</th><th>Basis</th><th>Contract</th></tr>
-      </thead>
-      <tbody>
-      {% for c in choices %}
-        <tr>
-          <td><input type="checkbox" class="pick-box" data-id="{{ c.player_id }}"></td>
-          <td class="name">{{ c.full_name }}</td>
-          <td>{{ c.position }}</td>
-          <td class="rd">R{{ c.cost_round }}</td>
-          <td class="tm">{{ c.basis_source }}</td>
-          <td class="term-cell" data-id="{{ c.player_id }}">
-            {% if c.state == "must_sign" %}
-              <button type="button" class="term-btn" data-id="{{ c.player_id }}">Choose term</button>
-            {% else %}
-              <span class="tm">no commitment</span>
             {% endif %}
           </td>
         </tr>
@@ -89,22 +76,114 @@
       </tbody>
     </table>
   </section>
+  {% endif %}
 
-  <section id="summary">
-    <h2>Your selection</h2>
-    <p class="slots"><b><span id="used">0</span> of 3</b> slots used.</p>
-    <div id="conflicts"></div>
-    <ul id="chosen" class="records"></ul>
-    <p id="warn" class="note"></p>
-    <button type="button" id="submit" disabled>Submit selection</button>
-    <p class="note">Submitting is not wired up yet.</p>
+  <section>
+    <h2>Phases</h2>
+    <div class="phase-strip">
+    {% for ph in ctx.phases %}
+      <div class="phase-card {% if ph.resolved_at %}done{% elif ph.is_open %}open{% endif %}">
+        <h3>Keeper {{ ph.n }}
+          {% if ph.resolved_at %}<span class="pill">closed</span>
+          {% elif ph.is_open %}<span class="pill live">open</span>
+          {% else %}<span class="pill">upcoming</span>{% endif %}
+        </h3>
+        <p class="tm">{{ ph.opens_at.strftime("%b %d") }} &ndash; {{ ph.closes_at.strftime("%b %d") }}</p>
+        {% if ph.submission %}
+          <p class="settled">
+            {% if ph.submission.origin == "forfeit" %}<b>Forfeited</b>
+            {% else %}<b>R{{ ph.submission.cost_round }} {{ ph.submission.full_name }}</b>
+              <span class="tm">{{ ph.submission.origin }}</span>{% endif %}
+          </p>
+        {% elif ph.contract %}
+          <p class="settled">
+            <b>R{{ ph.contract.cost_round }} {{ ph.contract.full_name }}</b>
+            <span class="tm">contract</span>
+          </p>
+        {% else %}
+          <p class="slot-fill" data-phase="{{ ph.n }}">
+            <span class="tm">nothing planned</span>
+          </p>
+          <input type="hidden" name="p{{ ph.n }}_player" class="pick-field"
+                 data-phase="{{ ph.n }}" value="{{ ph.planned_id or '' }}">
+          <input type="hidden" name="p{{ ph.n }}_term" class="term-field"
+                 data-phase="{{ ph.n }}" value="{{ ph.planned_term or '' }}">
+          {% if editable %}
+            <button type="submit" class="submit-phase" formaction="/keepers/submit"
+                    name="phase" value="{{ ph.n }}"
+                    {% if not ph.is_open and not is_admin %}disabled{% endif %}>
+              Submit Keeper {{ ph.n }}
+            </button>
+            {% if not ph.is_open and not is_admin %}
+              <span class="tm">window not open</span>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+    </div>
   </section>
 
-  {% if blocked %}
+  {% set ns = namespace(open=[]) %}
+  {% for ph in ctx.phases %}
+    {% if not ph.resolved_at and not ph.contract and not ph.submission %}
+      {% set ns.open = ns.open + [ph] %}
+    {% endif %}
+  {% endfor %}
+
+  {% if ns.open and editable %}
+  <section>
+    <h2>Available to keep</h2>
+    <p class="note">Assign a player to a phase. Rounds already used are skipped
+      automatically, so a clash moves the later pick to an earlier round.
+      Click a selected button again to clear it.</p>
+    <table class="keepers picker-table">
+      <thead>
+        <tr>
+          <th>Player</th><th>Pos</th><th>Cost</th><th>Basis</th>
+          {% for ph in ns.open %}<th class="ph-col">K{{ ph.n }}</th>{% endfor %}
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for c in ctx.choices %}
+        <tr data-id="{{ c.player_id }}">
+          <td class="name">{{ c.full_name }}</td>
+          <td>{{ c.position }}</td>
+          <td class="rd">R{{ c.cost_round }}</td>
+          <td class="tm">{{ c.basis_source }}{% if c.state == "must_sign" %} &middot; needs term{% endif %}</td>
+          {% for ph in ns.open %}
+            <td class="ph-col">
+              <input type="radio" class="assign" name="phase{{ ph.n }}"
+                     data-phase="{{ ph.n }}" data-id="{{ c.player_id }}"
+                     {% if c.player_id == ph.planned_id %}checked{% endif %}>
+            </td>
+          {% endfor %}
+          <td class="term-line" data-id="{{ c.player_id }}"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" class="ghost" id="clear">Clear all</button>
+  </section>
+  {% endif %}
+
+  <section id="summary">
+    <h2>Plan</h2>
+    <ul id="chosen" class="records"></ul>
+    <p id="warn" class="note"></p>
+    {% if editable %}
+      <button type="submit">Save plan</button>
+      <p class="note">Saved plans submit automatically when each window closes.</p>
+    {% endif %}
+  </section>
+  </form>
+
+  {% if ctx.blocked %}
   <section>
     <h2>Not eligible</h2>
     <ul class="records">
-    {% for b in blocked %}
+    {% for b in ctx.blocked %}
       <li>{{ b.full_name }} &mdash;
         {% if b.state == "ineligible_expired" %}contract expired{% else %}kept four seasons{% endif %}</li>
     {% endfor %}
@@ -124,7 +203,7 @@
     </div>
   </div>
 
-  <script id="players" type="application/json">{{ payload|tojson }}</script>
+  <script id="players" type="application/json">{{ ctx.payload|tojson }}</script>
   <script id="meta" type="application/json">{{ {"season": season}|tojson }}</script>
   <script src="{{ static_url('keepers.js') }}"></script>
   {% endif %}

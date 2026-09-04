@@ -1,240 +1,213 @@
 (function () {
-  var players = JSON.parse(document.getElementById("players").textContent);
-  var meta = JSON.parse(document.getElementById("meta").textContent);
-  var season = meta.season;
+  var el = document.getElementById("players");
+  if (!el) { return; }
+  var players = JSON.parse(el.textContent);
+  var season = JSON.parse(document.getElementById("meta").textContent).season;
   var byId = {};
-  players.forEach(function (p) { byId[p.id] = p; });
+  players.forEach(function (p) { byId[String(p.id)] = p; });
 
-  var voids = document.querySelectorAll(".void-box");
-  var picks = document.querySelectorAll(".pick-box");
+  var radios = Array.prototype.slice.call(document.querySelectorAll(".assign"));
+  var voids = Array.prototype.slice.call(document.querySelectorAll(".void-box"));
   var modal = document.getElementById("modal");
-  var terms = {};
   var openFor = null;
-  var bumped = {};
 
-  function openModal(id) {
-    var p = byId[id];
-    document.getElementById("modal-title").textContent = p.name;
-    document.getElementById("modal-sub").textContent =
-      p.pos + " \u00b7 keeper year two \u00b7 costs R" + p.cost + " in " + season +
-      " either way. The choice is what happens after.";
-
-    var opts = document.getElementById("modal-options");
-    opts.innerHTML =
-      "<button type='button' class='opt' data-term='1'>" +
-        "<b>1 year</b>" +
-        "<span>R" + p.cost + " in " + season + ", then ineligible in " + (season + 1) + ".</span>" +
-      "</button>" +
-      "<button type='button' class='opt' data-term='3'>" +
-        "<b>3 years</b>" +
-        "<span>R" + p.cost + " in " + season + ", then R" + p.later + " in " +
-        (season + 1) + " and " + (season + 2) + ". Ineligible in " + (season + 3) + ".</span>" +
-      "</button>";
-
-    opts.querySelectorAll(".opt").forEach(function (b) {
-      b.addEventListener("click", function () {
-        terms[id] = b.dataset.term;
-        closeModal();
-      });
-    });
-
-    openFor = id;
-    modal.hidden = false;
-    document.getElementById("modal-cancel").focus();
+  function field(cls, phase) {
+    return document.querySelector("." + cls + "[data-phase='" + phase + "']");
   }
 
-  function closeModal() {
-    modal.hidden = true;
-    if (openFor && !terms[openFor]) {
-      var b = document.querySelector(".pick-box[data-id='" + openFor + "']");
-      if (b) { b.checked = false; }
-    }
-    openFor = null;
-    render();
-  }
-
-  document.getElementById("modal-cancel").addEventListener("click", closeModal);
-  modal.addEventListener("click", function (e) {
-    if (e.target === modal) closeModal();
-  });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") closeModal();
-  });
-
-  function activeContracts() {
-    var out = [];
-    players.forEach(function (p) {
-      if (p.state !== "contract") return;
-      var box = document.querySelector(".void-box[data-id='" + p.id + "']");
-      if (!box || !box.checked) out.push(p);
+  function assigned() {
+    var out = {};
+    radios.forEach(function (r) {
+      if (r.checked) { out[r.dataset.phase] = r.dataset.id; }
     });
     return out;
   }
 
-  function chosen() {
+  function openModal(phase, id) {
+    var p = byId[id];
+    if (!p) { return; }
+    openFor = phase;
+    document.getElementById("modal-title").textContent = p.name;
+    document.getElementById("modal-sub").textContent =
+      p.pos + " \u00b7 keeper year two \u00b7 R" + p.cost + " in " + season +
+      " either way. The choice is what happens after.";
+    document.getElementById("modal-options").innerHTML =
+      "<button type='button' class='opt' data-term='1'><b>1 year</b><span>R" +
+      p.cost + " in " + season + ", then ineligible in " + (season + 1) +
+      ".</span></button><button type='button' class='opt' data-term='3'><b>3 years</b>" +
+      "<span>R" + p.cost + " in " + season + ", then R" + p.later + " in " +
+      (season + 1) + " and " + (season + 2) + ".</span></button>";
+    document.querySelectorAll("#modal-options .opt").forEach(function (b) {
+      b.addEventListener("click", function () {
+        field("term-field", phase).value = b.dataset.term;
+        modal.hidden = true;
+        openFor = null;
+        render();
+      });
+    });
+    modal.hidden = false;
+    document.getElementById("modal-cancel").focus();
+  }
+
+  function cancelModal() {
+    if (openFor !== null && !field("term-field", openFor).value) {
+      radios.forEach(function (r) {
+        if (r.dataset.phase === openFor) { r.checked = false; r.dataset.wasChecked = "0"; }
+      });
+    }
+    modal.hidden = true;
+    openFor = null;
+    render();
+  }
+
+  document.getElementById("modal-cancel").addEventListener("click", cancelModal);
+  modal.addEventListener("click", function (e) { if (e.target === modal) { cancelModal(); } });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modal.hidden) { cancelModal(); }
+  });
+
+  function lockedRounds() {
     var out = [];
-    picks.forEach(function (b) { if (b.checked) out.push(byId[b.dataset.id]); });
+    document.querySelectorAll(".settled b").forEach(function (b) {
+      var m = /^R(\d+)/.exec(b.textContent.trim());
+      if (m) { out.push(parseInt(m[1], 10)); }
+    });
     return out;
   }
 
   function firstFree(from, taken) {
     for (var r = from; r >= 1; r--) {
-      if (taken.indexOf(r) === -1) return r;
+      if (taken.indexOf(r) === -1) { return r; }
     }
     return null;
   }
 
-  function renderTermCells() {
-    document.querySelectorAll(".term-cell").forEach(function (cell) {
-      var id = cell.dataset.id;
-      var p = byId[id];
-      if (!p || p.state !== "must_sign") return;
-      var box = document.querySelector(".pick-box[data-id='" + id + "']");
-      var picked = box && box.checked;
-      var t = terms[id];
-
-      if (!picked) {
-        cell.innerHTML = "<span class='tm'>select to choose a term</span>";
-        return;
-      }
-      if (!t) {
-        cell.innerHTML = "<button type='button' class='term-btn needed' data-id='" +
-          id + "'>Choose term</button>";
-      } else {
-        var label = t === "1" ? "1 year" : "3 years, then R" + p.later;
-        cell.innerHTML = "<span class='chosen-term'>" + label + "</span>" +
-          "<button type='button' class='term-btn edit' data-id='" + id + "'>Edit</button>";
-      }
-      cell.querySelectorAll(".term-btn").forEach(function (b) {
-        b.addEventListener("click", function () { openModal(b.dataset.id); });
-      });
-    });
-  }
-
   function render() {
-    var held = activeContracts();
-    var sel = chosen();
-    var all = held.concat(sel);
-    document.getElementById("used").textContent = all.length;
+    var taken = lockedRounds();
+    var lines = [];
+    var problems = [];
+    var picked = assigned();
+    var seen = [];
 
-    var taken = held.map(function (p) { return p.cost; });
-    var resolved = held.map(function (p) {
-      return { p: p, round: p.cost, locked: true };
+    document.querySelectorAll(".settled b").forEach(function (b) {
+      lines.push({ round: 0, text: b.textContent.trim() + " <span class='tm'>locked</span>" });
     });
-    var conflicts = [];
-
-    sel.forEach(function (p) {
-      if (taken.indexOf(p.cost) === -1) {
-        taken.push(p.cost);
-        resolved.push({ p: p, round: p.cost, locked: false });
-      } else {
-        conflicts.push(p);
-      }
+    document.querySelectorAll(".term-line").forEach(function (t) { t.innerHTML = ""; });
+    document.querySelectorAll(".slot-fill").forEach(function (s) {
+      s.innerHTML = "<span class='tm'>nothing planned</span>";
+    });
+    document.querySelectorAll(".picker-table tbody tr").forEach(function (tr) {
+      tr.classList.remove("picked");
     });
 
-    var box = document.getElementById("conflicts");
-    box.innerHTML = "";
-    var impossible = false;
+    Object.keys(picked).sort().forEach(function (phase) {
+      var id = picked[phase];
+      var p = byId[id];
+      var pf = field("pick-field", phase);
+      if (pf) { pf.value = id; }
 
-    conflicts.forEach(function (p) {
-      var rival = resolved.filter(function (r) { return r.round === p.cost; })[0];
-      var target = firstFree(p.cost - 1, taken);
-
-      if (target === null) {
-        impossible = true;
-        box.innerHTML += "<div class='errors'><b>" + p.name +
-          " cannot be kept.</b> No earlier round is free" +
-          (p.cost === 1 ? ", and two round 1 keepers are not allowed." : ".") + "</div>";
+      if (seen.indexOf(id) !== -1) {
+        problems.push(p.name + " is assigned to more than one phase.");
         return;
       }
+      seen.push(id);
 
-      var canMoveRival = rival && !rival.locked;
-      var pick = bumped[p.id];
-      var html = "<div class='conflict'><b>Round " + p.cost + " conflict.</b> " +
-        p.name + " and " + rival.p.name + " both cost R" + p.cost +
-        ". One moves to R" + target + ".";
-
-      if (!canMoveRival) {
-        html += " " + rival.p.name + " is under contract and cannot move, so " +
-          p.name + " goes to R" + target + ".";
-      } else {
-        html += "<div class='choose'>" +
-          "<label><input type='radio' name='bump" + p.id + "' value='self'" +
-          (pick !== "rival" ? " checked" : "") + "> " + p.name + " &rarr; R" + target + "</label>" +
-          "<label><input type='radio' name='bump" + p.id + "' value='rival'" +
-          (pick === "rival" ? " checked" : "") + "> " + rival.p.name + " &rarr; R" + target + "</label>" +
-          "</div>";
+      var rd = firstFree(p.cost, taken);
+      if (rd === null) {
+        problems.push(p.name + " cannot be kept, no free round at or below R" + p.cost + ".");
+        return;
       }
-      box.innerHTML += html + "</div>";
+      taken.push(rd);
 
-      taken.push(target);
-      if (pick === "rival" && canMoveRival) {
-        rival.round = target;
-        resolved.push({ p: p, round: p.cost, locked: false });
-      } else {
-        resolved.push({ p: p, round: target, locked: false });
+      var row = document.querySelector(".picker-table tr[data-id='" + id + "']");
+      if (row) { row.classList.add("picked"); }
+
+      var slot = document.querySelector(".slot-fill[data-phase='" + phase + "']");
+      if (slot) { slot.innerHTML = "<b>R" + rd + " " + p.name + "</b>"; }
+
+      var note = "R" + rd;
+      if (rd !== p.cost) { note += " <span class='tm'>from R" + p.cost + "</span>"; }
+      if (p.state === "must_sign") {
+        var t = field("term-field", phase).value;
+        if (!t) {
+          problems.push(p.name + " needs a contract term.");
+          note += " <button type='button' class='term-btn needed' data-phase='" +
+                  phase + "' data-id='" + id + "'>Choose term</button>";
+        } else {
+          note += " &middot; " + (t === "1" ? "1 yr" : "3 yr then R" + p.later) +
+                  " <button type='button' class='term-btn edit' data-phase='" +
+                  phase + "' data-id='" + id + "'>Edit</button>";
+        }
+      }
+      var cell = document.querySelector(".term-line[data-id='" + id + "']");
+      if (cell) { cell.innerHTML = note; }
+
+      lines.push({ round: rd, text: "R" + rd + " " + p.name });
+    });
+
+    ["1", "2", "3"].forEach(function (n) {
+      if (!picked[n]) {
+        var pf = field("pick-field", n);
+        if (pf) { pf.value = ""; }
       }
     });
 
-    box.querySelectorAll("input[type=radio]").forEach(function (r) {
-      r.addEventListener("change", function () {
-        bumped[r.name.replace("bump", "")] = r.value;
-        render();
+    document.querySelectorAll(".term-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        openModal(b.dataset.phase, b.dataset.id);
       });
+    });
+
+    voids.forEach(function (v) {
+      if (v.checked) {
+        lines.push({ round: parseInt(v.dataset.penalty, 10),
+                     text: "R" + v.dataset.penalty +
+                           " forced defence <span class='tm'>void penalty</span>" });
+      }
     });
 
     var list = document.getElementById("chosen");
     list.innerHTML = "";
-    resolved.slice().sort(function (a, b) { return a.round - b.round; })
-      .forEach(function (r) {
-        var extra = r.locked ? " <span class='tm'>contract</span>" : "";
-        if (r.p.state === "must_sign" && terms[r.p.id]) {
-          extra += " <span class='tm'>" +
-            (terms[r.p.id] === "1" ? "1 year" : "3 years") + "</span>";
-        }
-        list.innerHTML += "<li><b>R" + r.round + "</b> " + r.p.name + extra + "</li>";
-      });
-
-    voids.forEach(function (v) {
-      if (v.checked) {
-        list.innerHTML += "<li><b>R" + v.dataset.penalty +
-          "</b> forced defence pick <span class='tm'>void penalty</span></li>";
-      }
-    });
-
-    renderTermCells();
-
-    var needTerm = sel.filter(function (p) {
-      return p.state === "must_sign" && !terms[p.id];
+    lines.sort(function (a, b) { return a.round - b.round; }).forEach(function (l) {
+      list.innerHTML += "<li>" + l.text + "</li>";
     });
 
     var warn = document.getElementById("warn");
-    if (all.length > 3) {
-      warn.textContent = "Too many keepers. Deselect one, or void a contract.";
-      warn.className = "note error";
-    } else if (impossible) {
-      warn.textContent = "Resolve the conflict above.";
-      warn.className = "note error";
-    } else if (needTerm.length) {
-      warn.textContent = "Choose a contract term for " +
-        needTerm.map(function (p) { return p.name; }).join(", ") + ".";
-      warn.className = "note error";
-    } else {
-      warn.textContent = all.length + " of 3 slots used.";
-      warn.className = "note";
-    }
+    warn.innerHTML = problems.join("<br>");
+    warn.className = problems.length ? "note error" : "note";
   }
 
-  voids.forEach(function (v) { v.addEventListener("change", render); });
-  picks.forEach(function (b) {
-    b.addEventListener("change", function () {
-      var p = byId[b.dataset.id];
-      render();
-      if (b.checked && p && p.state === "must_sign" && !terms[b.dataset.id]) {
-        openModal(b.dataset.id);
+  radios.forEach(function (r) {
+    r.addEventListener("click", function () {
+      if (r.dataset.wasChecked === "1") {
+        r.checked = false;
+        r.dataset.wasChecked = "0";
+        field("term-field", r.dataset.phase).value = "";
+        render();
+        return;
       }
+      radios.forEach(function (o) {
+        if (o.dataset.phase === r.dataset.phase) { o.dataset.wasChecked = "0"; }
+      });
+      r.dataset.wasChecked = "1";
+      field("term-field", r.dataset.phase).value = "";
+      render();
+      var p = byId[r.dataset.id];
+      if (p && p.state === "must_sign") { openModal(r.dataset.phase, r.dataset.id); }
     });
+    if (r.checked) { r.dataset.wasChecked = "1"; }
   });
+
+  voids.forEach(function (v) { v.addEventListener("change", render); });
+
+  var clear = document.getElementById("clear");
+  if (clear) {
+    clear.addEventListener("click", function () {
+      radios.forEach(function (r) { r.checked = false; r.dataset.wasChecked = "0"; });
+      document.querySelectorAll(".term-field").forEach(function (t) { t.value = ""; });
+      render();
+    });
+  }
+
   render();
 })();
-
