@@ -4,8 +4,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 sql = " ".join(sys.argv[1:])
-with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+url = os.environ.get("DATABASE_URL_DIRECT") or os.environ["DATABASE_URL"]
+
+with psycopg.connect(url) as conn:
     with conn.cursor() as cur:
         cur.execute(sql)
-        for row in cur.fetchall():
-            print(row)
+        if cur.description:
+            for row in cur.fetchall():
+                print(row)
+        else:
+            print(cur.statusmessage)
+    conn.commit()
