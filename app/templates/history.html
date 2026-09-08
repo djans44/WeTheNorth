@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import avatar %}
 {% block title %}League History | We the North{% endblock %}
 
 {% block content %}
@@ -41,7 +42,9 @@
       <tbody>
       {% for o in standings %}
         <tr>
-          <td class="name">{{ o.username }}</td>
+          <td class="name">
+            <span class="avatar-line">{{ avatar(o.username, 24) }}{{ o.username }}</span>
+          </td>
           <td>{{ o.seasons_played }}</td>
           <td>{{ o.wins }}</td>
           <td>{{ o.losses }}</td>
@@ -65,13 +68,16 @@
         <thead>
           <tr>
             <th></th>
-            {% for o in order %}<th>{{ o }}</th>{% endfor %}
+            {# Colours are not unique, so the name stays under the sigil. #}
+            {% for o in order %}
+              <th class="chead">{{ avatar(o, 24) }}<span>{{ o }}</span></th>
+            {% endfor %}
           </tr>
         </thead>
         <tbody>
         {% for a in order %}
           <tr>
-            <th>{{ a }}</th>
+            <th><span class="avatar-line">{{ avatar(a, 24) }}{{ a }}</span></th>
             {% for b in order %}
               {% if a == b %}
                 <td class="self"></td>
@@ -143,7 +149,9 @@
       <tbody>
       {% for p in projections %}
         <tr>
-          <td class="name">{{ p.username }}</td>
+          <td class="name">
+            <span class="avatar-line">{{ avatar(p.username, 24) }}{{ p.username }}</span>
+          </td>
           <td>{{ p.games }}</td>
           <td class="{% if p.avg_vs_projection > 0 %}win{% else %}loss{% endif %}">
             {{ "%+.2f"|format(p.avg_vs_projection) }}</td>

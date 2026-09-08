@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import avatar %}
 {% block title %}{{ s.season_year }} | We the North{% endblock %}
 
 {% set labels = {"regular": "Regular season", "quarterfinal": "Quarterfinal",
@@ -32,7 +33,12 @@
       {% for t in standings %}
         <tr>
           <td class="{% if t.final_rank == 1 %}win{% endif %}">{{ ordinal(t.final_rank) or loop.index }}</td>
-          <td class="name"><a href="/team/{{ t.username|lower }}">{{ t.username }}</a></td>
+          <td class="name">
+            <span class="avatar-line">
+              {{ avatar(t.username, 24) }}
+              <a href="/team/{{ t.username|lower }}">{{ t.username }}</a>
+            </span>
+          </td>
           <td class="name">{{ t.team_name }}</td>
           <td>{{ t.wins }}</td>
           <td>{{ t.losses }}</td>
