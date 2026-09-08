@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% block title %}League History | We the North{% endblock %}
 
 {% block content %}
@@ -7,10 +7,10 @@
   {# tight, not the standard head: with the lede gone there is only a title
      here, and that is what the modifier is for. #}
   <header class="page-head tight">
-    <h1>League History</h1>
+    <h1>{{ leaf(20) }}League History</h1>
   </header>
 
-  <section>
+  <section id="champions">
     <h2>Champions</h2>
     <table>
       <thead>
@@ -22,17 +22,24 @@
           {# This table is the season index now that /seasons is gone, so the
              year has to be the way in. #}
           <td class="year"><a href="/season/{{ s.season_year }}">{{ s.season_year }}</a></td>
-          <td class="win">{{ s.champion }}<span class="tm">{{ s.champion_team }}</span></td>
-          <td>{{ s.runner_up }}<span class="tm">{{ s.runner_up_team }}</span></td>
-          <td>{{ s.third_place }}<span class="tm">{{ s.third_place_team }}</span></td>
-          <td>{{ s.regular_season_leader }}<span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span></td>
+          {# data-label rather than a content string in the stylesheet: the
+             narrow layout drops the header row, and the label belongs next
+             to the column it names. #}
+          <td class="win" data-label="Champion">
+            {{ s.champion }}<span class="tm">{{ s.champion_team }}</span></td>
+          <td data-label="Runner-up">
+            {{ s.runner_up }}<span class="tm">{{ s.runner_up_team }}</span></td>
+          <td data-label="Third">
+            {{ s.third_place }}<span class="tm">{{ s.third_place_team }}</span></td>
+          <td data-label="Best record">
+            {{ s.regular_season_leader }}<span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span></td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
   </section>
 
-  <section>
+  <section id="alltime">
     <h2>All-time standings</h2>
     <table>
       <thead>
@@ -62,7 +69,7 @@
     </table>
   </section>
 
-  <section>
+  <section id="h2h">
     <h2>Head to head</h2>
     <p class="note">Rows are the owner, columns the opponent. All games, playoffs included.</p>
     <div class="scroller">
@@ -103,7 +110,7 @@
     </div>
   </section>
 
-  <section>
+  <section id="records">
     <h2>Records</h2>
 
     <h3>Highest single week</h3>
@@ -145,7 +152,7 @@
     </ol>
   </section>
 
-  <section>
+  <section id="projection">
     <h2>Against the projection</h2>
     <p class="note">Regular season only. How much each owner beat or missed Yahoo's projection, per game.</p>
     <table>

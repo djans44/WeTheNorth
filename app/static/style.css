@@ -1434,6 +1434,53 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
     white-space: nowrap;
   }
 
+  /* Champions: five columns need 628px and there are 319. Dropping columns
+     cannot save it -- the season and the champion alone are 206px, and the
+     runner-up takes it past the edge -- so each season stacks into a block
+     with the header row's words moved beside the values they label. */
+  #champions table,
+  #champions tbody { display: block; white-space: normal; }
+  #champions thead { display: none; }
+  #champions tr {
+    display: block;
+    padding: var(--s3) 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  #champions td {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: 0 var(--s3);
+    padding: 0.1rem 0;
+    border: 0;
+    text-align: left;
+  }
+  #champions td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+  #champions .year { display: block; margin-bottom: 0.2rem; }
+  #champions .year::before { content: none; }
+  #champions .tm { grid-column: 2; }
+
+  /* All-time standings: ten columns need 551px. Owner, the record, the win
+     percentage the table is sorted on, and the titles come to 275 and fit.
+     Seasons played stays too, at a squeeze, because without it Niall's
+     17-11 reads as a bad four-year run rather than a good two-year one. */
+  #alltime th:nth-child(6), #alltime td:nth-child(6),
+  #alltime th:nth-child(7), #alltime td:nth-child(7),
+  #alltime th:nth-child(8), #alltime td:nth-child(8),
+  #alltime th:nth-child(9), #alltime td:nth-child(9) { display: none; }
+  #alltime table { display: table; white-space: normal; }
+
+  /* Against the projection: 357px in 319. Total goes, because it is per game
+     times games and both of those are still here. Games stays -- it is what
+     stops Niall's lead reading as better than everyone else's rather than
+     shorter. */
+  #projection th:nth-child(4), #projection td:nth-child(4) { display: none; }
+  #projection table { display: table; white-space: normal; }
+
   /* Standings: drop the team name and points against so the seven columns
      become five and fit without scrolling. The record is the reason the
      table exists and it was the part scrolled off screen; a team name is
