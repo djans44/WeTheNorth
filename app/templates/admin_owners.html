@@ -7,8 +7,8 @@
   <header class="page-head">
     <div class="tape"></div>
     <h1>Owners</h1>
-    <p class="lede">Colour and initials for everyone in one pass. Open an owner
-      to change their name, team, email or admin rights.</p>
+    <p class="lede">Team name, colour and initials for everyone in one pass.
+      Open an owner to change their name, email or admin rights.</p>
   </header>
 
   <section>
@@ -38,7 +38,13 @@
                 </span>
               </span>
             </td>
-            <td>{{ o.team_name or "—" }}</td>
+            <td>
+              {% if o.team_name is not none %}
+                <input name="team_{{ o.owner_id }}" value="{{ o.team_name }}" required>
+              {% else %}
+                <span class="tm">no {{ season }} team</span>
+              {% endif %}
+            </td>
             <td><input name="initials_{{ o.owner_id }}" value="{{ o.avatar_initials or '' }}"
                        maxlength="2" size="2"></td>
             <td>
@@ -59,7 +65,7 @@
         {% endfor %}
         </tbody>
       </table>
-      <button type="submit">Save sigils</button>
+      <button type="submit">Save owners</button>
     </form>
   </section>
 

@@ -410,7 +410,7 @@ Everything else requires a session (middleware redirects to `/`).
 | `POST /admin/keepers/reset` | Reset one manager or a whole season |
 | `GET /admin/rivals`, `POST /admin/rivals/generate`, `POST /admin/rivals/set` | Rivalries |
 | `GET /admin/schedule`, `POST /admin/schedule/save` | Schedule generation |
-| `GET/POST /admin/owners` | Owners: quick colour/initials pass, plus add an owner |
+| `GET/POST /admin/owners` | Owners: team name, colour and initials in one pass, plus add an owner |
 | `GET/POST /admin/owners/{id}` | One owner: name, team, email, admin, retired, sigil |
 
 ---

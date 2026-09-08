@@ -176,7 +176,7 @@ and the admin side split in two:
   forms, three submits, since CLAUDE.md rules out nested forms. Self-service
   only: no acting-for picker, and no `is_admin` — a self-editable admin flag
   would let any of the twelve make themselves commissioner.
-- **`/admin/owners`** — the Owners page. The quick pass is colour and initials
+- **`/admin/owners`** — the Owners page. The quick pass is team name, colour and initials
   for everyone in one submit; an **Open** link leads to
   `/admin/owners/{id}` for name, team, email, admin and retired. It also adds
   new owners. This is the only route to Tulio, who has no email and so cannot

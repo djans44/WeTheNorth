@@ -654,34 +654,53 @@ def admin_owners(request: Request):
 
 @app.post("/admin/owners")
 async def admin_owners_save(request: Request):
-    """The quick pass: colour and initials for everyone in one submit."""
+    """The quick pass: team name, colour and initials for everyone at once."""
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     from urllib.parse import quote
     form = await request.form()
 
-    updates = []
-    for key in form.keys():
-        if not key.startswith("bg_"):
-            continue
-        oid = int(key.split("_", 1)[1])
-        bg = (form.get(key) or "").strip().upper()
-        if bg not in AVATAR_HEXES:
-            return RedirectResponse(
-                url="/admin/owners?error=" +
-                    quote("That is not one of the league colours."),
-                status_code=303)
-        updates.append((oid, bg, _clean_initials(form.get(f"initials_{oid}"))))
+    def bad(msg):
+        return RedirectResponse(
+            url="/admin/owners?error=" + quote(msg), status_code=303)
 
     with get_db() as conn:
+        season = _current_season(conn)
+        # Only owners with a row for this season have a name to rename, and
+        # team_name is not null, so a blank is refused rather than skipped.
+        named = {r["owner_id"]: r["username"] for r in query(conn, """
+            select t.owner_id, o.username
+            from teams t join owners o on o.owner_id = t.owner_id
+            where t.season_year = %s
+        """, (season,))}
+
+        updates = []
+        for key in form.keys():
+            if not key.startswith("bg_"):
+                continue
+            oid = int(key.split("_", 1)[1])
+            bg = (form.get(key) or "").strip().upper()
+            if bg not in AVATAR_HEXES:
+                return bad("That is not one of the league colours.")
+            team = (form.get(f"team_{oid}") or "").strip()
+            if oid in named and not team:
+                return bad(f"{named[oid]} needs a team name.")
+            updates.append((oid, bg, _clean_initials(form.get(f"initials_{oid}")),
+                            team if oid in named else None))
+
         with conn.cursor() as cur:
-            for oid, bg, initials in updates:
+            for oid, bg, initials, team in updates:
                 _save_sigil(cur, oid, bg, initials)
+                if team:
+                    cur.execute("""
+                        update teams set team_name = %s, updated_at = now()
+                        where owner_id = %s and season_year = %s
+                    """, (team, oid, season))
         conn.commit()
     bust_owner_caches()
 
     return RedirectResponse(
-        url="/admin/owners?msg=" + quote("Sigils saved"), status_code=303)
+        url="/admin/owners?msg=" + quote("Owners saved"), status_code=303)
 
 
 @app.post("/admin/owners/new")
