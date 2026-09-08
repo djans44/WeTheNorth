@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar, leaf, seedmark %}
+{% from "macros.html" import avatar, leaf, seedmark, bracketdraw %}
 {% block title %}{{ s.season_year }} | We the North{% endblock %}
 
 {% set labels = {"regular": "Regular season", "quarterfinal": "Quarterfinal",
@@ -60,7 +60,26 @@
 
   <section id="standings">
     <h2>{% if s.champion %}Final standings{% else %}Standings{% endif %}</h2>
-    <table>
+
+    {% if brackets.championship or brackets.consolation %}
+      {# Hidden until app.js unhides it. Without the script no panel is
+         hidden and all of them are simply on the page, which is the same
+         fallback the week strip takes. #}
+      <p class="switch" hidden>
+        {% if brackets.championship %}
+          <button type="button" data-shows="bracket">Championship</button>
+        {% endif %}
+        {% if brackets.consolation %}
+          <button type="button" data-shows="consolation">Consolation</button>
+        {% endif %}
+        <button type="button" data-shows="table">Standings</button>
+      </p>
+
+      {% if brackets.championship %}{{ bracketdraw(brackets.championship, "bracket") }}{% endif %}
+      {% if brackets.consolation %}{{ bracketdraw(brackets.consolation, "consolation") }}{% endif %}
+    {% endif %}
+
+    <table data-panel="table">
       <thead>
         <tr><th>Pos</th><th>Owner</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr>
       </thead>
@@ -89,7 +108,7 @@
       </tbody>
     </table>
     {% if seed_key %}
-      <p class="seedkey">
+      <p class="seedkey" data-panel="table">
         {% for seed in seed_key %}
           <span>{{ seedmark(seed, named=false) }}{{ seed.text }}</span>
         {% endfor %}

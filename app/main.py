@@ -486,6 +486,104 @@ def seed_key(labels, standings):
     return sorted(key, key=lambda s: (order[s["mark"]], not s["firm"]))
 
 
+def _victor(g):
+    """Who won a played game, by owner name. None while it is unplayed, and
+    None on an exact tie, which the data cannot resolve on its own."""
+    a, b = g["points_a"], g["points_b"]
+    if a is None or b is None or a == b:
+        return None
+    return g["owner_a"] if a > b else g["owner_b"]
+
+
+def _draw(opening, middle, final, third, fifth, names):
+    """Assemble one bracket from its three rounds.
+
+    Both sides of the playoffs have the same shape: four opening rows, two of
+    which carry a null opponent and are byes for the higher seeds; two games
+    in the middle round; one to settle the side. Two more games decide the
+    places below it.
+
+    Nothing records which bye feeds which middle game, so it is worked out
+    from who turns up: a middle game holds one bye team and one winner from
+    the opening round. Before those are played there is nothing to read it
+    from, and the halves pair in the order the rows arrive -- the two sides of
+    a bracket are interchangeable until somebody plays.
+    """
+    byes = [g for g in opening if not g["team_b"]]
+    duels = [g for g in opening if g["team_b"]]
+
+    halves, spare_byes, spare_duels = [], list(byes), list(duels)
+    for semi in middle:
+        here = {semi["owner_a"], semi["owner_b"]}
+        bye = next((b for b in spare_byes if b["owner_a"] in here), None)
+        duel = next((d for d in spare_duels if _victor(d) in here), None)
+        if bye:
+            spare_byes.remove(bye)
+        if duel:
+            spare_duels.remove(duel)
+        halves.append({"bye": bye, "duel": duel, "semi": semi})
+
+    # Whatever the middle round could not account for -- because it has not
+    # been played, or because a tie left no winner to trace.
+    while spare_byes or spare_duels:
+        halves.append({"bye": spare_byes.pop(0) if spare_byes else None,
+                       "duel": spare_duels.pop(0) if spare_duels else None,
+                       "semi": None})
+
+    return {
+        "halves": halves,
+        "final": final,
+        # Every round has a result. Nothing reaches the last game until the
+        # rounds before it are played, so the one game answers for all three.
+        "settled": bool(final and _victor(final)),
+        "third": third,
+        "fifth": fifth,
+        "names": names,
+    }
+
+
+def _one(rows):
+    return rows[0] if rows else None
+
+
+def playoff_brackets(games):
+    """Both sides of the playoffs, drawn from the week 15-17 rows.
+
+    The championship side is named by game type throughout. The consolation
+    side is not: its first two rounds are both `consolation` and are told
+    apart by week, which is why it is picked out here rather than by a lookup.
+    """
+    rounds = {}
+    for g in games:
+        if g["game_type"] != "regular":
+            rounds.setdefault(g["game_type"], []).append(g)
+
+    out = {"championship": None, "consolation": None}
+
+    if rounds.get("quarterfinal"):
+        out["championship"] = _draw(
+            rounds["quarterfinal"], rounds.get("semifinal", []),
+            _one(rounds.get("championship", [])),
+            _one(rounds.get("third_place", [])),
+            _one(rounds.get("fifth_place", [])),
+            ("Quarterfinals", "Semifinals", "Final",
+             "Third place", "Fifth place"))
+
+    cons = rounds.get("consolation", [])
+    if cons:
+        opening_week = min(g["week"] for g in cons)
+        out["consolation"] = _draw(
+            [g for g in cons if g["week"] == opening_week],
+            [g for g in cons if g["week"] != opening_week],
+            _one(rounds.get("seventh_place", [])),
+            _one(rounds.get("ninth_place", [])),
+            _one(rounds.get("eleventh_place", [])),
+            ("First round", "Second round", "Seventh place",
+             "Ninth place", "Eleventh place"))
+
+    return out
+
+
 @app.get("/current")
 def current_season():
     with get_db() as conn:
@@ -597,11 +695,13 @@ def season(request: Request, year: int):
     open_week = played[-1] if played else (weeks[0]["week"] if weeks else None)
 
     seeds = playoff_labels(standings, remaining)
+    brackets = playoff_brackets(games)
     return templates.TemplateResponse(
         request=request, name="season.html",
         context={"s": head[0], "standings": standings, "weeks": weeks,
                  "records": records, "open_week": open_week,
                  "seeds": seeds, "seed_key": seed_key(seeds, standings),
+                 "brackets": brackets,
                  "keepers": group_runs(keepers, "username")})
 
 

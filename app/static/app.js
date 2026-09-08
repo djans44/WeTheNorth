@@ -69,6 +69,40 @@
     });
   }
 
+  // ---- season page: bracket or standings ----
+  // Both panels are on the page and visible until this runs, so without the
+  // script nothing is lost -- you simply get the bracket above the table.
+  // The buttons are hidden in the markup for the same reason: a control that
+  // cannot do anything should not be offered.
+  var sw = document.querySelector(".switch");
+  if (sw) {
+    var panels = document.querySelectorAll("[data-panel]");
+    var buttons = sw.querySelectorAll("button");
+
+    var showPanel = function (which) {
+      var i;
+      for (i = 0; i < panels.length; i++) {
+        panels[i].hidden = panels[i].getAttribute("data-panel") !== which;
+      }
+      for (i = 0; i < buttons.length; i++) {
+        var on = buttons[i].getAttribute("data-shows") === which;
+        buttons[i].classList.toggle("on", on);
+        buttons[i].setAttribute("aria-pressed", on ? "true" : "false");
+      }
+    };
+
+    sw.hidden = false;
+    // Whichever button comes first, which is the championship bracket when
+    // there is one: it only exists once a playoff game does, and when it
+    // exists it is the more interesting half.
+    showPanel(buttons[0].getAttribute("data-shows"));
+
+    sw.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-shows]");
+      if (b) { showPanel(b.getAttribute("data-shows")); }
+    });
+  }
+
   // ---- season page: one week at a time ----
   // The server renders every week and marks one open. Without this script
   // they all stay visible and the nav links simply jump to them, so the

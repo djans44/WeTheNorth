@@ -69,3 +69,73 @@
     {%- endif %}
   </svg>
 {%- endmacro %}
+
+
+{# One tie in the bracket. `side` names which of the two is being drawn, so
+   the winner can be picked out without the caller repeating the comparison.
+   A bye has no opponent, so it prints the seed's own score and says so. #}
+{% macro tie(g, label=none) -%}
+  {% set played = g and g.points_a is not none and g.points_b is not none %}
+  {% set a_won = played and g.points_a > g.points_b %}
+  {% set b_won = played and g.points_b > g.points_a %}
+  <div class="tie">
+    {% if label %}<span class="tie-label">{{ label }}</span>{% endif %}
+    {% if g %}
+      <span class="side {% if a_won %}won{% endif %}">
+        {{ avatar(g.owner_a, 20) }}
+        <span class="who">{{ g.owner_a }}</span>
+        <span class="pts">{{ "%.2f"|format(g.points_a) if g.points_a is not none }}</span>
+      </span>
+      <span class="side {% if b_won %}won{% endif %}">
+        {% if g.team_b %}
+          {{ avatar(g.owner_b, 20) }}
+          <span class="who">{{ g.owner_b }}</span>
+          <span class="pts">{{ "%.2f"|format(g.points_b) if g.points_b is not none }}</span>
+        {% else %}
+          <span class="who bye">bye</span>
+        {% endif %}
+      </span>
+    {% else %}
+      <span class="side"><span class="who bye">to be decided</span></span>
+    {% endif %}
+  </div>
+{%- endmacro %}
+
+
+{# One bracket. The championship and consolation sides have the same shape
+   and differ only in what the rounds are called, so they share this. `panel`
+   is what the Bracket/Consolation/Standings switch shows and hides. #}
+{% macro bracketdraw(b, panel) -%}
+  <div class="bracket{% if b.settled %} settled{% endif %}" data-panel="{{ panel }}">
+    <div class="round qf">
+      <h3>{{ b.names[0] }}</h3>
+      <div class="ties">
+        {% for half in b.halves %}
+          {{ tie(half.bye) }}
+          {{ tie(half.duel) }}
+        {% endfor %}
+      </div>
+    </div>
+    <div class="round sf">
+      <h3>{{ b.names[1] }}</h3>
+      <div class="ties">
+        {% for half in b.halves %}{{ tie(half.semi) }}{% endfor %}
+      </div>
+    </div>
+    <div class="round fin">
+      <h3>{{ b.names[2] }}</h3>
+      <div class="ties">{{ tie(b.final) }}</div>
+    </div>
+
+    {# In the bracket but not of it: these are what the beaten play for, not
+       a further round. They sit on a second row underneath, so they no
+       longer pull the last game off centre. Narrow, each one follows the
+       round it came out of. #}
+    {% if b.third %}
+      <div class="placement third">{{ tie(b.third, b.names[3]) }}</div>
+    {% endif %}
+    {% if b.fifth %}
+      <div class="placement fifth">{{ tie(b.fifth, b.names[4]) }}</div>
+    {% endif %}
+  </div>
+{%- endmacro %}

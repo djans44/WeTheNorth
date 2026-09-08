@@ -104,6 +104,12 @@
 
 * { box-sizing: border-box; }
 
+/* The browser's own rule for this is display:none at zero specificity, so any
+   class that sets display -- .bracket, .seedkey, .switch -- silently beat it
+   and the element stayed on screen with hidden set. Anything toggled from
+   app.js relies on this. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   padding: var(--pad-body);
@@ -341,6 +347,78 @@ h3 {
 }
 
 .settled { margin: 0.4rem 0 0; font-size: var(--t-md); }
+
+/* Bracket or standings, one at a time. Two buttons rather than a select:
+   there are only ever two, and a pressed button says which you are looking
+   at without being opened. */
+.switch {
+  display: flex;
+  /* Three buttons overflow a 375px phone on one line. */
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: 0 0 var(--s4);
+}
+.switch > button[type="button"] {
+  margin-top: 0;
+  padding: 0.3rem var(--s4);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  color: var(--ink-muted);
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.switch > button:hover { border-color: var(--accent); color: var(--accent); }
+.switch > button.on {
+  color: var(--panel-bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The championship bracket. Three columns, each round spread over the full
+   height, which puts a semifinal beside the middle of the two ties feeding
+   it without any of them being positioned by hand. */
+.bracket {
+  display: grid;
+  /* Six so that three rounds and two placements both divide it evenly. */
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+}
+.bracket > .round { grid-row: 1; grid-column: span 2; }
+.bracket > .placement { grid-row: 2; grid-column: span 3; }
+.round { display: flex; flex-direction: column; }
+.round > h3 { margin: 0 0 var(--s3); }
+.round > .ties {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: var(--s3);
+}
+.tie {
+  padding: var(--s2) var(--s3);
+  background: var(--field-bg);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.tie-label {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+.tie .side {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0.15rem 0;
+}
+.tie .who { flex: 1; }
+.tie .who.bye { color: var(--ink-muted); font-style: italic; }
+.tie .pts { font-variant-numeric: tabular-nums; color: var(--ink-muted); }
+.tie .side.won .who { font-weight: 600; color: var(--win); }
+.tie .side.won .pts { color: var(--win); }
 
 /* Playoff position in the standings: a mark on the name line, so it costs
    the row no height. Outline while provisional, filled once settled, so a
@@ -1285,6 +1363,26 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   #standings table { display: table; white-space: normal; }
   #standings th:nth-child(3), #standings td:nth-child(3),
   #standings th:nth-child(7), #standings td:nth-child(7) { display: none; }
+
+  /* The bracket's three columns will not fit either. Stacked, each round
+     keeps its heading, so it reads as a list of rounds rather than a
+     drawing -- which is the honest thing to show at this width.
+
+     A finished bracket is turned around to put the final first: on a phone
+     the top of the section is all you see without scrolling, and the result
+     is the news. While it is still being played the rounds stay in playing
+     order, because then the unplayed round is the news. */
+  .bracket { grid-template-columns: 1fr; }
+  .bracket > .round,
+  .bracket > .placement { grid-row: auto; grid-column: auto; }
+  .round > .ties { justify-content: flex-start; }
+  /* Ordered by class rather than position: third place is missing until it
+     is played, and nth-child would then renumber everything after it. */
+  .bracket.settled > .fin    { order: 1; }
+  .bracket.settled > .third  { order: 2; }
+  .bracket.settled > .sf     { order: 3; }
+  .bracket.settled > .fifth  { order: 4; }
+  .bracket.settled > .qf     { order: 5; }
 
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }
