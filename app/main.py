@@ -83,6 +83,67 @@ templates.env.globals["static_url"] = static_url
 templates.env.globals["ordinal"] = ordinal
 
 
+# --- records ----------------------------------------------------------
+#
+# One set of shapes for both pages. /history and /season/{year} ask the same
+# questions of different slices, and when they each carried their own copy of
+# the SQL the two drifted -- /history counting playoff games as league records
+# while the season page had already stopped.
+#
+# {scope} is a literal written here, never anything a request supplies; the
+# values still go through bound parameters.
+RECORD_SQL = {
+    "high": """
+        select username, opponent_username, season_year, week, points_for
+        from game_log where {scope} order by points_for desc limit {n}""",
+    "low": """
+        select username, opponent_username, season_year, week, points_for
+        from game_log where {scope} order by points_for asc limit {n}""",
+    "blowouts": """
+        select username, opponent_username, season_year, week,
+               points_for, points_against,
+               points_for - points_against as margin
+        from game_log where {scope} and result = 'W'
+        order by margin desc limit {n}""",
+    "nailbiters": """
+        select username, opponent_username, season_year, week,
+               points_for, points_against,
+               points_for - points_against as margin
+        from game_log where {scope} and result = 'W'
+        order by margin asc limit {n}""",
+    "shootouts": """
+        select username, opponent_username, season_year, week,
+               points_for + points_against as combined
+        from game_log where {scope} and result = 'W'
+        order by combined desc limit {n}""",
+}
+
+# Named in the same voice on both pages, so the same record is not called two
+# things depending on where you read it.
+RECORD_NAMES = {
+    "high": "Mightiest weeks",
+    "low": "Bleakest weeks",
+    "blowouts": "Greatest routs",
+    "nailbiters": "Narrowest escapes",
+    "shootouts": "Bloodiest fields",
+}
+
+ALL_RECORDS = ("high", "low", "blowouts", "nailbiters", "shootouts")
+
+# The championship side of the bracket, and nothing else. Consolation and the
+# seventh, ninth and eleventh place games are played in the same weeks, but by
+# teams already out of it; a record set there is not a playoff record.
+# fifth_place belongs: it is the two beaten quarterfinalists, both qualifiers.
+BRACKET_TYPES = ("quarterfinal", "semifinal", "championship",
+                 "third_place", "fifth_place")
+BRACKET_SCOPE = "game_type in (%s)" % ", ".join("'%s'" % g for g in BRACKET_TYPES)
+
+
+def records_for(conn, keys, scope, params=(), n=5):
+    return {k: query(conn, RECORD_SQL[k].format(scope=scope, n=n), params)
+            for k in keys}
+
+
 def get_db():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -270,37 +331,20 @@ def history(request: Request):
         projections = query(conn, """
             select * from owner_projection_stats order by avg_vs_projection desc
         """)
-        high = query(conn, """
-            select username, team_name, season_year, week, points_for
-            from game_log order by points_for desc limit 5
-        """)
-        low = query(conn, """
-            select username, team_name, season_year, week, points_for
-            from game_log order by points_for asc limit 5
-        """)
-        blowouts = query(conn, """
-            select username, opponent_username, season_year, week,
-                   points_for, points_against, points_for - points_against as margin
-            from game_log where result = 'W' order by margin desc limit 5
-        """)
-        nailbiters = query(conn, """
-            select username, opponent_username, season_year, week,
-                   points_for, points_against, points_for - points_against as margin
-            from game_log where result = 'W' order by margin asc limit 5
-        """)
-        shootouts = query(conn, """
-            select username, opponent_username, season_year, week,
-                   points_for + points_against as combined
-            from game_log where result = 'W' order by combined desc limit 5
-        """)
+        # Split, not merged. A 14-game regular season where every manager
+        # plays is one thing; a playoff week where half the league is idle is
+        # another, and a single list quietly let the second set the first's
+        # records -- the all-time highest week was a semifinal.
+        regular = records_for(conn, ALL_RECORDS, "game_type = 'regular'")
+        postseason = records_for(conn, ALL_RECORDS, BRACKET_SCOPE)
     order = [s["username"] for s in standings]
     grid = {(r["username"], r["opponent_username"]): r for r in h2h_rows}
     return templates.TemplateResponse(
         request=request, name="history.html",
         context={"seasons": seasons, "standings": standings, "order": order,
-                 "grid": grid, "projections": projections, "high": high,
-                 "low": low, "blowouts": blowouts, "nailbiters": nailbiters,
-                 "shootouts": shootouts})
+                 "grid": grid, "projections": projections,
+                 "regular": regular, "postseason": postseason,
+                 "record_names": RECORD_NAMES, "record_keys": ALL_RECORDS})
 
 
 @app.get("/teams", response_class=HTMLResponse)
@@ -637,41 +681,14 @@ def season(request: Request, year: int):
             where m.season_year = %s
             order by m.week, m.game_type, m.matchup_id
         """, (year,))
-        # The same three shapes /history uses, scoped to one season and cut
-        # to three. Season year is dropped from the select because the whole
-        # page is one season.
-        #
-        # Regular season only. game_type rather than week <= 14 so the filter
-        # states what it means, and so it survives a season of another length.
-        # This is a deliberate departure from /history, which counts every
-        # game: a 14-game field is a fair comparison, a playoff bracket where
-        # half the league is not playing is not.
-        records = {
-            "high": query(conn, """
-                select username, opponent_username, week, points_for
-                from game_log
-                where season_year = %s and game_type = 'regular'
-                order by points_for desc limit 3
-            """, (year,)),
-            "blowouts": query(conn, """
-                select username, opponent_username, week,
-                       points_for, points_against,
-                       points_for - points_against as margin
-                from game_log
-                where season_year = %s and game_type = 'regular'
-                  and result = 'W'
-                order by margin desc limit 3
-            """, (year,)),
-            "nailbiters": query(conn, """
-                select username, opponent_username, week,
-                       points_for, points_against,
-                       points_for - points_against as margin
-                from game_log
-                where season_year = %s and game_type = 'regular'
-                  and result = 'W'
-                order by margin asc limit 3
-            """, (year,)),
-        }
+        # Regular season only, and game_type rather than week <= 14 so the
+        # filter states what it means and survives a season of another
+        # length. /history reports the playoff records separately; here a
+        # single season's playoff sample is a handful of games, so the page
+        # shows the 14-game field where everyone plays.
+        records = records_for(conn, ("high", "blowouts", "nailbiters"),
+                              "season_year = %s and game_type = 'regular'",
+                              (year,), 3)
         # A season with no scores yet has nothing to rank, and an empty
         # Records section would still claim a spot in the section nav.
         if not records["high"]:

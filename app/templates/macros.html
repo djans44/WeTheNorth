@@ -139,3 +139,34 @@
     {% endif %}
   </div>
 {%- endmacro %}
+
+
+{# One record list. The five shapes carry different columns, so the line is
+   built per kind rather than by a caller assembling strings. The detail sits
+   on a second line: at a third of a panel the flat form wrapped inside the
+   score itself.
+
+   Both /history and a season page draw their records through this, so the
+   two cannot drift into formatting the same number differently.
+   show_year=false on a season page, where every row is that season. #}
+{% macro recordlist(kind, rows, name, show_year=true) -%}
+  <div class="record-set">
+    <h3>{{ name }}</h3>
+    <ol class="records">
+    {% for r in rows %}
+      {% if kind in ("high", "low") %}
+        <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }}
+          <span class="rec-detail">vs {{ r.opponent_username }},
+            {% if show_year %}{{ r.season_year }} {% endif %}week {{ r.week }}</span></li>
+      {% elif kind == "shootouts" %}
+        <li><b>{{ "%.2f"|format(r.combined) }}</b> {{ r.username }} and {{ r.opponent_username }}
+          <span class="rec-detail">{% if show_year %}{{ r.season_year }} {% endif %}week {{ r.week }}</span></li>
+      {% else %}
+        <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }}
+          <span class="rec-detail">{{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }},
+            {% if show_year %}{{ r.season_year }} {% endif %}week {{ r.week }}</span></li>
+      {% endif %}
+    {% endfor %}
+    </ol>
+  </div>
+{%- endmacro %}

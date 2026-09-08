@@ -521,6 +521,19 @@ h3 {
   gap: var(--s4) var(--s5);
 }
 .record-set > h3 { margin-top: 0; }
+
+/* The heading over a whole group of lists, not one of them. Sized between
+   the section's h2 and the list headings so the nesting reads. */
+.record-group {
+  margin: var(--s5) 0 0;
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.record-group + .note { margin-bottom: var(--s4); }
+.record-group:first-of-type { margin-top: var(--s3); }
 /* Score and week on a second line by design. Left flat, a third of the panel
    is too narrow for them and the wrap lands inside the score, splitting
    162.66-84.59 across two lines. /history keeps the one-line form, where it

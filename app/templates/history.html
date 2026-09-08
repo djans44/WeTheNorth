@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar, leaf %}
+{% from "macros.html" import avatar, leaf, recordlist %}
 {% block title %}League History | We the North{% endblock %}
 
 {% block content %}
@@ -69,6 +69,25 @@
     </table>
   </section>
 
+  {# Above head to head deliberately: these are the page's headline numbers
+     and the grid is a reference table you go looking for. #}
+  <section id="records">
+    <h2>Records</h2>
+
+    <h3 class="record-group">Regular season</h3>
+    <p class="note">Fourteen weeks, every manager playing every one of them.</p>
+    <div class="record-sets">
+      {% for k in record_keys %}{{ recordlist(k, regular[k], record_names[k]) }}{% endfor %}
+    </div>
+
+    <h3 class="record-group">Playoffs</h3>
+    <p class="note">The championship bracket only. The consolation ladder is
+      played in the same weeks by teams already out of it.</p>
+    <div class="record-sets">
+      {% for k in record_keys %}{{ recordlist(k, postseason[k], record_names[k]) }}{% endfor %}
+    </div>
+  </section>
+
   <section id="h2h">
     <h2>Head to head</h2>
     <p class="note">Rows are the owner, columns the opponent. All games, playoffs included.</p>
@@ -108,48 +127,6 @@
         </tbody>
       </table>
     </div>
-  </section>
-
-  <section id="records">
-    <h2>Records</h2>
-
-    <h3>Highest single week</h3>
-    <ol class="records">
-    {% for r in high %}
-      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }}, {{ r.season_year }} week {{ r.week }}</li>
-    {% endfor %}
-    </ol>
-
-    <h3>Lowest single week</h3>
-    <ol class="records">
-    {% for r in low %}
-      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }}, {{ r.season_year }} week {{ r.week }}</li>
-    {% endfor %}
-    </ol>
-
-    <h3>Biggest blowouts</h3>
-    <ol class="records">
-    {% for r in blowouts %}
-      <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }},
-        {{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }}, {{ r.season_year }} week {{ r.week }}</li>
-    {% endfor %}
-    </ol>
-
-    <h3>Closest games</h3>
-    <ol class="records">
-    {% for r in nailbiters %}
-      <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }},
-        {{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }}, {{ r.season_year }} week {{ r.week }}</li>
-    {% endfor %}
-    </ol>
-
-    <h3>Highest combined</h3>
-    <ol class="records">
-    {% for r in shootouts %}
-      <li><b>{{ "%.2f"|format(r.combined) }}</b> {{ r.username }} and {{ r.opponent_username }},
-        {{ r.season_year }} week {{ r.week }}</li>
-    {% endfor %}
-    </ol>
   </section>
 
   <section id="projection">
