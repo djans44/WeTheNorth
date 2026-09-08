@@ -429,9 +429,44 @@ def season(request: Request, year: int):
                  "weeks": weeks, "records": records})
 
 
+# Order the rivalry weights are shown in on /rules, loosest to fiercest.
+RIVAL_WEIGHT_LABELS = [
+    ("regular", "Regular season"),
+    ("consolation", "Consolation"),
+    ("eleventh_place", "Eleventh place"),
+    ("ninth_place", "Ninth place"),
+    ("seventh_place", "Seventh place"),
+    ("fifth_place", "Fifth place"),
+    ("quarterfinal", "Quarterfinal"),
+    ("semifinal", "Semifinal"),
+    ("third_place", "Third place"),
+    ("championship", "Championship"),
+]
+
+
 @app.get("/rules", response_class=HTMLResponse)
 def rules(request: Request):
-    return templates.TemplateResponse(request=request, name="rules.html")
+    """The rivalry weights and league size come from the code and the
+    seasons row, not from prose, so the page cannot drift from behaviour."""
+    with get_db() as conn:
+        rows = query(conn, """
+            select season_year, team_count, keeper_count
+            from seasons order by season_year desc limit 1
+        """)
+    s = rows[0] if rows else {"season_year": None, "team_count": 12,
+                              "keeper_count": 3}
+    # %g so 10.0 reads as 10 while 2.5 stays 2.5.
+    def n(v):
+        return f"{v:g}"
+
+    return templates.TemplateResponse(
+        request=request, name="rules.html",
+        context={"s": s,
+                 "weights": [(label, n(RIVAL_WEIGHTS[key]))
+                             for key, label in RIVAL_WEIGHT_LABELS],
+                 "close_bonus": n(RIVAL_CLOSE_BONUS),
+                 "close_margin": n(RIVAL_CLOSE_MARGIN),
+                 "prior_bonus": n(RIVAL_PRIOR_BONUS)})
 
 
 def _colour_holders(rows, skip=None):

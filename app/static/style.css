@@ -530,6 +530,29 @@ select, .entry input {
 .errors ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
 .errors li { color: #a03024; }
 
+/* ---- rules ---- */
+
+.contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--display);
+  font-size: 1.02rem;
+}
+.contents a { color: var(--ink-soft); }
+.contents a:hover { color: var(--ink); }
+
+.ruleset { margin: 0.9rem 0 0; padding-left: 1.2rem; }
+.ruleset li { margin-bottom: 0.5rem; }
+.ruleset li:last-child { margin-bottom: 0; }
+
+/* The rules read as prose, so the tables sit in from the text rather than
+   filling the panel edge to edge. */
+#playoffs table, #draft table, #rivalries table { margin-top: 0.9rem; }
+
 .decree {
   margin: 2rem 0;
   font-family: var(--display);

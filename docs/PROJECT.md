@@ -321,7 +321,10 @@ survives, so they can adjust and resubmit.
 
 ### Draft order
 
-1. Admin runs a **randomised lottery** (real lottery rules to come later)
+1. Admin runs a **randomised lottery**. The league rule is weighted ballots by
+   last season's finish — 1 ballot for 1st–3rd, 2 for 4th–6th, 3 for 7th–12th,
+   27 in the hat — and a new manager skips the draw and chooses first.
+   **Neither is implemented**: the code still draws uniformly. See `/rules`.
 2. That sets the **order of choosing**, not the draft order
 3. In one live session, each manager picks whichever **draft slot** they want
 4. Admin can pick for anyone or override any slot at any time
@@ -388,7 +391,7 @@ Everything else requires a session (middleware redirects to `/`).
 | `GET /seasons` | Season index |
 | `GET /season/{year}` | Standings and week-by-week results |
 | `GET /current` | Redirects to the newest season |
-| `GET /rules` | Placeholder ("the rules are too confusing, just ask Josh") |
+| `GET /rules` | The full league rules. Rivalry weights and league size come from the code and the `seasons` row, not prose |
 | `GET /draft-order`, `POST /draft-order/pick` | Lottery board and slot selection |
 | `GET /draft-prep`, `POST /draft-prep/placeholder` | Draft board, keeper columns, placeholders |
 | `GET /keepers` | Keeper selection page |
@@ -444,10 +447,14 @@ button.
 
 **Not built**
 - **Trades and waivers on the season page** — data is loaded, needs a view and a template
-- **League rules content** — the page exists, the rules do not
 - 2022–2024 draft `is_keeper` flags are set, but keeper history for those
   seasons could be surfaced on manager pages
-- Real **lottery rules** (currently pure randomisation)
+- Real **lottery rules**. `/rules` now documents the agreed ballot tiers —
+  one ballot for finishing 1st–3rd, two for 4th–6th, three for 7th–12th —
+  but `admin_draft_lottery` still draws uniformly with
+  `row_number() over (order by random())`. **The page and the code disagree.**
+- A **new manager choosing their slot first** is on `/rules` but not in the
+  code either; the lottery has no special case for them
 - Badges (spec in `docs/features/badges.md`)
 - **Create-season checklist** (`docs/features/season-setup.md`) — every step
   needed to stand up the next league year, in dependency order. **Adding an
@@ -465,6 +472,10 @@ button.
 - Reopening a keeper submission after its phase has resolved leaves the owner
   unable to resubmit, since the window is closed.
 - A tie in a placement game would give both teams the lower position.
+- **Playoff qualification is not computed.** `made_playoffs` is observed from
+  the games that were actually played, not derived from the seeding rule on
+  `/rules` (top two bye, 3rd and 4th on record, last two on points for). The
+  commissioner works the bracket out and enters it; nothing checks it.
 
 ---
 

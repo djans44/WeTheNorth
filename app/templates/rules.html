@@ -6,10 +6,239 @@
   <header class="page-head">
     <div class="tape"></div>
     <h1>Rules</h1>
+    <p class="lede">Everything the league runs on. The keeper rules are the
+      intricate part &mdash; the rest is mostly bookkeeping.</p>
   </header>
 
   <section>
-    <p class="decree">The rules are too confusing, just ask Josh.</p>
+    <ul class="contents">
+      <li><a href="#league">The league</a></li>
+      <li><a href="#season">The season</a></li>
+      <li><a href="#playoffs">Playoffs</a></li>
+      <li><a href="#keepers">Keepers</a></li>
+      <li><a href="#contracts">Contracts</a></li>
+      <li><a href="#voids">Voiding a contract</a></li>
+      <li><a href="#phases">Choosing your keepers</a></li>
+      <li><a href="#draft">Draft order and the board</a></li>
+      <li><a href="#rivalries">Rivalries</a></li>
+      <li><a href="#joining">Joining and leaving</a></li>
+    </ul>
+  </section>
+
+  <section id="league">
+    <h2>The league</h2>
+    <p>{{ s.team_count }} teams on Yahoo Fantasy. Two quarterbacks, superflex,
+      half PPR.</p>
+    <p>Starters are QB, two WR, two RB, a W/T, a W/R/T and a Q/W/R/T, plus a
+      defence. Four bench spots and two IR. <b>There is no kicker slot.</b></p>
+    <p>The draft is 13 rounds, snake order.</p>
+  </section>
+
+  <section id="season">
+    <h2>The season</h2>
+    <p>Fourteen weeks of regular season, then three weeks of playoffs.</p>
+    <p>Each manager plays three opponents twice and the other eight once. The
+      doubled-up pairings favour whoever you have faced least often, so the
+      schedule evens out over the years rather than within one season.</p>
+    <ul class="ruleset">
+      <li>Weeks 1 to 11 are a full round robin &mdash; everyone plays everyone once.</li>
+      <li><b>Week 10 is rivalry week.</b> Every manager plays their rival.</li>
+      <li>Weeks 12 to 14 are the rematches.</li>
+      <li>No pair ever meets in consecutive weeks.</li>
+    </ul>
+  </section>
+
+  <section id="playoffs">
+    <h2>Playoffs</h2>
+    <p>Six teams make the championship bracket.</p>
+    <ul class="ruleset">
+      <li>The <b>top two</b> seeds get a first-round bye.</li>
+      <li><b>Third and fourth</b> qualify on record.</li>
+      <li>The <b>last two spots</b> go to the two remaining teams with the most
+        points for, whatever their record.</li>
+    </ul>
+    <p>The bracket has been the same every year:</p>
+    <table>
+      <thead><tr><th>Week</th><th>Championship bracket</th><th>Everyone else</th></tr></thead>
+      <tbody>
+        <tr><td class="name">15</td>
+            <td class="name">Two quarterfinals, two byes</td>
+            <td class="name">Four consolation games</td></tr>
+        <tr><td class="name">16</td>
+            <td class="name">Two semifinals</td>
+            <td class="name">Fifth place, eleventh place, two consolation</td></tr>
+        <tr><td class="name">17</td>
+            <td class="name">Championship, third place</td>
+            <td class="name">Seventh place, ninth place</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Your final position from first to twelfth is settled by
+      those named placement games, not by record. Win the third-place game and
+      you finished third; lose it and you finished fourth.</p>
+  </section>
+
+  <section id="keepers">
+    <h2>Keepers</h2>
+    <p>You may keep up to {{ s.keeper_count }} players, drawn from your
+      <b>end-of-season roster</b> &mdash; not from who drafted them. Trade for a
+      player in November and he is yours to keep.</p>
+
+    <h3>What a keeper costs</h3>
+    <p>Keeping a player costs you that round in the draft. The price is his
+      <b>original draft round</b>, or <b>round 13</b> if he was picked up off
+      waivers or free agency at any point that season.</p>
+    <ul class="ruleset">
+      <li>A trade carries the price with the player, unchanged. Drafted then
+        traded keeps the draft round; picked up off waivers then traded stays 13.</li>
+      <li>Drafted, dropped, then added back by the same team is 13. You gave
+        him up.</li>
+    </ul>
+
+    <h3>How long you can keep him</h3>
+    <p>Four seasons at most: one year as a plain keeper, then up to three more
+      under contract.</p>
+    <ul class="ruleset">
+      <li><b>Year one</b> costs his original round. No commitment.</li>
+      <li><b>Year two</b> requires a contract. You choose one year or three.</li>
+      <li>Once a contract expires the player is <b>ineligible for one year</b>,
+        after which he resets to being an ordinary non-keeper.</li>
+    </ul>
+
+    <h3>When two keepers want the same round</h3>
+    <p>No two of your keepers may cost the same round. The one who arrived
+      later moves <b>up</b> to the next free, more expensive round. A player
+      already under contract never moves, so the newcomer is the one that
+      shifts.</p>
+    <p class="note">Which means two round-one keepers are impossible. There is
+      nowhere earlier to go.</p>
+  </section>
+
+  <section id="contracts">
+    <h2>Contracts</h2>
+    <p>At the start of a player's second keeper year you sign him for one year
+      or for three.</p>
+    <ul class="ruleset">
+      <li><b>One year</b> &mdash; he costs his original round again, and is then
+        ineligible the following season.</li>
+      <li><b>Three years</b> &mdash; year one at his original round, then years two
+        and three at whichever is cheaper: his original round, or his ADP round
+        plus two. <b>That price is locked when you sign</b> and never moves
+        again, however he performs.</li>
+    </ul>
+    <p class="decree">A contract is an obligation, not an option.</p>
+    <p>If you are holding a contracted player when keeper season comes round,
+      you <b>must</b> keep him, and he fills one of your
+      {{ s.keeper_count }} slots.</p>
+    <p>Contracts follow the player, not the manager. Trade for a contracted
+      player and you inherit the terms exactly as they stand. The commissioner
+      will block any trade that would leave a manager holding a fourth
+      contracted player.</p>
+  </section>
+
+  <section id="voids">
+    <h2>Voiding a contract</h2>
+    <p>The only way out of a contract.</p>
+    <ul class="ruleset">
+      <li>The slot frees up immediately &mdash; you may still keep
+        {{ s.keeper_count }} players that year.</li>
+      <li>You are forced to draft a <b>defence</b> at the contract's round plus
+        three, capped at round 13.</li>
+      <li>You may void more than one contract in a season. Each carries its own
+        forced defence pick.</li>
+    </ul>
+    <p class="note">The wasted roster spot is the price. That is the whole
+      point of it.</p>
+    <p>Voids must be declared during the first keeper phase, and have their own
+      submit button. <b>A void you tick but never submit is discarded</b> when
+      that phase resolves, and the contract stands.</p>
+  </section>
+
+  <section id="phases">
+    <h2>Choosing your keepers</h2>
+    <p>Selection runs in three phases, one keeper each, each with its own
+      submission window.</p>
+    <ul class="ruleset">
+      <li><b>Contracts fill the earliest phases automatically</b>, longest
+        remaining contract first. What round they cost has nothing to do with
+        the order.</li>
+      <li>Your free choices fill whatever phases are left.</li>
+      <li>You can plan all three phases in advance. A plan submits itself when
+        its window closes.</li>
+      <li><b>Miss a window with no contract to fill the slot and you forfeit
+        that keeper.</b></li>
+    </ul>
+    <p>Contracts and forfeits are approved automatically. Anything you chose
+      yourself is reviewed. If a submission is rejected the phase reopens and
+      your plan survives, so you can adjust and send it again.</p>
+    <p>You submit only for yourself. Admins can submit on anyone's behalf.</p>
+  </section>
+
+  <section id="draft">
+    <h2>Draft order and the board</h2>
+
+    <h3>The lottery</h3>
+    <p>Ballots are handed out by where you finished last season, in tiers:</p>
+    <table>
+      <thead><tr><th>Finished</th><th>Ballots</th></tr></thead>
+      <tbody>
+        <tr><td class="name">1st to 3rd</td><td>1</td></tr>
+        <tr><td class="name">4th to 6th</td><td>2</td></tr>
+        <tr><td class="name">7th to 12th</td><td>3</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Twenty-seven ballots in the hat. A bottom-six finisher is
+      three times as likely to be drawn as a top-three finisher.</p>
+
+    <h3>Choosing your slot</h3>
+    <p>The lottery does not set the draft order. It sets the <b>order in which
+      you choose</b> your draft slot. Everyone picks their slot in one live
+      session, in the order drawn.</p>
+    <p><b>Slots are chosen before keeper selection</b>, so you know where you
+      are drafting from while you decide who to keep.</p>
+
+    <h3>The board</h3>
+    <p>Snake order. Pick numbers skip over cells already spent on keepers, so
+      the numbers count only the picks you actually make. Forced defence picks
+      from a void count as taken too, and keepers bump around them.</p>
+  </section>
+
+  <section id="rivalries">
+    <h2>Rivalries</h2>
+    <p>Every manager has exactly one rival each season. Rivalries are mutual,
+      and nobody is two managers' rival.</p>
+    <p>They are worked out from every game the two of you have ever played,
+      scored like this:</p>
+    <table>
+      <thead><tr><th>Game</th><th>Weight</th></tr></thead>
+      <tbody>
+      {% for label, w in weights %}
+        <tr><td class="name">{{ label }}</td><td>{{ w }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <ul class="ruleset">
+      <li>Add <b>{{ close_bonus }}</b> for any meeting decided by
+        {{ close_margin }} points or fewer.</li>
+      <li>Add <b>{{ prior_bonus }}</b> for every past season the two of you were
+        already rivals.</li>
+    </ul>
+    <p>Every possible way of pairing the league up is scored, and the
+      arrangement with the highest total wins. The commissioner can override
+      the result, so long as the pairings stay mutual.</p>
+  </section>
+
+  <section id="joining">
+    <h2>Joining and leaving</h2>
+    <p>When a manager leaves, their team does not dissolve.</p>
+    <ul class="ruleset">
+      <li>The incoming manager <b>takes over the vacant team as it stands</b>,
+        including every keeper and every contract on it.</li>
+      <li>Those contracts carry their existing terms. They are obligations for
+        the new manager exactly as they were for the old one, and can only be
+        escaped by voiding.</li>
+      <li>A new manager <b>skips the lottery and chooses their draft slot
+        first</b>, ahead of everyone else.</li>
+    </ul>
   </section>
 </div>
 {% endblock %}
