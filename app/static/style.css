@@ -571,7 +571,8 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .sectionnav:hover span,
 .sectionnav:focus-within span { max-width: 11rem; }
 
-/* One week at a time, chosen from this strip. */
+/* One week at a time, chosen from this strip. The narrow-screen dropdown
+   below is the same choice in one line; the media query swaps them. */
 .week-nav {
   display: flex;
   flex-wrap: wrap;
@@ -598,6 +599,11 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 /* Scheduled but not played: still selectable, just quieter. */
 .week-nav a.unplayed { color: #a49c8c; border-style: dashed; }
 .week-nav a.unplayed.on { color: var(--panel-bg); border-style: solid; }
+
+/* Off until the strip runs out of room. */
+.week-picker { display: none; margin-bottom: var(--s5); }
+.week-picker > label { flex: 0 0 auto; }
+.week-picker select { flex: 0 0 auto; min-width: 12rem; }
 
 .week h3 { margin-top: 0; }
 
@@ -1212,7 +1218,51 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
     overflow-x: auto;
     white-space: nowrap;
   }
-  .page table.scores { white-space: normal; }
+
+  /* Standings: drop the team name and points against so the seven columns
+     become five and fit without scrolling. The record is the reason the
+     table exists and it was the part scrolled off screen; a team name is
+     on its manager's page anyway. */
+  #standings table { display: table; white-space: normal; }
+  #standings th:nth-child(3), #standings td:nth-child(3),
+  #standings th:nth-child(7), #standings td:nth-child(7) { display: none; }
+
+  /* Seventeen buttons ran to three rows here, so the strip gives way to
+     the dropdown, which is one line. Same control, same JS. */
+  .week-nav { display: none; }
+  .week-picker { display: flex; }
+
+  /* Fixtures: each game stacks instead of squeezing six columns into
+     317px, where names wrapped to three lines and rows ran to 130px.
+     The playoff label becomes a heading over the game rather than a
+     first column. */
+  #fixtures table.scores,
+  #fixtures .scores tbody { display: block; white-space: normal; }
+  #fixtures .scores tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "label label"
+      "teama scorea"
+      "teamb scoreb";
+    gap: 2px var(--s3);
+    padding: var(--s2) 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  #fixtures .scores td { display: block; border: 0; padding: 0; text-align: left; }
+  #fixtures .scores .gt { grid-area: label; width: auto; }
+  #fixtures .scores .gt:empty { display: none; }
+  #fixtures .scores td:nth-child(2) { grid-area: teama; }
+  #fixtures .scores td:nth-child(3) { grid-area: scorea; text-align: right; }
+  /* "vs" carries no meaning once the two teams are stacked; the bye marker
+     moved into the team cell so nothing is lost by hiding it. */
+  #fixtures .scores .vs { display: none; }
+  #fixtures .scores td:nth-child(5) { grid-area: scoreb; text-align: right; }
+  #fixtures .scores td:nth-child(6) { grid-area: teamb; }
+  #fixtures .scores .pts { width: auto; }
+  /* Manager inline with the team rather than under it: stacked, a separate
+     line per manager put each game back to five lines and ~128px. */
+  #fixtures .scores .name .tm { display: inline; margin-left: 0.4rem; }
 
   .page-head h1 { margin-left: var(--pad-gutter); margin-right: var(--pad-gutter); }
   .page-head h1.titled { gap: var(--s3); }

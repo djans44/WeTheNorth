@@ -73,10 +73,16 @@
   // The server renders every week and marks one open. Without this script
   // they all stay visible and the nav links simply jump to them, so the
   // page still works.
+  //
+  // Two controls choose the week -- a strip of seventeen on wide screens, a
+  // select on narrow ones -- and CSS shows one at a time. Both are updated on
+  // every change rather than only the visible one, so resizing or rotating
+  // never reveals a control pointing at a different week.
   var weekNav = document.querySelector(".week-nav");
-  if (weekNav) {
+  var weekPick = document.getElementById("weekpick");
+  if (weekNav || weekPick) {
     var weeks = document.querySelectorAll(".week");
-    var links = weekNav.querySelectorAll("a");
+    var links = weekNav ? weekNav.querySelectorAll("a") : [];
 
     var show = function (n) {
       var i;
@@ -88,17 +94,23 @@
         links[i].className = links[i].className.replace(/\s*\bon\b/, "");
         if (on) { links[i].className += " on"; }
       }
+      if (weekPick) { weekPick.value = n; }
     };
 
-    var opening = weekNav.querySelector("a.on") || links[0];
-    if (opening) { show(opening.getAttribute("data-week")); }
+    var opening = (weekNav && weekNav.querySelector("a.on")) || links[0];
+    show(weekPick ? weekPick.value : opening.getAttribute("data-week"));
 
-    weekNav.addEventListener("click", function (e) {
-      var a = e.target.closest("a[data-week]");
-      if (!a) { return; }
-      e.preventDefault();
-      show(a.getAttribute("data-week"));
-    });
+    if (weekNav) {
+      weekNav.addEventListener("click", function (e) {
+        var a = e.target.closest("a[data-week]");
+        if (!a) { return; }
+        e.preventDefault();
+        show(a.getAttribute("data-week"));
+      });
+    }
+    if (weekPick) {
+      weekPick.addEventListener("change", function () { show(weekPick.value); });
+    }
   }
 
   // ---- toast ----

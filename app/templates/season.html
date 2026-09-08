@@ -92,14 +92,29 @@
   <section id="fixtures">
     <h2>{% if s.champion %}Results{% else %}Fixtures and results{% endif %}</h2>
 
-    {# Anchors, not buttons: without JS these jump to the week, and every
-       week is visible because nothing has been hidden. #}
+    {# Two controls for the same choice, one shown per width: the strip is
+       seventeen buttons, which needs room, and the select is one line, which
+       does not. app.js keeps them in sync so a rotation never leaves the
+       newly visible one showing a different week. Anchors, not buttons, so
+       without JS they still jump to the week -- and every week is visible,
+       because nothing has been hidden. #}
     <nav class="week-nav">
       {% for w in weeks %}
         <a href="#week-{{ w.week }}" data-week="{{ w.week }}"
            class="{% if w.week == open_week %}on{% endif %}{% if not w.played %} unplayed{% endif %}">{{ w.week }}</a>
       {% endfor %}
     </nav>
+
+    <p class="field short week-picker">
+      <label for="weekpick">Week</label>
+      <select id="weekpick">
+        {% for w in weeks %}
+          <option value="{{ w.week }}" {% if w.week == open_week %}selected{% endif %}>
+            Week {{ w.week }}{% if not w.played %} &mdash; not played{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </p>
 
     {% for w in weeks %}
       <div class="week" id="week-{{ w.week }}" data-week="{{ w.week }}">
@@ -113,10 +128,11 @@
                 {{ g.team_a }}<span class="tm">{{ g.owner_a }}</span>
               </td>
               <td class="pts">{{ "%.2f"|format(g.points_a) if g.points_a is not none }}</td>
-              <td class="vs">{% if g.team_b %}vs{% else %}bye{% endif %}</td>
+              <td class="vs">vs</td>
               <td class="pts">{{ "%.2f"|format(g.points_b) if g.points_b is not none }}</td>
               <td class="name {% if g.team_b and g.points_a is not none and g.points_b is not none and g.points_b > g.points_a %}win{% endif %}">
-                {% if g.team_b %}{{ g.team_b }}<span class="tm">{{ g.owner_b }}</span>{% endif %}
+                {% if g.team_b %}{{ g.team_b }}<span class="tm">{{ g.owner_b }}</span>
+                {%- else %}<span class="tm">bye</span>{% endif %}
               </td>
             </tr>
           {% endfor %}
