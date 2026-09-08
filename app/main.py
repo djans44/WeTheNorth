@@ -16,6 +16,30 @@ load_dotenv()
 STATIC_DIR = pathlib.Path("app/static")
 PUBLIC_PATHS = {"/", "/login", "/logout", "/health"}
 
+# Sixteen swatches for thirteen owners. Every one is dark enough that
+# parchment text sits on it legibly, which is why nothing in this codebase
+# calculates contrast -- the avatar foreground is always #EDE4D3.
+# Single source of truth: feeds the pickers and validates every save.
+AVATAR_PALETTE = [
+    ("Oxblood",      "#6B1F24"),
+    ("Rust",         "#8C4425"),
+    ("Antique gold", "#8A6D1F"),
+    ("Olive",        "#55622F"),
+    ("Forest",       "#2C4733"),
+    ("Pine",         "#1F4A42"),
+    ("Deep teal",    "#1B5560"),
+    ("Northern ice", "#3C6E88"),
+    ("Slate",        "#2F4A66"),
+    ("Midnight",     "#1E2A44"),
+    ("Royal purple", "#472B57"),
+    ("Plum",         "#632C51"),
+    ("Charcoal",     "#33383D"),
+    ("Stone",        "#5E5D55"),
+    ("Bone",         "#7A6A55"),
+    ("Ash",          "#4A4E52"),
+]
+AVATAR_HEXES = {hex_ for _, hex_ in AVATAR_PALETTE}
+
 app = FastAPI()
 
 
@@ -71,6 +95,7 @@ def query(conn, sql, params=None):
 
 _owner_cache = {"at": 0.0, "rows": []}
 _season_cache = {"at": 0.0, "rows": []}
+_avatar_cache = {"at": 0.0, "map": {}}
 
 
 def nav_owners():
@@ -104,6 +129,79 @@ def nav_seasons():
 
 templates.env.globals["nav_owners"] = nav_owners
 templates.env.globals["nav_seasons"] = nav_seasons
+
+
+def initials_for(username, last_name=None, override=None):
+    """Override, else first + last initial, else the first two letters.
+
+    last_name is null for everyone today, so most owners land on the last
+    rung. Filling one in promotes that owner to real initials with no code
+    change -- which is the whole reason the column exists.
+    """
+    if override and override.strip():
+        return override.strip().upper()[:2]
+    first = (username or "").strip()
+    last = (last_name or "").strip()
+    if first and last:
+        return (first[0] + last[0]).upper()
+    return first.upper()[:2]
+
+
+def owner_avatars():
+    """owner_id and lowercased username both key the same avatar entry.
+
+    Almost every query on this site selects a username and nothing else --
+    the head-to-head grid is keyed on username strings, and the stats views
+    are fixed column lists. Looking colours up here at render time means no
+    existing query or view has to change to carry the new columns.
+    """
+    now = time.time()
+    if now - _avatar_cache["at"] > 300:
+        try:
+            with get_db() as conn:
+                rows = query(conn, """
+                    select owner_id, username, last_name,
+                           avatar_bg, avatar_initials
+                    from owners
+                """)
+            found = {}
+            for r in rows:
+                entry = {
+                    "name": r["username"],
+                    "bg": r["avatar_bg"],
+                    "initials": initials_for(
+                        r["username"], r["last_name"], r["avatar_initials"]),
+                }
+                found[r["owner_id"]] = entry
+                found[r["username"].lower()] = entry
+            _avatar_cache["map"] = found
+            _avatar_cache["at"] = now
+        except Exception:
+            pass
+    return _avatar_cache["map"]
+
+
+def bust_avatars():
+    _avatar_cache["at"] = 0.0
+
+
+def av(who):
+    """Resolve a username, an owner_id or an owner row to avatar fields.
+
+    Rows carrying someone else's name in a second column -- an opponent, a
+    rival -- must pass that column explicitly rather than the whole row.
+    """
+    if isinstance(who, dict):
+        who = who.get("owner_id") or who.get("username")
+    key = who if isinstance(who, int) else (who or "").strip().lower()
+    entry = owner_avatars().get(key)
+    if entry:
+        return entry
+    label = "" if isinstance(who, int) else str(who or "")
+    return {"name": label, "bg": "#33383D", "initials": initials_for(label)}
+
+
+templates.env.globals["av"] = av
 
 
 @app.get("/", response_class=HTMLResponse)
