@@ -53,6 +53,33 @@
     {% endif %}
   </section>
 
+  {% if keepers %}
+  <section>
+    <h2>Keepers</h2>
+    <p class="note">Who each manager held onto, and the round it cost them.</p>
+    <div class="keeper-grid">
+      {% for group in keepers %}
+        <div class="owner-block">
+          <h3>
+            <span class="avatar-line">
+              {{ avatar(group.rows[0].owner_id, 24) }}
+              <a href="/team/{{ group.key|lower }}">{{ group.key }}</a>
+            </span>
+          </h3>
+          {% for k in group.rows %}
+            <p class="kept">
+              <b class="rd">R{{ k.cost_round }}</b>
+              {{ k.full_name }} <span class="tm">{{ k.position }}</span>
+              <span class="tm term">{{ ordinal(k.keeper_year) }} year{% if k.contract_years %},
+                {{ k.contract_years }}-year deal{% endif %}</span>
+            </p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {% if records %}
   <section>
     <h2>Biggest weeks</h2>

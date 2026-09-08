@@ -391,9 +391,9 @@ Everything else requires a session (middleware redirects to `/`).
 |---|---|
 | `GET /history` | Champions, all-time standings, head-to-head grid, records, projection stats |
 | `GET /teams` | All managers |
-| `GET /team/{name}` | One manager: season by season, rival, head-to-head, best/worst weeks, projections |
+| `GET /team/{name}` | One manager: season by season, keepers, rival, head-to-head, best/worst weeks, projections |
 | `GET /seasons` | Season index |
-| `GET /season/{year}` | Standings and week-by-week results |
+| `GET /season/{year}` | Standings, keepers, and week-by-week results |
 | `GET /current` | Redirects to the newest season |
 | `GET /rules` | The full league rules. Rivalry weights and league size come from the code and the `seasons` row, not prose |
 | `GET /draft-order`, `POST /draft-order/pick` | Lottery board and slot selection |
@@ -451,8 +451,6 @@ button.
 
 **Not built**
 - **Trades and waivers on the season page** — data is loaded, needs a view and a template
-- 2022–2024 draft `is_keeper` flags are set, but keeper history for those
-  seasons could be surfaced on manager pages
 - Badges (spec in `docs/features/badges.md`)
 - **Create-season checklist** (`docs/features/season-setup.md`) — every step
   needed to stand up the next league year, in dependency order. **Adding an

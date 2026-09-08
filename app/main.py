@@ -351,10 +351,15 @@ def team(request: Request, name: str):
             join owners ro on ro.owner_id = r.rival_owner_id
             where r.owner_id = %s order by r.season_year desc
         """, (oid,))
+        keepers = query(conn, KEEPER_HISTORY_SQL + """
+            where t.owner_id = %s
+            order by ks.season_year desc, ks.cost_round
+        """, (oid,))
     return templates.TemplateResponse(
         request=request, name="team.html",
         context={"owner": owner, "seasons": seasons, "h2h": h2h,
                  "best": best, "worst": worst, "rivals": rivals,
+                 "keepers": group_runs(keepers, "season_year"),
                  "projection": proj_rows[0] if proj_rows else None})
 
 
@@ -418,6 +423,10 @@ def season(request: Request, year: int):
             from game_log where season_year = %s
             order by points_for desc limit 3
         """, (year,))
+        keepers = query(conn, KEEPER_HISTORY_SQL + """
+            where ks.season_year = %s
+            order by o.username, ks.cost_round
+        """, (year,))
     weeks = []
     for g in games:
         if not weeks or weeks[-1]["week"] != g["week"]:
@@ -425,8 +434,9 @@ def season(request: Request, year: int):
         weeks[-1]["games"].append(g)
     return templates.TemplateResponse(
         request=request, name="season.html",
-        context={"s": head[0], "standings": standings,
-                 "weeks": weeks, "records": records})
+        context={"s": head[0], "standings": standings, "weeks": weeks,
+                 "records": records,
+                 "keepers": group_runs(keepers, "username")})
 
 
 # Order the rivalry weights are shown in on /rules, loosest to fiercest.
@@ -485,6 +495,35 @@ def _colour_holders(rows, skip=None):
 
 def _current_season(conn):
     return query(conn, "select max(season_year) as y from seasons")[0]["y"]
+
+
+def group_runs(rows, key):
+    """Consecutive rows sharing a key, in the order the query returned them.
+
+    The query does the ordering; this only breaks it into runs.
+    """
+    out = []
+    for r in rows:
+        if not out or out[-1]["key"] != r[key]:
+            out.append({"key": r[key], "rows": []})
+        out[-1]["rows"].append(r)
+    return out
+
+
+# keeper_selections is the record of what was actually kept. It agrees with
+# the is_keeper flags on draft_picks and carries the cost and the contract,
+# which the flags do not.
+KEEPER_HISTORY_SQL = """
+    select ks.season_year, ks.cost_round, ks.keeper_year,
+           o.owner_id, o.username,
+           pl.full_name, pl.position,
+           kc.contract_years, kc.status as contract_status
+    from keeper_selections ks
+    join teams   t  on t.team_id   = ks.team_id
+    join owners  o  on o.owner_id  = t.owner_id
+    join players pl on pl.player_id = ks.player_id
+    left join keeper_contracts kc on kc.contract_id = ks.contract_id
+"""
 
 
 def _owner_form(conn, oid):

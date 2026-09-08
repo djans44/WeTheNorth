@@ -39,6 +39,28 @@
     </table>
   </section>
 
+  {% if keepers %}
+  <section>
+    <h2>Keepers</h2>
+    <p class="note">Every player held onto, and the round it cost.</p>
+    <div class="keeper-grid">
+      {% for group in keepers %}
+        <div class="owner-block">
+          <h3><a href="/season/{{ group.key }}" class="year">{{ group.key }}</a></h3>
+          {% for k in group.rows %}
+            <p class="kept">
+              <b class="rd">R{{ k.cost_round }}</b>
+              {{ k.full_name }} <span class="tm">{{ k.position }}</span>
+              <span class="tm term">{{ ordinal(k.keeper_year) }} year{% if k.contract_years %},
+                {{ k.contract_years }}-year deal{% endif %}</span>
+            </p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {% if rivals %}
   <section>
     <h2>Rival</h2>
