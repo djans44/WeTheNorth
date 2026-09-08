@@ -5,7 +5,6 @@
 {% block content %}
 <div class="page">
   <header class="page-head">
-    <div class="tape"></div>
     <h1 class="titled">{{ avatar(owner.owner_id, 96) }}{{ owner.username }}</h1>
     <p class="lede">
       {{ owner.wins }}&ndash;{{ owner.losses }} across {{ owner.seasons_played }} season{{ "s" if owner.seasons_played != 1 }},
