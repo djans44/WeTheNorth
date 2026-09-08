@@ -34,3 +34,38 @@
         style="--av-bg: {{ a.bg }}; --av-size: {{ size }}px; --av-font: {{ (size * 0.4)|round|int }}px;"
         title="{{ a.name }}">{{ a.initials }}</span>
 {%- endmacro %}
+
+
+{# Playoff position, as a mark beside the name. Three shapes rather than
+   three colours, so it survives being printed or read by someone who cannot
+   tell the accent from the muted ink. Drawn filled when the position is
+   settled and as an outline while it is still provisional.
+
+   Kept deliberately blunt: a crown, a star, a playing card. An earlier
+   attempt at a detailed glyph on this site was unreadable at 24px and these
+   are 16, so each one is a silhouette and nothing more -- a jester's cap was
+   tried first and collapsed into a lump at this size.
+
+   The card's pip is knocked out of the shape with fill-rule="evenodd" rather
+   than drawn on top, so it survives the fill being switched off. It is a
+   diamond and not a star because the star is already the mark above it. #}
+{% macro seedmark(seed, size=16, named=true) -%}
+  {# named=false in the legend, where the words are already beside the mark:
+     announcing it there would read "Bye Bye". #}
+  <svg class="seedmark {{ seed.mark }}{% if seed.firm %} firm{% endif %}"
+       viewBox="0 0 20 20"
+       {% if named %}role="img" aria-label="{{ seed.text }}"
+       {%- else %}aria-hidden="true" focusable="false"{% endif %}
+       style="width: {{ size }}px; height: {{ size }}px;">
+    {%- if named %}<title>{{ seed.text }}</title>{% endif %}
+    {%- if seed.mark == "bye" %}
+      <path d="M2.5 15.5V5l4 3.3L10 3.2l3.5 5.1 4-3.3v10.5z"/>
+    {%- elif seed.mark == "berth" %}
+      <path d="M10 2.6l2.3 4.8 5.2.7-3.8 3.7.9 5.2-4.6-2.5-4.6 2.5.9-5.2L2.5 8.1l5.2-.7z"/>
+    {%- else %}
+      <g transform="rotate(-14 10 10)">
+        <path d="M5.2 3.1h9.6a1.4 1.4 0 0 1 1.4 1.4v11a1.4 1.4 0 0 1-1.4 1.4H5.2a1.4 1.4 0 0 1-1.4-1.4v-11a1.4 1.4 0 0 1 1.4-1.4zM10 6.6l2.6 3.4L10 13.4 7.4 10z"/>
+      </g>
+    {%- endif %}
+  </svg>
+{%- endmacro %}

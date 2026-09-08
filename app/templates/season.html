@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar, leaf %}
+{% from "macros.html" import avatar, leaf, seedmark %}
 {% block title %}{{ s.season_year }} | We the North{% endblock %}
 
 {% set labels = {"regular": "Regular season", "quarterfinal": "Quarterfinal",
@@ -68,10 +68,15 @@
       {% for t in standings %}
         <tr>
           <td class="{% if t.final_rank == 1 %}win{% endif %}">{{ ordinal(t.final_rank) or loop.index }}</td>
+          {# The mark sits inside the name line rather than on a line of its
+             own: as a written label it added 21px to every row. The legend
+             under the table carries the words. #}
           <td class="name">
             <span class="avatar-line">
               {{ avatar(t.username, 24) }}
               <a href="/team/{{ t.username|lower }}">{{ t.username }}</a>
+              {% set seed = seeds.get(t.team_id) %}
+              {% if seed %}{{ seedmark(seed) }}{% endif %}
             </span>
           </td>
           <td class="name">{{ t.team_name }}</td>
@@ -83,6 +88,13 @@
       {% endfor %}
       </tbody>
     </table>
+    {% if seed_key %}
+      <p class="seedkey">
+        {% for seed in seed_key %}
+          <span>{{ seedmark(seed, named=false) }}{{ seed.text }}</span>
+        {% endfor %}
+      </p>
+    {% endif %}
     {% if not weeks %}
       <p class="note">No results recorded yet, so the order above is just the entry list.</p>
     {% endif %}

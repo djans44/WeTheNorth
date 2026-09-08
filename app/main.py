@@ -377,6 +377,115 @@ def team(request: Request, name: str):
                  "projection": proj_rows[0] if proj_rows else None})
 
 
+# --- the playoff field -------------------------------------------------
+#
+# Two byes, two more places on record, then the last two to the highest
+# points for among everyone else. Checked against 2022-2025, where it
+# reproduces each season's real bracket exactly -- including 2025, where Joey
+# went in at 6-8 on points for and Borys stayed home at 7-7.
+PLAYOFF_BYES = 2
+PLAYOFF_ON_RECORD = 4
+PLAYOFF_SPOTS = 6
+
+
+def _record(t):
+    """Wins, counting a tie as half. No season has produced one yet, so this
+    has never mattered; it is here so that the first one does not silently
+    rank a tied team below a team with the same number of wins."""
+    return t["wins"] + 0.5 * (t["ties"] or 0)
+
+
+def playoff_labels(standings, remaining):
+    """Map team_id to a label for the standings table.
+
+    `remaining` is regular season games still to play, per team_id.
+
+    Once the regular season is over the field is settled, so the labels state
+    the position outright. While it is running they say what is true now and
+    what is already beyond reach, and the two are distinguished because
+    "leading" and "cannot be caught" are different claims to make about
+    someone's season.
+
+    The clinch test uses wins alone and errs towards saying nothing: a berth
+    is clinched when at most three others can still reach your win total, a
+    bye when at most one can. Top four on record are always in, so being no
+    worse than fourth is a berth whatever the points-for race does. Points
+    for is deliberately left out of it -- bringing it in could only make the
+    test claim more than it can prove.
+
+    There is no "clinched wild card" for the same reason: wild cards are
+    decided on points for, and a rival can always outscore you in the weeks
+    left. It is only safe once the season is over, when it is also pointless.
+    """
+    played = sum(t["wins"] + t["losses"] + (t["ties"] or 0) for t in standings)
+    if not played:
+        return {}          # nothing to seed on, so no claims
+
+    seeded = sorted(standings, key=lambda t: (-_record(t), -float(t["points_for"])))
+    done = not any(remaining.get(t["team_id"], 0) for t in standings)
+
+    # The last two places are the highest scorers among everyone left, which
+    # is not the same as the next two on record and must not be taken from
+    # the record order. 2025 is the case that proves it: Borys sat sixth at
+    # 7-7 and Joey seventh at 6-8, and it was Joey who went, on points for.
+    field = seeded[:PLAYOFF_ON_RECORD]
+    wildcards = sorted(seeded[PLAYOFF_ON_RECORD:],
+                       key=lambda t: -float(t["points_for"]))
+    field += wildcards[:PLAYOFF_SPOTS - PLAYOFF_ON_RECORD]
+
+    # mark: which glyph the standings table shows -- crown, shield, star.
+    # firm: settled, nothing can undo it. A provisional mark is drawn as an
+    # outline so the table does not present a lead as a guarantee.
+    labels = {}
+    for i, t in enumerate(field):
+        mark = ("bye" if i < PLAYOFF_BYES
+                else "berth" if i < PLAYOFF_ON_RECORD
+                else "wild")
+
+        if done:
+            text = ("Bye" if mark == "bye"
+                    else "Playoff team" if mark == "berth"
+                    else "Wild card")
+            labels[t["team_id"]] = {"text": text, "firm": True, "mark": mark}
+            continue
+
+        # Worst case for this team against the best case for everyone else.
+        floor = _record(t)
+        rivals = sum(1 for o in standings
+                     if o["team_id"] != t["team_id"]
+                     and _record(o) + remaining.get(o["team_id"], 0) >= floor)
+
+        if mark == "bye":
+            firm = rivals <= PLAYOFF_BYES - 1
+            text = "Clinched bye" if firm else "On pace for bye"
+        elif mark == "berth":
+            firm = rivals <= PLAYOFF_ON_RECORD - 1
+            text = "Clinched playoffs" if firm else "Playoff team"
+        else:
+            # Never firm: a wild card rests on points for, which the weeks
+            # left can always overturn.
+            firm, text = False, "Wild card"
+        labels[t["team_id"]] = {"text": text, "firm": firm, "mark": mark}
+    return labels
+
+
+def seed_key(labels, standings):
+    """The legend under the standings, built from the marks actually on the
+    page. Generated rather than written out so it can never describe a state
+    the table is not showing -- a finished season has no "on pace" row."""
+    order = {"bye": 0, "berth": 1, "wild": 2}
+    seen, key = set(), []
+    for t in standings:
+        seed = labels.get(t["team_id"])
+        if not seed:
+            continue
+        ident = (seed["mark"], seed["firm"], seed["text"])
+        if ident not in seen:
+            seen.add(ident)
+            key.append(seed)
+    return sorted(key, key=lambda s: (order[s["mark"]], not s["firm"]))
+
+
 @app.get("/current")
 def current_season():
     with get_db() as conn:
@@ -398,8 +507,24 @@ def season(request: Request, year: int):
             raise HTTPException(status_code=404, detail="No such season")
         standings = query(conn, """
             select * from team_season_stats where season_year = %s
-            order by final_rank nulls last, wins desc, points_for desc
+            order by final_rank nulls last,
+                     wins + 0.5 * coalesce(ties, 0) desc, points_for desc
         """, (year,))
+        # Scheduled regular season games per team, so the clinch test knows
+        # how many are left. Counted from matchups rather than assuming 14,
+        # so a half-built schedule does not make everyone look eliminated.
+        remaining = {r["team_id"]: r["left"] for r in query(conn, """
+            select t.team_id,
+                   count(m.matchup_id) filter (where m.game_type = 'regular')
+                     - (s.wins + s.losses + coalesce(s.ties, 0)) as left
+            from teams t
+            join team_season_stats s on s.team_id = t.team_id
+            left join matchups m
+              on m.season_year = t.season_year
+             and (m.team_a_id = t.team_id or m.team_b_id = t.team_id)
+            where t.season_year = %s
+            group by t.team_id, s.wins, s.losses, s.ties
+        """, (year,))}
         games = query(conn, """
             select m.week, m.game_type,
                    ta.team_name as team_a, oa.username as owner_a,
@@ -471,10 +596,12 @@ def season(request: Request, year: int):
     played = [w["week"] for w in weeks if w["played"]]
     open_week = played[-1] if played else (weeks[0]["week"] if weeks else None)
 
+    seeds = playoff_labels(standings, remaining)
     return templates.TemplateResponse(
         request=request, name="season.html",
         context={"s": head[0], "standings": standings, "weeks": weeks,
                  "records": records, "open_week": open_week,
+                 "seeds": seeds, "seed_key": seed_key(seeds, standings),
                  "keepers": group_runs(keepers, "username")})
 
 
