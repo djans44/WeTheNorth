@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}Manager avatars | We the North{% endblock %}
+
+{% block content %}
+<div class="page wide">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Manager avatars</h1>
+    <p class="lede">Colour, surname and initials for every manager, retired ones
+      included. Tulio has no email and cannot sign in, so this is the only way to
+      set his.</p>
+  </header>
+
+  <section>
+    <p class="note">Initials come from the override if there is one, otherwise
+      from the first and last name, otherwise from the first two letters of the
+      first name. A surname is the tidier fix; an override is for the cases it
+      cannot solve.</p>
+
+    <form method="post" action="/admin/owners">
+      <table class="keepers owners-grid">
+        <thead>
+          <tr><th>Manager</th><th>Surname</th><th>Override</th><th>Colour</th></tr>
+        </thead>
+        <tbody>
+        {% for o in owners %}
+          <tr>
+            <td class="name">
+              <span class="avatar-line">
+                {{ avatar(o.owner_id, 32) }}
+                <span>{{ o.username }}{% if o.is_retired %}<span class="tm">retired</span>{% endif %}</span>
+              </span>
+            </td>
+            <td><input name="last_{{ o.owner_id }}" value="{{ o.last_name or '' }}" size="12"></td>
+            <td><input name="initials_{{ o.owner_id }}" value="{{ o.avatar_initials or '' }}"
+                       maxlength="2" size="2"></td>
+            <td>
+              <div class="avatar-picker compact">
+                {% for name, hex in palette %}
+                  {% set taken = holders.get(hex, []) | reject('equalto', o.username) | list %}
+                  <label class="swatch" style="--sw: {{ hex }};"
+                         title="{{ name }}{% if taken %} &mdash; also {{ taken|join(', ') }}{% endif %}">
+                    <input type="radio" name="bg_{{ o.owner_id }}" value="{{ hex }}"
+                           {% if hex == o.avatar_bg %}checked{% endif %}>
+                    <span class="chip"></span>
+                  </label>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit">Save sigils</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

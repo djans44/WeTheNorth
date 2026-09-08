@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}Your sigil | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Your sigil</h1>
+    <p class="lede">The colour you are known by across the league. It follows you
+      through the standings, the head-to-head grid and every table that names you.</p>
+  </header>
+
+  <section>
+    <form method="post" action="/profile">
+      <div class="sigil">
+        {{ avatar(me.username, 96) }}
+        <div>
+          <b>{{ me.username }}</b>
+          <span class="tm">
+            {% if me.avatar_initials %}
+              Showing your override.
+            {% elif me.last_name %}
+              Taken from {{ me.username }} {{ me.last_name }}.
+            {% else %}
+              Taken from your name. Set an override below to change it.
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <h2>Colour</h2>
+      <p class="note">Sixteen to choose from. Colours are not reserved &mdash; where
+        another manager already sits on one, they are named beneath it.</p>
+      <div class="avatar-picker">
+        {% for name, hex in palette %}
+          {% set taken = holders.get(hex, []) %}
+          <label class="swatch" style="--sw: {{ hex }};">
+            <input type="radio" name="avatar_bg" value="{{ hex }}"
+                   {% if hex == me.avatar_bg %}checked{% endif %}>
+            <span class="chip"></span>
+            <span class="swatch-name">{{ name }}</span>
+            {% if taken %}<span class="tm">{{ taken|join(', ') }}</span>{% endif %}
+          </label>
+        {% endfor %}
+      </div>
+
+      <h2>Initials</h2>
+      <p class="note">Two letters at most. Leave it blank to use the letters
+        drawn from your name.</p>
+      <p class="field">
+        <label for="avatar_initials">Override</label>
+        <input id="avatar_initials" name="avatar_initials" maxlength="2" size="2"
+               value="{{ me.avatar_initials or '' }}">
+      </p>
+
+      <button type="submit">Save sigil</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

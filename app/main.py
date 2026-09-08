@@ -428,6 +428,119 @@ def rules(request: Request):
     return templates.TemplateResponse(request=request, name="rules.html")
 
 
+def _colour_holders(rows, skip=None):
+    """Which other owners already sit on each colour.
+
+    Colours are not unique, so this is a hint in the picker rather than a
+    restriction: you can see who you are about to match before you do it.
+    """
+    holders = {}
+    for r in rows:
+        if skip is not None and r["owner_id"] == skip:
+            continue
+        holders.setdefault(r["avatar_bg"], []).append(r["username"])
+    return holders
+
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile(request: Request):
+    oid = request.session["owner_id"]
+    with get_db() as conn:
+        everyone = query(conn, """
+            select owner_id, username, last_name, avatar_bg, avatar_initials
+            from owners order by username
+        """)
+    me = next((r for r in everyone if r["owner_id"] == oid), None)
+    if not me:
+        raise HTTPException(status_code=404, detail="No such owner")
+    return templates.TemplateResponse(
+        request=request, name="profile.html",
+        context={"me": me, "palette": AVATAR_PALETTE,
+                 "holders": _colour_holders(everyone, skip=oid)})
+
+
+@app.post("/profile")
+async def profile_save(request: Request):
+    from urllib.parse import quote
+    oid = request.session["owner_id"]
+    form = await request.form()
+    bg = (form.get("avatar_bg") or "").strip().upper()
+    initials = (form.get("avatar_initials") or "").strip().upper()[:2]
+
+    if bg not in AVATAR_HEXES:
+        return RedirectResponse(
+            url="/profile?error=" + quote("That is not one of the league colours."),
+            status_code=303)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                update owners
+                set avatar_bg = %s, avatar_initials = %s, updated_at = now()
+                where owner_id = %s
+            """, (bg, initials or None, oid))
+        conn.commit()
+    bust_avatars()
+
+    return RedirectResponse(
+        url="/profile?msg=" + quote("Sigil saved"), status_code=303)
+
+
+@app.get("/admin/owners", response_class=HTMLResponse)
+def admin_owners(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    with get_db() as conn:
+        owners = query(conn, """
+            select owner_id, username, last_name, avatar_bg, avatar_initials,
+                   email, is_retired
+            from owners order by is_retired, username
+        """)
+    return templates.TemplateResponse(
+        request=request, name="admin_owners.html",
+        context={"owners": owners, "palette": AVATAR_PALETTE,
+                 "holders": _colour_holders(owners)})
+
+
+@app.post("/admin/owners")
+async def admin_owners_save(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+
+    updates = []
+    for key in form.keys():
+        if not key.startswith("bg_"):
+            continue
+        oid = int(key.split("_", 1)[1])
+        bg = (form.get(key) or "").strip().upper()
+        if bg not in AVATAR_HEXES:
+            return RedirectResponse(
+                url="/admin/owners?error=" +
+                    quote("That is not one of the league colours."),
+                status_code=303)
+        last = (form.get(f"last_{oid}") or "").strip()
+        initials = (form.get(f"initials_{oid}") or "").strip().upper()[:2]
+        updates.append((bg, last or None, initials or None, oid))
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            for row in updates:
+                cur.execute("""
+                    update owners
+                    set avatar_bg = %s, last_name = %s, avatar_initials = %s,
+                        updated_at = now()
+                    where owner_id = %s
+                """, row)
+        conn.commit()
+    bust_avatars()
+
+    return RedirectResponse(
+        url="/admin/owners?msg=" + quote("Sigils saved"), status_code=303)
+
+
 def keeper_context(conn, season, owner_id):
     windows = query(conn, """
         select phase, opens_at, closes_at, resolved_at,

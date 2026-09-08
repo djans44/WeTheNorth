@@ -1,0 +1,24 @@
+{#
+  Shared components.
+
+      {% from "macros.html" import avatar %}
+      {{ avatar(o.username, 24) }}
+
+  avatar() accepts a username, an owner_id, or an owner row. A row that
+  carries a second person in another column -- an opponent, a rival -- must
+  pass that column explicitly rather than the whole row.
+
+  av() is an environment global, so it resolves inside imported macros
+  without the calling template passing any context.
+
+  To sit an avatar beside a name or a link, wrap the pair in
+  <span class="avatar-line"> rather than reaching for another macro --
+  the call sites differ too much to be worth one.
+#}
+
+{% macro avatar(who, size=32) -%}
+  {%- set a = av(who) -%}
+  <span class="avatar"
+        style="--av-bg: {{ a.bg }}; --av-size: {{ size }}px; --av-font: {{ (size * 0.4)|round|int }}px;"
+        title="{{ a.name }}">{{ a.initials }}</span>
+{%- endmacro %}

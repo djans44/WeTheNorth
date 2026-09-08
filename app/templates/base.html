@@ -1,3 +1,4 @@
+{% from "macros.html" import avatar %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,12 +43,18 @@
           <li><a href="/admin/keepers">Keeper admin</a></li>
           <li><a href="/admin/rivals">Rivals</a></li>
           <li><a href="/admin/schedule">Create schedule</a></li>
+          <li><a href="/admin/owners">Manager avatars</a></li>
         </ul>
       </li>
       {% endif %}
     </ul>
     {% if request.session.get("username") %}
-      <span class="who">{{ request.session["username"] }} &middot; <a href="/logout">Sign out</a></span>
+      <span class="who">
+        <a class="me" href="/profile">
+          {{ avatar(request.session["username"], 24) }}{{ request.session["username"] }}
+        </a>
+        &middot; <a href="/logout">Sign out</a>
+      </span>
     {% endif %}
   </nav>
 

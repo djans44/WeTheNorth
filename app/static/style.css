@@ -204,6 +204,109 @@ tbody tr:last-child td { border-bottom: 0; }
 .records b { font-variant-numeric: tabular-nums; }
 
 
+/* ---- avatars ---- */
+
+/* Every palette swatch is dark enough for parchment text, so the
+   foreground is a constant and nothing here calculates contrast.
+   The thin gold ring is what makes this read as a house sigil rather
+   than a chat-app avatar. */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--av-size);
+  height: var(--av-size);
+  border-radius: 50%;
+  background: var(--av-bg);
+  color: #ede4d3;
+  font-family: var(--display);
+  font-size: var(--av-font);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(196, 168, 110, 0.45);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.avatar-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ---- avatar picker ---- */
+
+.sigil {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  margin-bottom: 1.75rem;
+}
+.sigil b { font-family: var(--display); font-size: 1.3rem; }
+
+.avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.avatar-picker .swatch {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--stone-edge);
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+}
+.avatar-picker .swatch:hover { border-color: var(--ink-soft); }
+
+/* The radio is the state, the chip is the control. */
+.avatar-picker .swatch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.avatar-picker .chip {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--sw);
+  border: 1px solid rgba(196, 168, 110, 0.45);
+  flex-shrink: 0;
+}
+
+.avatar-picker .swatch-name { font-size: 0.85rem; }
+.avatar-picker .swatch .tm { flex-basis: 100%; margin-left: 2.05rem; }
+
+.avatar-picker input:checked + .chip {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink);
+}
+.avatar-picker input:focus-visible + .chip { outline: 3px solid var(--frost); }
+.avatar-picker .swatch:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+/* Thirteen rows of sixteen: chips only, no names. */
+.avatar-picker.compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+}
+.avatar-picker.compact .swatch { padding: 0.15rem; border: 0; background: none; }
+.avatar-picker.compact .chip { width: 1.15rem; height: 1.15rem; }
+
+.owners-grid td { vertical-align: middle; }
+.owners-grid input[type="text"], .owners-grid input:not([type]) { text-align: left; }
+
+.field { display: flex; align-items: center; gap: 0.6rem; }
+
 /* ---- site navigation ---- */
 
 .sitenav {
@@ -313,8 +416,22 @@ body > .gatepost { margin-top: 0.5rem; }
 .scores td:nth-child(2) { text-align: right; }
 .scores td:last-child { text-align: left; }
 
-.sitenav .who { margin-left: auto; font-size: 0.85rem; color: var(--stone-edge); }
+.sitenav .who {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--stone-edge);
+}
 .sitenav .who a { text-decoration: underline; }
+.sitenav .who .me {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-decoration: none;
+}
+.sitenav .who .me:hover { color: var(--hazard); }
 .note.error { color: #a03024; font-weight: 600; }
 
 /* ---- admin entry ---- */
