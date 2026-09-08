@@ -377,24 +377,6 @@ def team(request: Request, name: str):
                  "projection": proj_rows[0] if proj_rows else None})
 
 
-@app.get("/seasons", response_class=HTMLResponse)
-def seasons_index(request: Request):
-    with get_db() as conn:
-        rows = query(conn, """
-            select s.season_year, s.is_complete, s.team_count, s.keeper_count,
-                   sr.champion, sr.champion_team, sr.runner_up,
-                   sr.regular_season_leader, sr.leader_wins, sr.leader_losses,
-                   (select count(*) from matchups m
-                     where m.season_year = s.season_year
-                       and m.team_a_points is not null) as games
-            from seasons s
-            left join season_results sr on sr.season_year = s.season_year
-            order by s.season_year desc
-        """)
-    return templates.TemplateResponse(
-        request=request, name="seasons.html", context={"seasons": rows})
-
-
 @app.get("/current")
 def current_season():
     with get_db() as conn:
@@ -444,12 +426,21 @@ def season(request: Request, year: int):
     weeks = []
     for g in games:
         if not weeks or weeks[-1]["week"] != g["week"]:
-            weeks.append({"week": g["week"], "games": []})
+            weeks.append({"week": g["week"], "games": [], "played": False})
         weeks[-1]["games"].append(g)
+        if g["points_a"] is not None:
+            weeks[-1]["played"] = True
+
+    # Open on the last week that has scores, so a season in progress lands on
+    # what just happened rather than on week 1. Before a ball is kicked, and
+    # once the season is over, that is the first and last week respectively.
+    played = [w["week"] for w in weeks if w["played"]]
+    open_week = played[-1] if played else (weeks[0]["week"] if weeks else None)
+
     return templates.TemplateResponse(
         request=request, name="season.html",
         context={"s": head[0], "standings": standings, "weeks": weeks,
-                 "records": records,
+                 "records": records, "open_week": open_week,
                  "keepers": group_runs(keepers, "username")})
 
 
