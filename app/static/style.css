@@ -341,6 +341,25 @@ h3 {
 .records li { margin-bottom: 0.3rem; }
 .records b { font-variant-numeric: tabular-nums; }
 
+/* Three record lists side by side. Equal columns rather than auto, so the
+   two lists with scores in them do not squeeze the third; they stack at the
+   narrow breakpoint. */
+.record-sets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s4) var(--s5);
+}
+.record-set > h3 { margin-top: 0; }
+/* Score and week on a second line by design. Left flat, a third of the panel
+   is too narrow for them and the wrap lands inside the score, splitting
+   162.66-84.59 across two lines. /history keeps the one-line form, where it
+   has the full width. */
+.records .rec-detail {
+  display: block;
+  color: var(--ink-muted);
+  font-size: var(--t-sm);
+}
+
 .danger { border-top: 3px solid var(--loss); }
 .danger h2 { color: var(--loss); }
 
@@ -1226,6 +1245,9 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   #standings table { display: table; white-space: normal; }
   #standings th:nth-child(3), #standings td:nth-child(3),
   #standings th:nth-child(7), #standings td:nth-child(7) { display: none; }
+
+  /* Three columns of records will not fit; one under the other. */
+  .record-sets { grid-template-columns: 1fr; }
 
   /* Seventeen buttons ran to three rows here, so the strip gives way to
      the dropdown, which is one line. Same control, same JS. */

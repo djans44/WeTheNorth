@@ -414,11 +414,45 @@ def season(request: Request, year: int):
             where m.season_year = %s
             order by m.week, m.game_type, m.matchup_id
         """, (year,))
-        records = query(conn, """
-            select username, week, points_for, opponent_username
-            from game_log where season_year = %s
-            order by points_for desc limit 3
-        """, (year,))
+        # The same three shapes /history uses, scoped to one season and cut
+        # to three. Season year is dropped from the select because the whole
+        # page is one season.
+        #
+        # Regular season only. game_type rather than week <= 14 so the filter
+        # states what it means, and so it survives a season of another length.
+        # This is a deliberate departure from /history, which counts every
+        # game: a 14-game field is a fair comparison, a playoff bracket where
+        # half the league is not playing is not.
+        records = {
+            "high": query(conn, """
+                select username, opponent_username, week, points_for
+                from game_log
+                where season_year = %s and game_type = 'regular'
+                order by points_for desc limit 3
+            """, (year,)),
+            "blowouts": query(conn, """
+                select username, opponent_username, week,
+                       points_for, points_against,
+                       points_for - points_against as margin
+                from game_log
+                where season_year = %s and game_type = 'regular'
+                  and result = 'W'
+                order by margin desc limit 3
+            """, (year,)),
+            "nailbiters": query(conn, """
+                select username, opponent_username, week,
+                       points_for, points_against,
+                       points_for - points_against as margin
+                from game_log
+                where season_year = %s and game_type = 'regular'
+                  and result = 'W'
+                order by margin asc limit 3
+            """, (year,)),
+        }
+        # A season with no scores yet has nothing to rank, and an empty
+        # Records section would still claim a spot in the section nav.
+        if not records["high"]:
+            records = None
         keepers = query(conn, KEEPER_HISTORY_SQL + """
             where ks.season_year = %s
             order by o.username, ks.cost_round

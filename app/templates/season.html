@@ -145,12 +145,42 @@
 
   {% if records %}
   <section id="records">
-    <h2>Biggest weeks</h2>
-    <ol class="records">
-    {% for r in records %}
-      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }} vs {{ r.opponent_username }}, week {{ r.week }}</li>
-    {% endfor %}
-    </ol>
+    <h2>Records</h2>
+    <p class="note">The regular season only, where every manager plays every week.</p>
+
+    <div class="record-sets">
+      <div class="record-set">
+        <h3>Mightiest weeks</h3>
+        <ol class="records">
+        {% for r in records.high %}
+          <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }}
+            <span class="rec-detail">vs {{ r.opponent_username }}, week {{ r.week }}</span></li>
+        {% endfor %}
+        </ol>
+      </div>
+
+      <div class="record-set">
+        <h3>Greatest routs</h3>
+        <ol class="records">
+        {% for r in records.blowouts %}
+          <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }}
+            <span class="rec-detail">{{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }},
+              week {{ r.week }}</span></li>
+        {% endfor %}
+        </ol>
+      </div>
+
+      <div class="record-set">
+        <h3>Narrowest escapes</h3>
+        <ol class="records">
+        {% for r in records.nailbiters %}
+          <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }}
+            <span class="rec-detail">{{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }},
+              week {{ r.week }}</span></li>
+        {% endfor %}
+        </ol>
+      </div>
+    </div>
   </section>
   {% endif %}
 
