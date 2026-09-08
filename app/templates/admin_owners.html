@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar %}
-{% block title %}Managers | We the North{% endblock %}
+{% block title %}Owners | We the North{% endblock %}
 
 {% block content %}
 <div class="page wide">
   <header class="page-head">
     <div class="tape"></div>
-    <h1>Managers</h1>
-    <p class="lede">Colour and initials for everyone in one pass. Open a manager
+    <h1>Owners</h1>
+    <p class="lede">Colour and initials for everyone in one pass. Open an owner
       to change their name, team, email or admin rights.</p>
   </header>
 
   <section>
-    <p class="note">Colours are not reserved. Where two managers share one, both
+    <p class="note">Colours are not reserved. Where two owners share one, both
       names show in the swatch tooltip.</p>
 
     <form method="post" action="/admin/owners">
       <table class="keepers owners-grid">
         <thead>
-          <tr><th>Manager</th><th>{{ season }} team</th><th>Initials</th>
+          <tr><th>Owner</th><th>{{ season }} team</th><th>Initials</th>
               <th>Colour</th><th></th></tr>
         </thead>
         <tbody>
@@ -60,6 +60,53 @@
         </tbody>
       </table>
       <button type="submit">Save sigils</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Add an owner</h2>
+    <p class="note">This creates the person, not a team. Rivalries and the
+      schedule take their entrants from the {{ season }} team list and both need
+      an even number, so putting someone into a season stays a separate job.</p>
+
+    <form method="post" action="/admin/owners/new">
+      <p class="field">
+        <label for="new_username">Display name</label>
+        <input id="new_username" name="username" required>
+      </p>
+      <p class="field">
+        <label for="new_last_name">Surname</label>
+        <input id="new_last_name" name="last_name">
+      </p>
+      <p class="field">
+        <label for="new_email">Email</label>
+        <input id="new_email" name="email" type="email">
+      </p>
+      <p class="note">Leave the email blank and they cannot sign in until one is
+        set. Their initials come from the names above unless you override them
+        after they are created.</p>
+
+      <p class="field">
+        <label>Colour</label>
+        <span class="avatar-picker compact">
+          {% for name, hex in palette %}
+            {% set taken = holders.get(hex, []) %}
+            <label class="hue" style="--sw: {{ hex }};"
+                   title="{{ name }}{% if taken %} &mdash; also {{ taken|join(', ') }}{% endif %}">
+              <input type="radio" name="avatar_bg" value="{{ hex }}"
+                     {% if hex == free_bg %}checked{% endif %}>
+              <span class="chip"></span>
+            </label>
+          {% endfor %}
+        </span>
+      </p>
+
+      <p class="checkline">
+        <input type="checkbox" id="new_is_admin" name="is_admin">
+        <label for="new_is_admin">Admin</label>
+      </p>
+
+      <button type="submit">Add owner</button>
     </form>
   </section>
 </div>

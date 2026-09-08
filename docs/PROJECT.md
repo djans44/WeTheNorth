@@ -116,8 +116,10 @@ Migrations `001` to `030`. Every table uses `timestamptz`.
 **`owners`** — `owner_id`, `username`, `email` (nullable), `is_admin`,
 `is_retired`, `created_by` (self-FK), timestamps.
 Unique indexes on `lower(username)` and `lower(email)`.
-Also `last_name` (nullable, admin-set, feeds derived initials), `avatar_bg`
-and `avatar_initials`. `avatar_bg` is **not** unique — colours may be shared.
+Also `last_name` (nullable, feeds derived initials), `avatar_bg` and
+`avatar_initials`. `avatar_bg` is **not** unique — colours may be shared.
+New owners are created from `/admin/owners` and get **no `teams` row**, so they
+stay out of every season-derived page until someone puts them in a season.
 
 **`seasons`** — `season_year` **is** the primary key (smallint, natural key).
 `team_count`, `keeper_count`, `is_complete`, `yahoo_league_key`.
@@ -393,7 +395,7 @@ Everything else requires a session (middleware redirects to `/`).
 | `POST /keepers/plan` | Save plan (validates round conflicts, refuses to save a conflict) |
 | `POST /keepers/submit` | Submit one phase |
 | `POST /keepers/void-submit` | Submit voids (writes and confirms in one step) |
-| `GET/POST /profile` | Your own avatar colour and initials override |
+| `GET/POST /profile` | Your own name, surname, team name, email and sigil |
 
 ### Admin (gated on `is_admin`)
 | Route | Purpose |
@@ -408,7 +410,8 @@ Everything else requires a session (middleware redirects to `/`).
 | `POST /admin/keepers/reset` | Reset one manager or a whole season |
 | `GET /admin/rivals`, `POST /admin/rivals/generate`, `POST /admin/rivals/set` | Rivalries |
 | `GET /admin/schedule`, `POST /admin/schedule/save` | Schedule generation |
-| `GET/POST /admin/owners` | Colour, surname and initials for every manager |
+| `GET/POST /admin/owners` | Owners: quick colour/initials pass, plus add an owner |
+| `GET/POST /admin/owners/{id}` | One owner: name, team, email, admin, retired, sigil |
 
 ---
 

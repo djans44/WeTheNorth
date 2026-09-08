@@ -627,10 +627,14 @@ def admin_owners(request: Request):
               on t.owner_id = o.owner_id and t.season_year = %s
             order by o.is_retired, o.username
         """, (season,))
+    holders = _colour_holders(owners)
+    # Preselect a colour nobody holds, so a new owner is distinct by default.
+    free = next((h for _, h in AVATAR_PALETTE if h not in holders),
+                AVATAR_PALETTE[0][1])
     return templates.TemplateResponse(
         request=request, name="admin_owners.html",
         context={"owners": owners, "palette": AVATAR_PALETTE,
-                 "season": season, "holders": _colour_holders(owners)})
+                 "season": season, "holders": holders, "free_bg": free})
 
 
 @app.post("/admin/owners")
@@ -663,6 +667,59 @@ async def admin_owners_save(request: Request):
 
     return RedirectResponse(
         url="/admin/owners?msg=" + quote("Sigils saved"), status_code=303)
+
+
+@app.post("/admin/owners/new")
+async def admin_owner_new(request: Request):
+    """Create the owner record only.
+
+    Deliberately no `teams` row: rivalries and the schedule both take their
+    participants from teams for the season, and both need an even count.
+    Putting someone into a season is a separate job.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    username = (form.get("username") or "").strip()
+    last_name = (form.get("last_name") or "").strip()
+    email = (form.get("email") or "").strip()
+    bg = (form.get("avatar_bg") or "").strip().upper()
+    is_admin = form.get("is_admin") is not None
+
+    def bad(msg):
+        return RedirectResponse(
+            url="/admin/owners?error=" + quote(msg), status_code=303)
+
+    if not username:
+        return bad("A display name is required.")
+    if bg not in AVATAR_HEXES:
+        return bad("That is not one of the league colours.")
+
+    with get_db() as conn:
+        clash = _taken(conn, "username", username, 0)
+        if clash:
+            return bad(f"{clash} already uses that name.")
+        if email:
+            clash = _taken(conn, "email", email, 0)
+            if clash:
+                return bad(f"{clash} already uses that address.")
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                insert into owners
+                    (username, last_name, email, is_admin, avatar_bg, created_by)
+                values (%s, %s, %s, %s, %s, %s)
+                returning owner_id
+            """, (username, last_name or None, email or None, is_admin, bg,
+                  request.session.get("owner_id")))
+            new_id = cur.fetchone()["owner_id"]
+        conn.commit()
+    bust_owner_caches()
+
+    return RedirectResponse(
+        url=f"/admin/owners/{new_id}?msg=" + quote(f"{username} added"),
+        status_code=303)
 
 
 @app.get("/admin/owners/{oid}", response_class=HTMLResponse)

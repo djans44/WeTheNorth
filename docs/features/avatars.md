@@ -168,17 +168,31 @@ half-full of grey defaults looks broken, and nobody logs in specifically to pick
 a colour. Theo is retired but still appears throughout the history pages, so he
 gets a colour too — assigned, not self-chosen.
 
-Two pages edit them:
+The page that started as a colour picker has since grown into a full profile,
+and the admin side split in two:
 
-- **`/profile`** — a signed-in owner changes their own swatch and initials
-  override. Self-service only; there is no acting-for picker here.
-- **`/admin/owners`** — admins set colour, **surname** and initials override for
-  all thirteen, retired included. Surnames are admin-only and do not appear on
-  `/profile`. This is also the only route to Tulio, who has no email and
-  therefore cannot sign in.
+- **`/profile`** — a signed-in owner sets their own sigil, display name,
+  surname, current-season team name, retired flag and sign-in email. Three
+  forms, three submits, since CLAUDE.md rules out nested forms. Self-service
+  only: no acting-for picker, and no `is_admin` — a self-editable admin flag
+  would let any of the twelve make themselves commissioner.
+- **`/admin/owners`** — the Owners page. The quick pass is colour and initials
+  for everyone in one submit; an **Open** link leads to
+  `/admin/owners/{id}` for name, team, email, admin and retired. It also adds
+  new owners. This is the only route to Tulio, who has no email and so cannot
+  sign in.
 
-Both validate the submitted hex against `AVATAR_PALETTE` and redirect with
-`?error=` on a bad value, matching `admin_rivals_set`.
+Surnames were briefly admin-only and are now on both pages.
+
+Every path validates the submitted hex against `AVATAR_PALETTE` and redirects
+with `?error=` on a bad value, matching `admin_rivals_set`. Usernames and emails
+are checked against the other owners before the write, so the error can name who
+already holds the value rather than surfacing a unique-index violation.
+
+**Adding an owner creates the person, not a team.** Rivalries and the schedule
+both take their entrants from the season's `teams` rows and both need an even
+count, so a new `owners` row deliberately leaves `teams` alone and stays out of
+every season-derived page until someone puts them in a season.
 
 The button reads "Save sigil" and the toast reads "Sigil saved". An earlier
 draft specified "Colour saved", but the form saves colour *and* initials
