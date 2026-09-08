@@ -129,12 +129,34 @@ Selection runs in 3 sequential phases, each with its own submission window.
 - Server-rendered Jinja templates. Shared components go in `templates/macros.html`.
 - User feedback is bottom toasts rendered by `static/app.js`, with scroll
   position preserved across form posts. Do not reintroduce top-of-page banners.
-- The visual identity is a construction-site and Game of Thrones mashup: stone
-  proclamation panels, hazard tape, serif display type, aged parchment text on
-  dark grounds. Follow it; don't drift toward generic SaaS cards.
-- Avoid all-caps labels and decorative numbered markers. Buttons name the action
-  that happens, and the resulting toast uses the same verb.
+- The visual identity is **Westeros, not a building site**. Stone panels and
+  aged parchment on a dark iron ground, Cinzel for display headings, gold used
+  as the single accent, and the proclamation voice in the copy — "admitted",
+  "the league roll", `.decree`. It used to be a construction-site mashup; the
+  hazard tape and rivets are gone and should not come back. Don't drift toward
+  generic SaaS cards either.
+- Avoid all-caps labels and decorative numbered markers. Display headings are
+  uppercase; a table header or a form label is not. Buttons name the action that
+  happens, and the resulting toast uses the same verb.
 - Empty states are an invitation to act, not an apology.
+
+### The stylesheet
+
+`static/style.css` is one file with **one definition per selector**. It
+previously grew to four definitions of `.settled` with three different values
+and a hundred byte-identical duplicated lines. If a component needs a variation,
+add a modifier class — never repeat the block lower down.
+
+- **Style through the tokens in `:root`.** Colour, type scale, spacing. A raw
+  hex or a magic rem in a rule is a bug unless there is a reason in a comment.
+- **Namespace anything page-specific.** `.swatch` was already the draft-prep
+  legend square when the colour picker reused the name, and the picker silently
+  inherited its fixed size. Only genuinely shared things stay bare: `.avatar`,
+  `.avatar-line`, `.tm`, `.note`, `.name`.
+- **New pages must work on a phone.** There is one `@media (max-width: 48rem)`
+  block; put narrow-screen rules there rather than starting a second one. Wide
+  tables scroll inside themselves, and the nav has no dropdowns at that width
+  because hover does not exist on touch.
 
 ## Working here
 

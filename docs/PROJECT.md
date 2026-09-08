@@ -424,10 +424,33 @@ Everything else requires a session (middleware redirects to `/`).
 
 ## 8. Front end conventions
 
-**Theme.** Construction site meets Game of Thrones. A pale stone "proclamation"
-panel on a dark iron background, hazard tape framing the title, rivets in the
-corners. Serif display face for headings and italic asides, sans for controls.
-All colours are CSS variables in `:root` at the top of `style.css`.
+**Theme.** Westeros. A pale stone panel on a dark iron ground, a double gold
+hairline capping each page, **Cinzel** for display headings, Georgia for prose
+asides, sans for controls. Gold is the only accent.
+
+It was previously a construction-site mashup — hazard tape and corner rivets —
+which was removed wholesale. The divider is now drawn by `.page-head::before`
+rather than by a `<div class="tape">` in every template.
+
+**Tokens.** Everything styles through `:root`: colour, a type scale (`--t-xs`
+through `--t-lg`), a spacing scale (`--s1`–`--s6`), and structure (`--rule`,
+`--frame`, `--shadow`). Restyling means editing `:root`, not hunting the file.
+
+**One definition per selector.** The file previously had 29 selectors defined
+more than once, including a hundred byte-identical duplicated lines and four
+`.settled` rules with three different values. Variations are modifier classes.
+Page-specific components are namespaced; a generic class name is a collision
+waiting to happen.
+
+**Responsive.** One `@media (max-width: 48rem)` block. Spacing steps down
+through the tokens, wide tables scroll inside themselves rather than stretching
+the document, and the nav drops its hover submenus — hover does not exist on
+touch, and every submenu destination is reachable from the page its parent links
+to.
+
+**Fonts.** Cinzel from `fonts.googleapis.com` with `display=swap`, so text
+paints in Georgia immediately and swaps when the font arrives. A `<link>`, not a
+build step.
 
 **Cache busting.** `static_url()` appends the file's mtime as a query string, so
 CSS and JS changes appear without a hard refresh.
@@ -445,7 +468,6 @@ button.
 
 **Loose ends**
 - **Tulio has no email** and cannot sign in
-- The **landing page still says "under construction"** despite a working site
 - Branch protection on `main` is not enabled
 - The second contributor has not been invited yet
 
