@@ -11,17 +11,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap">
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
   <link rel="stylesheet" href="{{ static_url('style.css') }}">
 </head>
 <body>
   {% set path = request.url.path %}
+  {# No nav at all when signed out. Every link bounces back to the gate, the
+     Managers menu would list all thirteen names -- which are now the sign-in
+     addresses -- and the lone wordmark just repeats the gate's own title. #}
+  {% if request.session.get("username") %}
   <nav class="sitenav">
     <a class="brand" href="/">We the North</a>
-    {# Signed out, every link here bounces back to the gate anyway, and the
-       Managers menu would list all thirteen names -- which are now the
-       sign-in addresses. #}
-    {% if request.session.get("username") %}
     <ul>
       <li class="has-menu">
         <a href="/seasons" {% if path.startswith('/season') %}class="on"{% endif %}>Seasons</a>
@@ -59,16 +59,14 @@
       </li>
       {% endif %}
     </ul>
-    {% endif %}
-    {% if request.session.get("username") %}
-      <span class="who">
-        <a class="me" href="/profile">
-          {{ avatar(request.session["username"], 24) }}{{ request.session["username"] }}
-        </a>
-        &middot; <a href="/logout">Sign out</a>
-      </span>
-    {% endif %}
+    <span class="who">
+      <a class="me" href="/profile">
+        {{ avatar(request.session["username"], 24) }}{{ request.session["username"] }}
+      </a>
+      &middot; <a href="/logout">Sign out</a>
+    </span>
   </nav>
+  {% endif %}
 
   {% block content %}{% endblock %}
   <script src="{{ static_url('app.js') }}"></script>

@@ -4,30 +4,39 @@
 {% block content %}
 <div class="gatepost">
   <div class="proclamation">
+    {# Hand-drawn in the markup. No image assets anywhere on this page. #}
+    <svg class="gate-leaf" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 3C8 7 5.5 10 5.5 13.5a6.5 6.5 0 0 0 13 0C18.5 10 16 7 12 3z"
+            fill="none" stroke="currentColor" stroke-width="1"/>
+      <path d="M12 7v12" fill="none" stroke="currentColor" stroke-width="1"/>
+    </svg>
     <h1>
       <span class="mark">We the North</span>
       <span class="sub">Fantasy Football League for the Ages</span>
     </h1>
     <p class="status">
-      Four seasons of standings, drafts and regrettable trades, kept in one place.
+      {% if tally and tally.seasons %}
+        {{ tally.seasons }} seasons, {{ tally.games }} games and every
+        regrettable trade, kept in one place.
+      {% else %}
+        Standings, drafts and regrettable trades, kept in one place.
+      {% endif %}
     </p>
   </div>
 
   <form class="gate" method="post" action="/login">
-    <label for="email">Enter your email to be admitted</label>
-    <div class="row">
-      <input id="email" type="email" name="email" required
-             placeholder="firstname@wethenorth.com" autocomplete="email"
-             {% if error %}aria-invalid="true"{% endif %}>
-      <button type="submit">Sign in</button>
-    </div>
+    {# No eyebrow line: the wordmark is directly above it, so it would just
+       say "We the North" twice. #}
+    <label class="gate-title" for="email">Enter your email to be admitted</label>
+    {# No real name here. This page is public and the address is the
+       credential, so an example would be a working sign-in. #}
+    <p class="gate-sub">Your first name at wethenorth.com</p>
+    <input id="email" type="email" name="email" required
+           placeholder="firstname@wethenorth.com" autocomplete="email"
+           {% if error %}aria-invalid="true"{% endif %}>
+    <button type="submit">Sign in</button>
     {% if error %}
-      <p class="note error">That address is not on the league roll. It is your
-        first name at wethenorth.com, nothing else.</p>
-    {% else %}
-      {# No real name here. This page is public and the address is the
-         credential, so an example would be a working sign-in. #}
-      <p class="note">Your first name at wethenorth.com.</p>
+      <p class="gate-error">That address is not on the league roll.</p>
     {% endif %}
   </form>
 </div>

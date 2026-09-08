@@ -214,8 +214,22 @@ templates.env.globals["av"] = av
 def home(request: Request, error: int = 0):
     if request.session.get("owner_id"):
         return RedirectResponse(url="/current", status_code=303)
+    # Counted, not typed. "Four seasons" was hardcoded and went stale the
+    # moment 2026 was entered.
+    try:
+        with get_db() as conn:
+            tally = query(conn, """
+                select
+                  (select count(*) from season_results
+                    where champion is not null)               as seasons,
+                  (select count(*) from matchups
+                    where team_a_points is not null)          as games
+            """)[0]
+    except Exception:
+        tally = None
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"error": error})
+        request=request, name="index.html",
+        context={"error": error, "tally": tally})
 
 
 @app.post("/login")

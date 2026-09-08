@@ -15,6 +15,23 @@
     }
   });
 
+  // ---- sign in stays disabled until the field has something in it ----
+  // Disabled from here rather than in the markup on purpose: if this script
+  // fails to load, the button must still work or nobody can sign in.
+  var gate = document.querySelector(".gate");
+  if (gate) {
+    var field = gate.querySelector("input[name=email]");
+    var submit = gate.querySelector("button[type=submit]");
+    if (field && submit) {
+      var sync = function () { submit.disabled = field.value.trim() === ""; };
+      sync();
+      field.addEventListener("input", sync);
+      field.addEventListener("change", sync);
+      // Autofill can populate the field without firing either event.
+      window.setTimeout(sync, 200);
+    }
+  }
+
   // ---- toast ----
   var params = new URLSearchParams(window.location.search);
   var msg = params.get("msg");

@@ -37,8 +37,27 @@
 
   /* --- meaning --- */
   --win:   #2c5f38;
-  --loss:  #8d2c22;
+  /* Deep oxblood, moved away from --accent so a defeat, an error and a
+     button do not all read as the same red. */
+  --loss:  #6b1f24;
   --focus: #6b8ba6;
+
+  /* --- login panel palette ---
+     The reference for the restyle. Each page adopts these as it is
+     reworked; the tokens above are what remains to be migrated. */
+  /* Warm grey, not cream. Cream sat too close to --panel-bg for the panel
+     to lift off it, and a neutral grey turned the panel yellow by contrast. */
+  --page-bg:     #e9e5da;
+  --panel-bg:    #fffdf7;
+  /* #8a8474 was the brief's value but measures 3.66:1 on the panel, under
+     the 4.5:1 needed for body text. This is 5.86:1 and still clearly muted
+     against the near-black ink. */
+  --ink-muted:   #6a6353;
+  --rule:        #d9d2c0;
+  --accent:      #8e2c22;
+  --accent-deep: #6e211a;
+  --field-bg:    #faf7ee;
+  --gate-prose:  "EB Garamond", Georgia, serif;
 
   /* --- board and keeper marks --- */
   --mark-kept: #e6cdc4;
@@ -71,7 +90,7 @@
   --pad-gutter:  var(--s6);
 
   /* --- structure --- */
-  --rule:   1px solid var(--panel-edge);
+  --hairline: 1px solid var(--panel-edge);
   --frame:  2px solid var(--ink);
   --shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
 }
@@ -107,11 +126,11 @@ a { color: inherit; }
 
 section {
   padding: var(--pad-section);
-  border-bottom: var(--rule);
+  border-bottom: var(--hairline);
 }
 section:last-child { border-bottom: 0; }
 
-.page-head { padding-bottom: var(--s5); border-bottom: var(--rule); }
+.page-head { padding-bottom: var(--s5); border-bottom: var(--hairline); }
 
 /* The gold band that caps every page, drawn by the panel rather than
    by a decorative div in the markup. */
@@ -252,7 +271,7 @@ section:last-child { border-bottom: 0; }
 .submenu .sep {
   margin-top: 0.35rem;
   padding-top: 0.35rem;
-  border-top: var(--rule);
+  border-top: var(--hairline);
 }
 .submenu .sep a { font-weight: 700; }
 
@@ -411,9 +430,18 @@ button[disabled] {
 
 form.inline { display: inline; }
 form h2:not(:first-child) { margin-top: 2.25rem; }
-form button[type="submit"] { margin-top: var(--s5); }
 
-.row { display: flex; gap: var(--s2); }
+/* Breathing room before the submit that ends a long stacked form.
+   Direct children only, so a button nested in a row is untouched -- and
+   the three utility forms that lay their button out in a line opt out,
+   or the margin knocks it below everything beside it. */
+form > button[type="submit"] { margin-top: var(--s5); }
+/* The attribute is repeated here on purpose: without it these selectors
+   score lower than the rule above and lose. */
+.picker > button[type="submit"],
+.inline > button[type="submit"],
+.add-form > button[type="submit"] { margin-top: 0; }
+
 
 .picker {
   display: flex;
@@ -453,7 +481,7 @@ table {
 th, td {
   padding: var(--s2) 0.6rem;
   text-align: right;
-  border-bottom: var(--rule);
+  border-bottom: var(--hairline);
 }
 
 /* Not uppercased: CLAUDE.md rules out all-caps labels, and a table
@@ -577,7 +605,7 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   flex-wrap: wrap;
   margin: 0;
   padding: 0.4rem 0.55rem;
-  border: var(--rule);
+  border: var(--hairline);
   background: rgba(255, 255, 255, 0.3);
   cursor: pointer;
 }
@@ -836,7 +864,7 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .keeper-grid .owner-block {
   margin: 0;
   padding-bottom: 0.9rem;
-  border-bottom: var(--rule);
+  border-bottom: var(--hairline);
 }
 .keeper-grid h3 { font-weight: 700; color: var(--ink); }
 .keeper-grid h3 a { text-decoration: none; }
@@ -876,54 +904,146 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 
 /* ---- the gate ---- */
 
+/* Signed out the gate is the only thing on the page, so it sits in the
+   middle of it. margin:auto rather than align-items:center, which would
+   clip the top if the panel ever grew taller than the viewport. */
+/* The landing page is the reference for the restyle, so it is the first to
+   take the pale ground. Other pages keep the dark iron until reworked. */
+body:has(> .gatepost) {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--page-bg);
+}
+
+/* One panel, not two. The proclamation and the sign-in are sections of a
+   single sheet -- they were previously separate panels nested inside each
+   other, which read as a card inside a frame. */
 .gatepost {
   max-width: 40rem;
-  margin: 0.5rem auto 0;
-  border: var(--frame);
-  box-shadow: 0 0 0 1px var(--panel-edge), 8px 8px 0 rgba(0, 0, 0, 0.45);
-  background: linear-gradient(180deg, var(--panel-lift) 0%, var(--panel) 55%, var(--panel-sink) 100%);
+  margin: auto;
+  background: var(--panel-bg);
+  border: 1px solid var(--accent);
+  border-top: 3px solid var(--accent);
+  border-radius: 2px;
+  font-family: var(--gate-prose);
+  text-align: center;
 }
 
-.proclamation { padding: 2.75rem 2.25rem var(--s6); }
+.proclamation { padding: 30px 30px 28px; }
 
-/* Gold rules above and below the title, as an illuminated page divides
-   its sections. */
-.proclamation h1 {
-  padding: var(--s5) 0;
-  border-top: 1px solid var(--gold);
-  border-bottom: 1px solid var(--gold);
-}
+.proclamation h1 { padding: 0; }
 
 .mark {
   display: block;
   font-family: var(--display);
-  font-size: clamp(2.1rem, 8.5vw, 3.6rem);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  color: var(--ink);
 }
 
 .sub {
   display: block;
-  margin-top: 0.9rem;
-  font-family: var(--prose);
-  font-size: clamp(0.9rem, 2.6vw, 1.05rem);
+  margin-top: 12px;
+  font-size: 15px;
   font-style: italic;
-  color: var(--ink-soft);
+  color: var(--ink-muted);
 }
 
 .status {
-  margin: 1.75rem auto 0;
-  max-width: 38ch;
-  font-family: var(--prose);
-  text-align: center;
-  color: var(--ink-soft);
+  margin: 20px auto 0;
+  max-width: 40ch;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  font-size: 15px;
+  color: var(--ink-muted);
 }
 
+/* Pale, weathered, manuscript. The button stacks under the field rather
+   than beside it -- side by side, an input and a button with identical
+   padding still resolve to different heights and the button hangs off the
+   bottom edge. */
+/* A section of the panel now, not a panel of its own. The hairline is all
+   that separates it from the proclamation above. */
 .gate {
-  padding: 1.75rem 2.25rem 2.25rem;
-  border-top: var(--rule);
+  padding: 26px 30px 32px;
+  border-top: 1px solid var(--rule);
+  margin: 0 30px;
+}
+
+/* Hand-drawn in the markup. No image assets anywhere on this page. */
+.gate-leaf { display: block; width: 22px; height: 22px; margin: 0 auto 14px; color: var(--accent); }
+
+/* The <label>, styled as the heading. Kept as a label so the field is
+   still named for a screen reader. */
+.gate-title {
+  display: block;
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.gate-sub { margin: 0 0 20px; font-size: 14px; color: var(--ink-muted); }
+
+.gate input {
+  width: 100%;
+  padding: 12px 13px;
+  font-family: var(--gate-prose);
+  font-size: 15px;
+  text-align: left;
+  color: var(--ink);
+  background: var(--field-bg);
+  border: 1px solid var(--rule);
+  border-bottom: 2px solid var(--accent);
+  border-radius: 2px;
+}
+.gate input::placeholder { color: var(--ink-muted); }
+.gate input:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom-color: var(--accent-deep);
+}
+
+/* The attribute is repeated so these outscore form > button[type="submit"],
+   which would otherwise win and add a 24px top margin. */
+.gate > button[type="submit"] {
+  margin-top: 18px;
+  padding: 11px 30px;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+}
+.gate > button[type="submit"]:hover,
+.gate > button[type="submit"]:focus-visible {
+  background: var(--accent);
+  color: var(--panel-bg);
+}
+
+/* Until the field has something in it. The global button[disabled] rule is
+   for the dark theme and would fill this one solid grey. */
+.gate > button[type="submit"][disabled] {
+  color: var(--ink-muted);
+  background: transparent;
+  border-color: var(--rule);
+  cursor: not-allowed;
+}
+.gate > button[type="submit"][disabled]:hover {
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.gate-error {
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: var(--accent);
 }
 
 
@@ -999,7 +1119,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 
   .proclamation { padding: 1.75rem 1.25rem var(--s5); }
   .gate { padding: 1.5rem 1.25rem 1.75rem; }
-  .row { flex-direction: column; }
 
   .field { flex-wrap: wrap; }
   .field > label { flex-basis: 100%; }
