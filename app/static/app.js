@@ -69,6 +69,20 @@
     });
   }
 
+  // ---- season page: close the year picker on an outside click ----
+  // <details> stays open until it is clicked again, which is right for a
+  // disclosure and wrong for a menu. Enhancement only: without this the
+  // picker still opens, still navigates, and still closes on a second click.
+  var yearpick = document.querySelector(".yearpick");
+  if (yearpick) {
+    document.addEventListener("click", function (e) {
+      if (yearpick.open && !yearpick.contains(e.target)) { yearpick.open = false; }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && yearpick.open) { yearpick.open = false; }
+    });
+  }
+
   // ---- season page: bracket or standings ----
   // Both panels are on the page and visible until this runs, so without the
   // script nothing is lost -- you simply get the bracket above the table.

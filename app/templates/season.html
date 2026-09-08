@@ -54,8 +54,26 @@
   {% endif %}
 </nav>
 <div class="page">
+  {# The year is the control that changes the year. <details> rather than a
+     <select>, because a select cannot navigate without script and these are
+     ordinary links: with JavaScript off the list still opens and still works.
+     A heading is allowed inside <summary>, so the h1 keeps its place in the
+     document outline. #}
   <header class="page-head tight">
-    <h1>{{ leaf(20) }}{{ s.season_year }}</h1>
+    <details class="yearpick">
+      <summary>
+        <h1>{{ leaf(20) }}{{ s.season_year }}</h1>
+      </summary>
+      <ul>
+        {% for row in nav_seasons() %}
+          <li>
+            <a href="/season/{{ row.season_year }}"
+               {% if row.season_year == s.season_year %}aria-current="page"{% endif %}>
+              {{ row.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
   </header>
 
   <section id="standings">
