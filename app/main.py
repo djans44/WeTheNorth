@@ -476,6 +476,19 @@ def _owner_form(conn, oid):
     }
 
 
+def _league_size(conn, season):
+    """How many active owners the league holds. Same source draft_prep uses."""
+    rows = query(conn, "select team_count from seasons where season_year = %s",
+                 (season,))
+    return rows[0]["team_count"] if rows else 12
+
+
+def _active_count(conn):
+    return query(conn, """
+        select count(*) as n from owners where not is_retired
+    """)[0]["n"]
+
+
 def _taken(conn, column, value, oid):
     """Is this username or email already another owner's?"""
     rows = query(conn, f"""
@@ -627,6 +640,7 @@ def admin_owners(request: Request):
               on t.owner_id = o.owner_id and t.season_year = %s
             order by o.is_retired, o.username
         """, (season,))
+        active, size = _active_count(conn), _league_size(conn, season)
     holders = _colour_holders(owners)
     # Preselect a colour nobody holds, so a new owner is distinct by default.
     free = next((h for _, h in AVATAR_PALETTE if h not in holders),
@@ -634,7 +648,8 @@ def admin_owners(request: Request):
     return templates.TemplateResponse(
         request=request, name="admin_owners.html",
         context={"owners": owners, "palette": AVATAR_PALETTE,
-                 "season": season, "holders": holders, "free_bg": free})
+                 "season": season, "holders": holders, "free_bg": free,
+                 "active": active, "size": size, "can_add": active < size})
 
 
 @app.post("/admin/owners")
@@ -697,6 +712,14 @@ async def admin_owner_new(request: Request):
         return bad("That is not one of the league colours.")
 
     with get_db() as conn:
+        # The league is a fixed size. Someone has to leave before someone
+        # joins, so this is checked here and not only hidden in the form.
+        size = _league_size(conn, _current_season(conn))
+        active = _active_count(conn)
+        if active >= size:
+            return bad(f"The league is full at {size}. "
+                       f"Retire an owner before adding one.")
+
         clash = _taken(conn, "username", username, 0)
         if clash:
             return bad(f"{clash} already uses that name.")
@@ -766,6 +789,18 @@ async def admin_owner_edit_save(request: Request, oid: int):
             clash = _taken(conn, "email", email, oid)
             if clash:
                 return bad(f"{clash} already uses that address.")
+
+        # Bringing someone back is the other way to overfill the league.
+        was = query(conn, """
+            select is_retired from owners where owner_id = %s
+        """, (oid,))
+        if not was:
+            raise HTTPException(status_code=404, detail="No such owner")
+        if was[0]["is_retired"] and not retired:
+            size = _league_size(conn, _current_season(conn))
+            if _active_count(conn) >= size:
+                return bad(f"The league is full at {size}. "
+                           f"Retire an owner before bringing one back.")
 
         # Removing the last admin would leave nobody able to reach this page.
         if not is_admin:

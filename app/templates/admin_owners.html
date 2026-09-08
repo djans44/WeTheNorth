@@ -65,9 +65,16 @@
 
   <section>
     <h2>Add an owner</h2>
-    <p class="note">This creates the person, not a team. Rivalries and the
-      schedule take their entrants from the {{ season }} team list and both need
-      an even number, so putting someone into a season stays a separate job.</p>
+
+    {% if not can_add %}
+      <p class="settled"><b>The league is full at {{ size }}.</b></p>
+      <p class="note">All {{ active }} places are taken. Open whoever is leaving
+        and mark them retired, and a place opens up here.</p>
+    {% else %}
+    <p class="note">{{ active }} of {{ size }} places taken. This creates the
+      person, not a team &mdash; rivalries and the schedule take their entrants
+      from the {{ season }} team list, so putting someone into a season stays a
+      separate job.</p>
 
     <form method="post" action="/admin/owners/new">
       <p class="field">
@@ -108,6 +115,7 @@
 
       <button type="submit">Add owner</button>
     </form>
+    {% endif %}
   </section>
 </div>
 {% endblock %}
