@@ -38,6 +38,19 @@
     </table>
   </section>
 
+  {% if rivals %}
+  <section>
+    <h2>Rival</h2>
+    <p class="settled"><b>{{ rivals[0].rival }}</b>
+      <span class="tm">{{ rivals[0].season_year }}</span></p>
+    {% if rivals|length > 1 %}
+      <p class="note">Previously:
+        {% for r in rivals[1:] %}{{ r.rival }} ({{ r.season_year }}){% if not loop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+  </section>
+  {% endif %}
+
   <section>
     <h2>Against each manager</h2>
     <table>
@@ -90,5 +103,6 @@
   {% endif %}
 </div>
 {% endblock %}
+
 
 

@@ -240,10 +240,17 @@ def team(request: Request, name: str):
         proj_rows = query(conn, """
             select * from owner_projection_stats where owner_id = %s
         """, (oid,))
+        rivals = query(conn, """
+            select r.season_year, ro.username as rival, ro.owner_id as rival_id,
+                   r.score, r.source
+            from rivalries r
+            join owners ro on ro.owner_id = r.rival_owner_id
+            where r.owner_id = %s order by r.season_year desc
+        """, (oid,))
     return templates.TemplateResponse(
         request=request, name="team.html",
         context={"owner": owner, "seasons": seasons, "h2h": h2h,
-                 "best": best, "worst": worst,
+                 "best": best, "worst": worst, "rivals": rivals,
                  "projection": proj_rows[0] if proj_rows else None})
 
 
@@ -1880,4 +1887,237 @@ async def admin_keeper_void(request: Request):
 
 
 
+
+
+
+RIVAL_WEIGHTS = {
+    "regular": 1.0,
+    "consolation": 2.0,
+    "eleventh_place": 2.5,
+    "ninth_place": 2.5,
+    "seventh_place": 3.0,
+    "fifth_place": 3.5,
+    "quarterfinal": 5.0,
+    "semifinal": 6.0,
+    "third_place": 6.0,
+    "championship": 10.0,
+}
+RIVAL_PRIOR_BONUS = 4.0
+RIVAL_CLOSE_BONUS = 2.0
+RIVAL_CLOSE_MARGIN = 10.0
+
+
+def rivalry_scores(conn, season):
+    """Pairwise rivalry score for every pair of owners active in `season`."""
+    owners = query(conn, """
+        select t.owner_id, o.username
+        from teams t join owners o on o.owner_id = t.owner_id
+        where t.season_year = %s order by o.username
+    """, (season,))
+    ids = [o["owner_id"] for o in owners]
+    names = {o["owner_id"]: o["username"] for o in owners}
+
+    games = query(conn, """
+        select g.owner_id, g.opponent_owner_id, g.game_type,
+               abs(g.points_for - g.points_against) as margin
+        from game_log g
+        where g.season_year <= %s
+    """, (season,))
+
+    priors = query(conn, """
+        select owner_id, rival_owner_id, count(*) as n
+        from rivalries where season_year < %s
+        group by owner_id, rival_owner_id
+    """, (season,))
+
+    score = {}
+    detail = {}
+    for g in games:
+        a, b = g["owner_id"], g["opponent_owner_id"]
+        if a not in names or b not in names or a >= b:
+            continue
+        w = RIVAL_WEIGHTS.get(g["game_type"], 1.0)
+        if g["margin"] is not None and float(g["margin"]) <= RIVAL_CLOSE_MARGIN:
+            w += RIVAL_CLOSE_BONUS
+        key = (a, b)
+        score[key] = score.get(key, 0.0) + w
+        d = detail.setdefault(key, {"games": 0, "playoff": 0, "close": 0})
+        d["games"] += 1
+        if g["game_type"] != "regular":
+            d["playoff"] += 1
+        if g["margin"] is not None and float(g["margin"]) <= RIVAL_CLOSE_MARGIN:
+            d["close"] += 1
+
+    for p in priors:
+        a, b = sorted((p["owner_id"], p["rival_owner_id"]))
+        if a in names and b in names:
+            key = (a, b)
+            score[key] = score.get(key, 0.0) + RIVAL_PRIOR_BONUS * p["n"]
+            detail.setdefault(key, {"games": 0, "playoff": 0, "close": 0})
+            detail[key]["prior"] = p["n"]
+
+    return ids, names, score, detail
+
+
+def best_pairing(ids, score):
+    """Highest total score across every perfect matching. 12 owners = 10,395."""
+    best = {"total": None, "pairs": None}
+
+    def walk(remaining, pairs, total):
+        if not remaining:
+            if best["total"] is None or total > best["total"]:
+                best["total"] = total
+                best["pairs"] = list(pairs)
+            return
+        a = remaining[0]
+        for i in range(1, len(remaining)):
+            b = remaining[i]
+            key = (a, b) if a < b else (b, a)
+            pairs.append((a, b))
+            walk(remaining[1:i] + remaining[i + 1:], pairs,
+                 total + score.get(key, 0.0))
+            pairs.pop()
+
+    if len(ids) % 2:
+        return None, None
+    walk(list(ids), [], 0.0)
+    return best["pairs"], best["total"]
+
+
+@app.get("/admin/rivals", response_class=HTMLResponse)
+def admin_rivals(request: Request, season: int = 0, preview: int = 0):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"]
+
+        current = query(conn, """
+            select r.owner_id, o.username, r.rival_owner_id, ro.username as rival,
+                   r.score, r.source
+            from rivalries r
+            join owners o on o.owner_id = r.owner_id
+            join owners ro on ro.owner_id = r.rival_owner_id
+            where r.season_year = %s order by o.username
+        """, (season,))
+
+        ids, names, score, detail = rivalry_scores(conn, season)
+
+    proposed = []
+    total = None
+    if preview:
+        pairs, total = best_pairing(ids, score)
+        for a, b in (pairs or []):
+            key = (a, b) if a < b else (b, a)
+            d = detail.get(key, {})
+            proposed.append({
+                "a": names[a], "b": names[b], "a_id": a, "b_id": b,
+                "score": round(score.get(key, 0.0), 1),
+                "games": d.get("games", 0), "playoff": d.get("playoff", 0),
+                "close": d.get("close", 0), "prior": d.get("prior", 0)})
+        proposed.sort(key=lambda x: -x["score"])
+
+    grid = []
+    for a in ids:
+        row = {"name": names[a], "cells": []}
+        for b in ids:
+            if a == b:
+                row["cells"].append(None)
+            else:
+                key = (a, b) if a < b else (b, a)
+                row["cells"].append(round(score.get(key, 0.0), 1))
+        grid.append(row)
+
+    return templates.TemplateResponse(
+        request=request, name="admin_rivals.html",
+        context={"years": years, "season": season, "current": current,
+                 "proposed": proposed, "total": total,
+                 "owners": [{"owner_id": i, "username": names[i]} for i in ids],
+                 "grid": grid, "headers": [names[i] for i in ids]})
+
+
+@app.post("/admin/rivals/generate")
+async def admin_rivals_generate(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    me = request.session.get("owner_id")
+    form = await request.form()
+    season = int(form["season"])
+
+    with get_db() as conn:
+        ids, names, score, _ = rivalry_scores(conn, season)
+        pairs, total = best_pairing(ids, score)
+        if not pairs:
+            return RedirectResponse(
+                url=f"/admin/rivals?season={season}&error=" +
+                    quote("Need an even number of managers"), status_code=303)
+        with conn.cursor() as cur:
+            cur.execute("delete from rivalries where season_year = %s", (season,))
+            for a, b in pairs:
+                key = (a, b) if a < b else (b, a)
+                s = round(score.get(key, 0.0), 2)
+                cur.execute("""
+                    insert into rivalries
+                        (season_year, owner_id, rival_owner_id, score, source, created_by)
+                    values (%s, %s, %s, %s, 'auto', %s), (%s, %s, %s, %s, 'auto', %s)
+                """, (season, a, b, s, me, season, b, a, s, me))
+        conn.commit()
+
+    return RedirectResponse(
+        url=f"/admin/rivals?season={season}&msg=" +
+            quote(f"{len(pairs)} rivalries generated"), status_code=303)
+
+
+@app.post("/admin/rivals/set")
+async def admin_rivals_set(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    me = request.session.get("owner_id")
+    form = await request.form()
+    season = int(form["season"])
+
+    picks = {}
+    for key in form.keys():
+        if key.startswith("rival_"):
+            raw = (form.get(key) or "").strip()
+            if raw:
+                picks[int(key.split("_", 1)[1])] = int(raw)
+
+    problems = []
+    with get_db() as conn:
+        ids, names, score, _ = rivalry_scores(conn, season)
+        for a in ids:
+            if a not in picks:
+                problems.append(f"{names[a]} has no rival.")
+        for a, b in picks.items():
+            if a == b:
+                problems.append(f"{names.get(a, a)} cannot rival themselves.")
+            elif picks.get(b) != a:
+                problems.append(
+                    f"{names.get(a, a)} picks {names.get(b, b)}, "
+                    f"but not the other way round.")
+
+        if problems:
+            return RedirectResponse(
+                url=f"/admin/rivals?season={season}&error=" +
+                    quote(" ".join(sorted(set(problems)))), status_code=303)
+
+        with conn.cursor() as cur:
+            cur.execute("delete from rivalries where season_year = %s", (season,))
+            for a, b in picks.items():
+                key = (a, b) if a < b else (b, a)
+                cur.execute("""
+                    insert into rivalries
+                        (season_year, owner_id, rival_owner_id, score, source, created_by)
+                    values (%s, %s, %s, %s, 'manual', %s)
+                """, (season, a, b, round(score.get(key, 0.0), 2), me))
+        conn.commit()
+
+    return RedirectResponse(
+        url=f"/admin/rivals?season={season}&msg=" + quote("Rivalries saved"),
+        status_code=303)
 

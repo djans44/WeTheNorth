@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Rivals | We the North{% endblock %}
+
+{% block content %}
+<div class="page wide">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Rivals</h1>
+    <p class="lede">Every manager gets exactly one rival, and nobody is two
+      managers' rival. Scores weight playoff meetings, close games and past rivalries.</p>
+  </header>
+
+  <section>
+    <form method="get" action="/admin/rivals" class="picker">
+      <label for="season">Season</label>
+      <select id="season" name="season">
+        {% for y in years %}
+          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Load</button>
+      <a href="/admin/rivals?season={{ season }}&preview=1" class="tm">Preview generated pairings</a>
+    </form>
+  </section>
+
+  {% if proposed %}
+  <section>
+    <h2>Proposed</h2>
+    <p class="note">Best of every possible pairing, total score {{ "%.1f"|format(total) }}.
+      Nothing saved yet.</p>
+    <table class="keepers">
+      <thead><tr><th>Pair</th><th>Score</th><th>Meetings</th><th>Playoff</th><th>Close</th><th>Past rival</th></tr></thead>
+      <tbody>
+      {% for p in proposed %}
+        <tr>
+          <td class="name">{{ p.a }} &amp; {{ p.b }}</td>
+          <td class="rd">{{ p.score }}</td>
+          <td>{{ p.games }}</td>
+          <td>{{ p.playoff }}</td>
+          <td>{{ p.close }}</td>
+          <td>{% if p.prior %}{{ p.prior }}&times;{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <form method="post" action="/admin/rivals/generate">
+      <input type="hidden" name="season" value="{{ season }}">
+      <button type="submit">Generate and save</button>
+    </form>
+    <p class="note">Replaces any existing rivalries for {{ season }}.</p>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>{{ season }} rivalries</h2>
+    {% if current %}
+      <ul class="records">
+      {% for c in current %}
+        {% if c.owner_id < c.rival_owner_id %}
+          <li><b>{{ c.username }}</b> vs <b>{{ c.rival }}</b>
+            <span class="tm">score {{ c.score }} &middot; {{ c.source }}</span></li>
+        {% endif %}
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="note">None set for {{ season }}.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Override</h2>
+    <p class="note">Both sides must agree. Saving is rejected unless every manager
+      is paired and each pairing is mutual.</p>
+    <form method="post" action="/admin/rivals/set">
+      <input type="hidden" name="season" value="{{ season }}">
+      <table class="keepers">
+        <thead><tr><th>Manager</th><th>Rival</th></tr></thead>
+        <tbody>
+        {% for o in owners %}
+          <tr>
+            <td class="name">{{ o.username }}</td>
+            <td>
+              <select name="rival_{{ o.owner_id }}">
+                <option value="">&mdash;</option>
+                {% for x in owners %}
+                  {% if x.owner_id != o.owner_id %}
+                    <option value="{{ x.owner_id }}"
+                      {% for c in current %}{% if c.owner_id == o.owner_id and c.rival_owner_id == x.owner_id %}selected{% endif %}{% endfor %}>
+                      {{ x.username }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit">Save pairings</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Score grid</h2>
+    <div class="scroller">
+      <table class="board">
+        <thead><tr><th></th>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for row in grid %}
+          <tr><th class="rhead">{{ row.name }}</th>
+          {% for c in row.cells %}
+            <td class="cell {% if c is none %}self{% endif %}">{{ c if c is not none else "" }}</td>
+          {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
