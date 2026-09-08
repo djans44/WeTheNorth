@@ -57,7 +57,6 @@
   --accent:      #8e2c22;
   --accent-deep: #6e211a;
   --field-bg:    #faf7ee;
-  --gate-prose:  "EB Garamond", Georgia, serif;
 
   /* --- board and keeper marks --- */
   --mark-kept: #e6cdc4;
@@ -67,7 +66,7 @@
 
   /* --- type --- */
   --display: "Cinzel", Georgia, "Palatino Linotype", "Book Antiqua", serif;
-  --prose:   Georgia, "Palatino Linotype", "Book Antiqua", serif;
+  --prose:   "EB Garamond", Georgia, "Palatino Linotype", serif;
   --body:    "Segoe UI", system-ui, -apple-system, sans-serif;
 
   --t-xs:   0.72rem;
@@ -90,7 +89,7 @@
   --pad-gutter:  var(--s6);
 
   /* --- structure --- */
-  --hairline: 1px solid var(--panel-edge);
+  --hairline: 1px solid var(--rule);
   --frame:  2px solid var(--ink);
   --shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
 }
@@ -103,7 +102,7 @@
 body {
   margin: 0;
   padding: var(--pad-body);
-  background: var(--ground);
+  background: var(--page-bg);
   color: var(--ink);
   font-family: var(--body);
   line-height: 1.55;
@@ -117,9 +116,10 @@ a { color: inherit; }
 .page {
   max-width: 56rem;
   margin: 0 auto;
-  background: var(--panel);
-  border: var(--frame);
-  box-shadow: var(--shadow);
+  background: var(--panel-bg);
+  border: 1px solid var(--accent);
+  border-top: 3px solid var(--accent);
+  border-radius: 2px;
 }
 
 .page.wide { max-width: 84rem; }
@@ -132,24 +132,23 @@ section:last-child { border-bottom: 0; }
 
 .page-head { padding-bottom: var(--s5); border-bottom: var(--hairline); }
 
-/* The gold band that caps every page, drawn by the panel rather than
-   by a decorative div in the markup. */
-.page-head::before {
-  content: "";
+/* A header carrying only a title does not need the room one with a lede
+   below it does. */
+.page-head.tight { padding-bottom: var(--s4); }
+.page-head.tight h1 { margin-bottom: 0; padding: var(--s4) 0; }
+.page-head.tight h1 .leaf {
   display: block;
-  height: 5px;
-  border-top: 1px solid var(--gold);
-  border-bottom: 1px solid var(--gold);
-  background: var(--gold-ghost);
+  margin: 0 auto 0.4rem;
+  color: var(--accent);
 }
 
 .page-head h1 {
   margin: var(--s5) var(--pad-gutter) var(--s2);
   font-family: var(--display);
   font-size: clamp(1.8rem, 5.5vw, 2.9rem);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--ink);
 }
 
 /* h1 is centred site-wide, so the sigil and the name centre as one group. */
@@ -164,7 +163,7 @@ section:last-child { border-bottom: 0; }
   margin: 0 var(--pad-gutter);
   max-width: 46ch;
   font-family: var(--prose);
-  color: var(--ink-soft);
+  color: var(--ink-muted);
 }
 
 .crumbs { margin: var(--s4) var(--pad-gutter) 0; }
@@ -181,16 +180,15 @@ section:last-child { border-bottom: 0; }
   align-items: baseline;
   gap: var(--s2) var(--s5);
   padding-bottom: var(--s3);
-  border-bottom: 1px solid var(--gold);
+  border-bottom: 1px solid var(--rule);
 }
 
 .sitenav .brand {
   font-family: var(--display);
   font-size: var(--t-md);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--parchment);
+  color: var(--ink);
   text-decoration: none;
 }
 
@@ -204,20 +202,19 @@ section:last-child { border-bottom: 0; }
 }
 
 .sitenav a {
-  color: #9d968a;
+  color: var(--ink-muted);
   text-decoration: none;
   font-size: var(--t-base);
 }
-.sitenav a:hover { color: var(--gold-bright); }
+.sitenav a:hover { color: var(--accent); }
 
 .sitenav a.on {
-  color: var(--parchment);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--gold);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .sitenav a:focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -227,7 +224,7 @@ section:last-child { border-bottom: 0; }
   align-items: center;
   gap: var(--s1);
   font-size: var(--t-sm);
-  color: #9d968a;
+  color: var(--ink-muted);
 }
 .sitenav .who a { text-decoration: underline; }
 .sitenav .who .me {
@@ -236,7 +233,22 @@ section:last-child { border-bottom: 0; }
   gap: 0.45rem;
   text-decoration: none;
 }
-.sitenav .who .me:hover { color: var(--gold-bright); }
+.sitenav .who .me:hover { color: var(--accent); }
+
+/* Hidden until the narrow breakpoint turns it on. */
+.sitenav .navtoggle {
+  display: none;
+  margin-left: auto;
+  align-items: center;
+  padding: 4px 6px;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.sitenav .navtoggle svg { width: 20px; height: 20px; }
+.sitenav .navtoggle:hover { color: var(--accent); border-color: var(--accent); }
 
 .sitenav .has-menu { position: relative; }
 
@@ -250,10 +262,10 @@ section:last-child { border-bottom: 0; }
   margin: 0;
   padding: var(--s1) 0;
   list-style: none;
-  background: var(--panel);
-  border: var(--frame);
-  border-top: 3px solid var(--gold);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45);
+  background: var(--panel-bg);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 4px 14px rgba(29, 27, 22, 0.14);
 }
 .has-menu:hover .submenu,
 .has-menu:focus-within .submenu { display: block; }
@@ -266,7 +278,7 @@ section:last-child { border-bottom: 0; }
   font-size: 0.9rem;
 }
 .submenu a:hover,
-.submenu a:focus-visible { background: var(--ink); color: var(--parchment); }
+.submenu a:focus-visible { background: var(--accent); color: var(--panel-bg); }
 
 .submenu .sep {
   margin-top: 0.35rem;
@@ -284,19 +296,19 @@ h2 {
   margin: 0 0 var(--s4);
   font-family: var(--display);
   font-size: var(--t-lg);
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ink);
 }
 
 h3 {
   margin: 1.75rem 0 var(--s2);
   font-size: var(--t-base);
   font-weight: 700;
-  color: var(--ink-soft);
+  color: var(--ink-muted);
 }
 
-.tm { display: block; font-size: 0.78rem; color: var(--ink-soft); }
+.tm { display: block; font-size: 0.78rem; color: var(--ink-muted); }
 .year { font-family: var(--display); font-size: var(--t-md); font-weight: 600; }
 .win  { color: var(--win); font-weight: 700; }
 .loss { color: var(--loss); }
@@ -306,7 +318,7 @@ h3 {
   font-family: var(--prose);
   font-style: italic;
   font-size: 0.9rem;
-  color: var(--ink-soft);
+  color: var(--ink-muted);
 }
 .note.ok    { color: var(--win); font-weight: 600; font-style: normal; }
 .note.error { color: var(--loss); font-weight: 600; font-style: normal; }
@@ -481,17 +493,17 @@ table {
 th, td {
   padding: var(--s2) 0.6rem;
   text-align: right;
-  border-bottom: var(--hairline);
+  border-bottom: 1px solid var(--rule);
 }
 
 /* Not uppercased: CLAUDE.md rules out all-caps labels, and a table
    header is a label. Display headings are a different matter. */
 thead th {
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
   font-family: var(--body);
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--ink-soft);
+  color: var(--ink-muted);
 }
 
 th:first-child, td:first-child, td.name, .year { text-align: left; }
@@ -511,6 +523,83 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   background: repeating-linear-gradient(-45deg,
     transparent 0 4px, rgba(29, 27, 22, 0.1) 4px 8px);
 }
+
+/* ---- section nav ---- */
+
+/* A rail of icons beside the page, widening on hover to name each section.
+   The label is always in the DOM for screen readers; only its width is
+   animated, so there is no JS and no display toggle. */
+/* Sits in the gutter immediately left of the page panel and level with its
+   top, rather than floating in the middle of the viewport where it read as
+   belonging to nothing. max() keeps it on screen when the window is barely
+   wider than the panel. */
+.sectionnav {
+  position: fixed;
+  top: 7.5rem;
+  left: max(0.75rem, calc(50% - 28rem - 3.75rem));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s2) 0;
+  background: var(--panel-bg);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--accent);
+  border-radius: 2px;
+}
+
+.sectionnav a {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 9px 11px;
+  color: var(--ink-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sectionnav a:hover { color: var(--accent); background: var(--field-bg); }
+
+.sectionnav svg { width: 24px; height: 24px; flex-shrink: 0; }
+
+.sectionnav span {
+  max-width: 0;
+  overflow: hidden;
+  font-family: var(--prose);
+  font-size: 14px;
+  transition: max-width 0.18s ease;
+}
+.sectionnav:hover span,
+.sectionnav:focus-within span { max-width: 11rem; }
+
+/* One week at a time, chosen from this strip. */
+.week-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: var(--s5);
+}
+.week-nav a {
+  min-width: 2.1rem;
+  padding: 4px 8px;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  text-align: center;
+  text-decoration: none;
+  color: var(--ink-muted);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.week-nav a:hover { border-color: var(--accent); color: var(--accent); }
+.week-nav a.on {
+  color: var(--panel-bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+/* Scheduled but not played: still selectable, just quieter. */
+.week-nav a.unplayed { color: #a49c8c; border-style: dashed; }
+.week-nav a.unplayed.on { color: var(--panel-bg); border-style: solid; }
+
+.week h3 { margin-top: 0; }
 
 /* Weekly results. */
 .scores { margin-bottom: var(--s4); }
@@ -909,11 +998,7 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    clip the top if the panel ever grew taller than the viewport. */
 /* The landing page is the reference for the restyle, so it is the first to
    take the pale ground. Other pages keep the dark iron until reworked. */
-body:has(> .gatepost) {
-  display: flex;
-  min-height: 100dvh;
-  background: var(--page-bg);
-}
+body:has(> .gatepost) { display: flex; min-height: 100dvh; }
 
 /* One panel, not two. The proclamation and the sign-in are sections of a
    single sheet -- they were previously separate panels nested inside each
@@ -925,7 +1010,7 @@ body:has(> .gatepost) {
   border: 1px solid var(--accent);
   border-top: 3px solid var(--accent);
   border-radius: 2px;
-  font-family: var(--gate-prose);
+  font-family: var(--prose);
   text-align: center;
 }
 
@@ -991,7 +1076,7 @@ body:has(> .gatepost) {
 .gate input {
   width: 100%;
   padding: 12px 13px;
-  font-family: var(--gate-prose);
+  font-family: var(--prose);
   font-size: 15px;
   text-align: left;
   color: var(--ink);
@@ -1103,6 +1188,22 @@ body:has(> .gatepost) {
   .sitenav > ul { gap: var(--s3) var(--s4); }
   .sitenav .who { flex-basis: 100%; margin-left: 0; }
 
+  /* Behind a hamburger below this width. .collapsible is added by app.js, so
+     without the script the nav stays open rather than becoming unreachable.
+     order:-1 puts the button before the wordmark without reordering the DOM,
+     so the tab order still starts at the brand. */
+  .sitenav .navtoggle {
+    display: flex;
+    order: -1;
+    margin-left: 0;
+    margin-right: var(--s3);
+  }
+  .sitenav.collapsible > ul,
+  .sitenav.collapsible .who { display: none; }
+  .sitenav.collapsible.open > ul,
+  .sitenav.collapsible.open .who { display: flex; flex-basis: 100%; }
+  .sitenav.collapsible.open > ul { flex-direction: column; gap: var(--s3); }
+
   /* Wide tables scroll inside themselves rather than stretching the
      page. Without this the standings and head-to-head force a
      horizontal scroll on the whole document. */
@@ -1122,6 +1223,38 @@ body:has(> .gatepost) {
 
   .field { flex-wrap: wrap; }
   .field > label { flex-basis: 100%; }
+
+  /* Both bars stay put while the page scrolls. The site nav needs an opaque
+     background once it is sticky, or the page shows through it. */
+  .sitenav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding-top: var(--s2);
+    background: var(--page-bg);
+  }
+
+  /* A rail in the gutter would sit on top of the panel at this width, so it
+     becomes a strip across the top instead. Labels are always shown here:
+     there is no hover on touch, so an icon alone could never be identified.
+     --nav-h is measured in app.js, because the site nav changes height when
+     the menu opens and a fixed offset would leave a gap or an overlap. */
+  .sectionnav {
+    position: sticky;
+    top: var(--nav-h, 2.75rem);
+    left: auto;
+    flex-direction: row;
+    justify-content: space-around;
+    margin: 0 0 var(--s4);
+    padding: 2px 0;
+  }
+  .sectionnav a {
+    flex-direction: column;
+    gap: 1px;
+    padding: 5px 4px;
+  }
+  .sectionnav svg { width: 20px; height: 20px; }
+  .sectionnav span { max-width: none; font-size: 10px; }
 
   .keeper-grid { gap: var(--s4); }
   .toast { left: var(--s2); right: var(--s2); bottom: var(--s2); transform: none; max-width: none; }

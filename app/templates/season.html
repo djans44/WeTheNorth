@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% block title %}{{ s.season_year }} | We the North{% endblock %}
 
 {% set labels = {"regular": "Regular season", "quarterfinal": "Quarterfinal",
@@ -7,22 +7,58 @@
                  "third_place": "Third place", "consolation": "Consolation"} %}
 
 {% block content %}
+{# One icon per section, widening on hover to show the label. Plain anchors --
+   no JS, and it degrades to a list of jump links. Hidden on narrow screens. #}
+<nav class="sectionnav" aria-label="Sections of this page">
+  <a href="#standings">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M3 15h3V8H3zM8.5 15h3V3h-3zM14 15h3v-5h-3z"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+    </svg>
+    <span>Standings</span>
+  </a>
+  {% if weeks %}
+  <a href="#fixtures">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <rect x="3" y="4" width="14" height="13" rx="1"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M3 8h14M7 2.5v3M13 2.5v3"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+    </svg>
+    <span>{% if s.champion %}Results{% else %}Fixtures{% endif %}</span>
+  </a>
+  {% endif %}
+  {% if records %}
+  <a href="#records">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M6.5 3h7v4a3.5 3.5 0 0 1-7 0zM10 10.5V14M7 17h6"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M6.5 4H4v1.5a2.5 2.5 0 0 0 2.5 2.5M13.5 4H16v1.5a2.5 2.5 0 0 1-2.5 2.5"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+    </svg>
+    <span>Records</span>
+  </a>
+  {% endif %}
+  {% if keepers %}
+  <a href="#keepers">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <rect x="2.5" y="9" width="3.2" height="7.5" rx="0.6"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M5.7 9.2l3.1-5.7a1.7 1.7 0 0 1 1.7 2.3L9.8 8.4h4.7a1.7 1.7 0 0 1 1.6 2.2
+               l-1.3 4.4a1.7 1.7 0 0 1-1.6 1.5H5.7"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Keepers</span>
+  </a>
+  {% endif %}
+</nav>
 <div class="page">
-  <header class="page-head">
-    <h1>{{ s.season_year }}</h1>
-    <p class="lede">
-      {% if s.champion %}
-        {{ s.champion }} won it with {{ s.champion_team }}, beating {{ s.runner_up }} in the final.
-      {% elif weeks %}
-        In progress. {{ s.team_count }} teams, {{ s.keeper_count }} keepers.
-      {% else %}
-        Not yet under way. {{ s.team_count }} teams are entered
-        {%- if s.keeper_count %} with {{ s.keeper_count }} keepers each{% endif %}.
-      {% endif %}
-    </p>
+  <header class="page-head tight">
+    <h1>{{ leaf(20) }}{{ s.season_year }}</h1>
   </header>
 
-  <section>
+  <section id="standings">
     <h2>{% if s.champion %}Final standings{% else %}Standings{% endif %}</h2>
     <table>
       <thead>
@@ -52,8 +88,58 @@
     {% endif %}
   </section>
 
+  {% if weeks %}
+  <section id="fixtures">
+    <h2>{% if s.champion %}Results{% else %}Fixtures and results{% endif %}</h2>
+
+    {# Anchors, not buttons: without JS these jump to the week, and every
+       week is visible because nothing has been hidden. #}
+    <nav class="week-nav">
+      {% for w in weeks %}
+        <a href="#week-{{ w.week }}" data-week="{{ w.week }}"
+           class="{% if w.week == open_week %}on{% endif %}{% if not w.played %} unplayed{% endif %}">{{ w.week }}</a>
+      {% endfor %}
+    </nav>
+
+    {% for w in weeks %}
+      <div class="week" id="week-{{ w.week }}" data-week="{{ w.week }}">
+        <h3>Week {{ w.week }}{% if not w.played %} <span class="tm">not yet played</span>{% endif %}</h3>
+        <table class="scores">
+          <tbody>
+          {% for g in w.games %}
+            <tr>
+              <td class="gt">{% if g.game_type != "regular" %}{{ labels[g.game_type] }}{% endif %}</td>
+              <td class="name {% if g.team_b and g.points_a is not none and g.points_b is not none and g.points_a > g.points_b %}win{% endif %}">
+                {{ g.team_a }}<span class="tm">{{ g.owner_a }}</span>
+              </td>
+              <td class="pts">{{ "%.2f"|format(g.points_a) if g.points_a is not none }}</td>
+              <td class="vs">{% if g.team_b %}vs{% else %}bye{% endif %}</td>
+              <td class="pts">{{ "%.2f"|format(g.points_b) if g.points_b is not none }}</td>
+              <td class="name {% if g.team_b and g.points_a is not none and g.points_b is not none and g.points_b > g.points_a %}win{% endif %}">
+                {% if g.team_b %}{{ g.team_b }}<span class="tm">{{ g.owner_b }}</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if records %}
+  <section id="records">
+    <h2>Biggest weeks</h2>
+    <ol class="records">
+    {% for r in records %}
+      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }} vs {{ r.opponent_username }}, week {{ r.week }}</li>
+    {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
   {% if keepers %}
-  <section>
+  <section id="keepers">
     <h2>Keepers</h2>
     <p class="note">Who each manager held onto, and the round it cost them.</p>
     <div class="keeper-grid">
@@ -78,41 +164,6 @@
     </div>
   </section>
   {% endif %}
-
-  {% if records %}
-  <section>
-    <h2>Biggest weeks</h2>
-    <ol class="records">
-    {% for r in records %}
-      <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }} vs {{ r.opponent_username }}, week {{ r.week }}</li>
-    {% endfor %}
-    </ol>
-  </section>
-  {% endif %}
-
-  {% if weeks %}
-  <section>
-    <h2>Results</h2>
-    {% for w in weeks %}
-      <h3>Week {{ w.week }}</h3>
-      <table class="scores">
-        <tbody>
-        {% for g in w.games %}
-          <tr>
-            <td class="gt">{% if g.game_type != "regular" %}{{ labels[g.game_type] }}{% endif %}</td>
-            <td class="name {% if g.team_b and g.points_a is not none and g.points_b is not none and g.points_a > g.points_b %}win{% endif %}">{{ g.team_a }}</td>
-            <td class="pts">{{ "%.2f"|format(g.points_a) if g.points_a is not none }}</td>
-            <td class="vs">{% if g.team_b %}vs{% else %}bye{% endif %}</td>
-            <td class="pts">{{ "%.2f"|format(g.points_b) if g.points_b is not none }}</td>
-            <td class="name {% if g.team_b and g.points_a is not none and g.points_b is not none and g.points_b > g.points_a %}win{% endif %}">{{ g.team_b or "" }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% endfor %}
-  </section>
-  {% endif %}
 </div>
 {% endblock %}
-
 

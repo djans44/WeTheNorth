@@ -16,6 +16,18 @@
   the call sites differ too much to be worth one.
 #}
 
+{# The house mark. Hand-drawn here rather than loaded as an asset -- there are
+   no image files anywhere on this site. #}
+{% macro leaf(size=22) -%}
+  <svg class="leaf" viewBox="0 0 24 24" aria-hidden="true" focusable="false"
+       style="width: {{ size }}px; height: {{ size }}px;">
+    <path d="M12 3C8 7 5.5 10 5.5 13.5a6.5 6.5 0 0 0 13 0C18.5 10 16 7 12 3z"
+          fill="none" stroke="currentColor" stroke-width="1"/>
+    <path d="M12 7v12" fill="none" stroke="currentColor" stroke-width="1"/>
+  </svg>
+{%- endmacro %}
+
+
 {% macro avatar(who, size=32) -%}
   {%- set a = av(who) -%}
   <span class="avatar"

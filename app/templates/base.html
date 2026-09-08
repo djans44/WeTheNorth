@@ -24,15 +24,16 @@
     <a class="brand" href="/">We the North</a>
     <ul>
       <li class="has-menu">
-        <a href="/seasons" {% if path.startswith('/season') %}class="on"{% endif %}>Seasons</a>
+        {# Points at the newest season, not an index page. There was a
+           /seasons list but it only restated League history. #}
+        <a href="/current" {% if path.startswith('/season') %}class="on"{% endif %}>Seasons</a>
         <ul class="submenu">
           {% for s in nav_seasons() %}
             <li><a href="/season/{{ s.season_year }}">{{ s.season_year }}</a></li>
           {% endfor %}
-          <li class="sep"><a href="/seasons">All seasons</a></li>
         </ul>
       </li>
-      <li><a href="/history" {% if path == '/history' %}class="on"{% endif %}>League history</a></li>
+      <li><a href="/history" {% if path == '/history' %}class="on"{% endif %}>History</a></li>
       <li class="has-menu">
         <a href="/teams" {% if path.startswith('/team') %}class="on"{% endif %}>Managers</a>
         <ul class="submenu">
@@ -42,9 +43,14 @@
           <li class="sep"><a href="/teams">All managers</a></li>
         </ul>
       </li>
-      <li><a href="/draft-order" {% if path.startswith('/draft') %}class="on"{% endif %}>Draft order</a></li>
-      <li><a href="/draft-prep" {% if path == '/draft-prep' %}class="on"{% endif %}>Draft prep</a></li>
-      <li><a href="/keepers" {% if path.startswith('/keeper') %}class="on"{% endif %}>Keeper selection</a></li>
+      <li class="has-menu">
+        <a href="/draft-order" {% if path.startswith('/draft') %}class="on"{% endif %}>Draft</a>
+        <ul class="submenu">
+          <li><a href="/draft-order">Draft order</a></li>
+          <li><a href="/draft-prep">Draft prep</a></li>
+        </ul>
+      </li>
+      <li><a href="/keepers" {% if path.startswith('/keeper') %}class="on"{% endif %}>Keepers</a></li>
       <li><a href="/rules" {% if path == '/rules' %}class="on"{% endif %}>Rules</a></li>
       {% if request.session.get("is_admin") %}
       <li class="has-menu">

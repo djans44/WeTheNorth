@@ -1,15 +1,11 @@
 {% extends "base.html" %}
+{% from "macros.html" import leaf %}
 {% block title %}We the North{% endblock %}
 
 {% block content %}
 <div class="gatepost">
   <div class="proclamation">
-    {# Hand-drawn in the markup. No image assets anywhere on this page. #}
-    <svg class="gate-leaf" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 3C8 7 5.5 10 5.5 13.5a6.5 6.5 0 0 0 13 0C18.5 10 16 7 12 3z"
-            fill="none" stroke="currentColor" stroke-width="1"/>
-      <path d="M12 7v12" fill="none" stroke="currentColor" stroke-width="1"/>
-    </svg>
+    <span class="gate-leaf">{{ leaf(22) }}</span>
     <h1>
       <span class="mark">We the North</span>
       <span class="sub">Fantasy Football League for the Ages</span>

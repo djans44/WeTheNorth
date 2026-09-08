@@ -18,7 +18,9 @@
       <tbody>
       {% for s in seasons %}
         <tr>
-          <td class="year">{{ s.season_year }}</td>
+          {# This table is the season index now that /seasons is gone, so the
+             year has to be the way in. #}
+          <td class="year"><a href="/season/{{ s.season_year }}">{{ s.season_year }}</a></td>
           <td class="win">{{ s.champion }}<span class="tm">{{ s.champion_team }}</span></td>
           <td>{{ s.runner_up }}<span class="tm">{{ s.runner_up_team }}</span></td>
           <td>{{ s.third_place }}<span class="tm">{{ s.third_place_team }}</span></td>

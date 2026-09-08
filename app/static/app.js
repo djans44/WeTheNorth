@@ -32,6 +32,75 @@
     }
   }
 
+  // ---- narrow screens: collapse the site nav behind a hamburger ----
+  // The button is added here rather than in the template so that without this
+  // script the nav simply stays open, as it did before.
+  var siteNav = document.querySelector(".sitenav");
+  if (siteNav && siteNav.querySelector("ul")) {
+    var toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "navtoggle";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Menu");
+    toggle.innerHTML =
+      '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+      '<path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+
+    // After the wordmark, before the links: margin-left:auto then pushes it
+    // to the right-hand end of the bar.
+    siteNav.classList.add("collapsible");
+    siteNav.insertBefore(toggle, siteNav.querySelector("ul"));
+
+    // The section strip sticks directly below the site nav, so it needs the
+    // nav's real height -- which changes when the menu opens. Published as a
+    // custom property rather than hard-coded in the stylesheet.
+    var publishNavHeight = function () {
+      document.documentElement.style.setProperty(
+        "--nav-h", siteNav.getBoundingClientRect().height + "px");
+    };
+    publishNavHeight();
+    window.addEventListener("resize", publishNavHeight);
+
+    toggle.addEventListener("click", function () {
+      var open = siteNav.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      publishNavHeight();
+    });
+  }
+
+  // ---- season page: one week at a time ----
+  // The server renders every week and marks one open. Without this script
+  // they all stay visible and the nav links simply jump to them, so the
+  // page still works.
+  var weekNav = document.querySelector(".week-nav");
+  if (weekNav) {
+    var weeks = document.querySelectorAll(".week");
+    var links = weekNav.querySelectorAll("a");
+
+    var show = function (n) {
+      var i;
+      for (i = 0; i < weeks.length; i++) {
+        weeks[i].hidden = weeks[i].getAttribute("data-week") !== n;
+      }
+      for (i = 0; i < links.length; i++) {
+        var on = links[i].getAttribute("data-week") === n;
+        links[i].className = links[i].className.replace(/\s*\bon\b/, "");
+        if (on) { links[i].className += " on"; }
+      }
+    };
+
+    var opening = weekNav.querySelector("a.on") || links[0];
+    if (opening) { show(opening.getAttribute("data-week")); }
+
+    weekNav.addEventListener("click", function (e) {
+      var a = e.target.closest("a[data-week]");
+      if (!a) { return; }
+      e.preventDefault();
+      show(a.getAttribute("data-week"));
+    });
+  }
+
   // ---- toast ----
   var params = new URLSearchParams(window.location.search);
   var msg = params.get("msg");
