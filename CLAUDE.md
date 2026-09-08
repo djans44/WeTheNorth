@@ -155,8 +155,15 @@ add a modifier class — never repeat the block lower down.
   `.avatar-line`, `.tm`, `.note`, `.name`.
 - **New pages must work on a phone.** There is one `@media (max-width: 48rem)`
   block; put narrow-screen rules there rather than starting a second one. Wide
-  tables scroll inside themselves, and the nav has no dropdowns at that width
-  because hover does not exist on touch.
+  tables scroll inside themselves. Hover does not exist on touch, so nothing
+  at that width may depend on it: the nav's submenus unfold in place inside
+  the hamburger rather than opening on hover, and the open menu scrolls
+  inside itself.
+- **Watch what the desktop rules leave switched on.** A narrow-screen
+  override inherits everything not overridden, and two of those have already
+  broken a layout: `flex-wrap: wrap` turned a height-capped nav column into
+  three columns, and a class that sets `display` silently beats the browser's
+  own `[hidden]` rule, so a panel JS had hidden stayed on screen.
 
 ## Working here
 

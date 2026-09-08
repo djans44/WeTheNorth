@@ -1375,10 +1375,35 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
     --pad-gutter:  1.1rem;
   }
 
-  /* Submenus open on hover, which does not exist on touch. Below this
-     width they are dropped entirely -- nothing becomes unreachable,
-     since /seasons lists the seasons and /teams lists the managers. */
-  .submenu { display: none !important; }
+  /* Submenus open on hover, which does not exist on touch. Rather than drop
+     them, they unfold in place under their parent and stay open: the menu is
+     already behind a hamburger, and making someone tap twice more to reach a
+     season buys nothing. A rule down the left says what belongs to what,
+     since there is no panel to do it. */
+  .submenu {
+    position: static;
+    display: block;
+    min-width: 0;
+    margin: 0.25rem 0 0.2rem var(--s3);
+    padding: 0 0 0 var(--s3);
+    background: none;
+    border: 0;
+    border-left: 1px solid var(--rule);
+    box-shadow: none;
+  }
+  .submenu a { padding: 0.3rem 0; font-size: var(--t-sm); }
+  .submenu a:hover { background: none; color: var(--accent); }
+  .submenu .sep { margin-top: 0.3rem; padding-top: 0.3rem; }
+
+  /* Twelve managers and five seasons make a menu taller than the phone it
+     opens on, so it scrolls inside itself rather than running off the end.
+     nowrap matters: the bar's own flex-wrap, harmless in a row, turns a
+     height-capped column into three columns side by side. */
+  .sitenav.collapsible.open > ul {
+    flex-wrap: nowrap;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
 
   .sitenav { gap: var(--s2) var(--s4); margin-bottom: var(--s4); }
   .sitenav > ul { gap: var(--s3) var(--s4); }
