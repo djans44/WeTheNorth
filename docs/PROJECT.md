@@ -81,7 +81,8 @@ requirements.txt
 ## 3. League facts
 
 - **12 teams**, Yahoo Fantasy, **2QB / superflex, half PPR**
-- Roster: QB, 2 WR, 2 RB, W/T, W/R/T, **Q/W/R/T**, DEF, 4 BN, 2 IR. **No kicker slot.**
+- Roster: QB, 2 WR, 2 RB, **TE**, W/R/T, **Q/W/R/T**, DEF, 4 BN, 2 IR. **No kicker slot.**
+  The importers still accept `W/T` as well, since earlier seasons' Yahoo exports use it.
 - **13-round draft**, snake
 - Seasons in the database: **2022–2026**
 - Regular season 14 weeks; playoffs weeks 15–17
