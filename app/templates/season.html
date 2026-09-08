@@ -68,11 +68,11 @@
         {% for g in w.games %}
           <tr>
             <td class="gt">{% if g.game_type != "regular" %}{{ labels[g.game_type] }}{% endif %}</td>
-            <td class="name {% if g.team_b and g.points_a > g.points_b %}win{% endif %}">{{ g.team_a }}</td>
+            <td class="name {% if g.team_b and g.points_a is not none and g.points_b is not none and g.points_a > g.points_b %}win{% endif %}">{{ g.team_a }}</td>
             <td class="pts">{{ "%.2f"|format(g.points_a) if g.points_a is not none }}</td>
             <td class="vs">{% if g.team_b %}vs{% else %}bye{% endif %}</td>
             <td class="pts">{{ "%.2f"|format(g.points_b) if g.points_b is not none }}</td>
-            <td class="name {% if g.team_b and g.points_b > g.points_a %}win{% endif %}">{{ g.team_b or "" }}</td>
+            <td class="name {% if g.team_b and g.points_a is not none and g.points_b is not none and g.points_b > g.points_a %}win{% endif %}">{{ g.team_b or "" }}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -82,4 +82,5 @@
   {% endif %}
 </div>
 {% endblock %}
+
 

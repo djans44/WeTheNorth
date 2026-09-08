@@ -2121,3 +2121,269 @@ async def admin_rivals_set(request: Request):
         url=f"/admin/rivals?season={season}&msg=" + quote("Rivalries saved"),
         status_code=303)
 
+
+
+import collections as _collections
+import itertools as _itertools
+import random as _random
+
+
+def _pk(a, b):
+    return (a, b) if a < b else (b, a)
+
+
+def meeting_history(conn, season):
+    """Regular-season meetings between each pair, all seasons before `season`."""
+    rows = query(conn, """
+        select g.owner_id, g.opponent_owner_id, count(*) as n
+        from game_log g
+        where g.season_year < %s and g.game_type = 'regular'
+        group by g.owner_id, g.opponent_owner_id
+    """, (season,))
+    hist = {}
+    for r in rows:
+        k = _pk(r["owner_id"], r["opponent_owner_id"])
+        hist[k] = max(hist.get(k, 0), r["n"])
+    return hist
+
+
+def _choose_doubles(ids, hist, rng, tries=4000):
+    best = None
+    for _ in range(tries):
+        deg = {i: 0 for i in ids}
+        chosen = []
+        pairs = [_pk(a, b) for a, b in _itertools.combinations(ids, 2)]
+        rng.shuffle(pairs)
+        pairs.sort(key=lambda p: hist.get(p, 0) + rng.random() * 0.5)
+        for p in pairs:
+            a, b = p
+            if deg[a] < 3 and deg[b] < 3:
+                chosen.append(p)
+                deg[a] += 1
+                deg[b] += 1
+        if all(v == 3 for v in deg.values()):
+            cost = sum(hist.get(p, 0) for p in chosen)
+            if best is None or cost < best[0]:
+                best = (cost, chosen)
+    return best[1] if best else None
+
+
+def _one_matching(ids, pool, rng):
+    adj = _collections.defaultdict(list)
+    for p, c in pool.items():
+        if c > 0:
+            adj[p[0]].append(p[1])
+            adj[p[1]].append(p[0])
+    out = []
+
+    def rec(remaining):
+        if not remaining:
+            return True
+        remaining.sort(key=lambda x: len([y for y in adj[x] if y in remaining]))
+        a = remaining[0]
+        opts = [y for y in adj[a] if y in remaining]
+        rng.shuffle(opts)
+        for b in opts:
+            out.append(_pk(a, b))
+            rest = [x for x in remaining if x != a and x != b]
+            if rec(rest):
+                return True
+            out.pop()
+        return False
+
+    return out if rec(list(ids)) else None
+
+
+
+def generate_schedule(ids, hist, rival_pairs, seed, weeks=14, rival_week=10,
+                      min_gap=2):
+    """Weeks 1-11 a full round robin with rivalry week pinned, 12-14 the
+    rematches, and no pair meeting within `min_gap` weeks."""
+    rng = _random.Random(seed)
+    doubles = _choose_doubles(ids, hist, rng)
+    if not doubles:
+        return None, "Could not build the doubled-opponent set."
+
+    rp = [_pk(a, b) for a, b in rival_pairs]
+    single = [_pk(a, b) for a, b in _itertools.combinations(ids, 2)]
+    rr = len(ids) - 1
+
+    for _ in range(800):
+        pool = _collections.Counter(single)
+        for p in rp:
+            if pool[p] <= 0:
+                return None, "Rivalry pairings are not valid matchups."
+            pool[p] -= 1
+
+        out = {rival_week: list(rp)}
+        fail = False
+        for w in range(1, rr + 1):
+            if w == rival_week:
+                continue
+            m = _one_matching(ids, pool, rng)
+            if m is None:
+                fail = True
+                break
+            out[w] = m
+            for p in m:
+                pool[p] -= 1
+        if fail or sum(pool.values()):
+            continue
+
+        dpool = _collections.Counter(doubles)
+        ok = True
+        for w in range(rr + 1, weeks + 1):
+            m = _one_matching(ids, dpool, rng)
+            if m is None:
+                ok = False
+                break
+            out[w] = m
+            for p in m:
+                dpool[p] -= 1
+        if not ok or sum(dpool.values()):
+            continue
+
+        when = _collections.defaultdict(list)
+        for w, ms in out.items():
+            for p in ms:
+                when[p].append(w)
+        if all(len(ws) < 2 or (max(ws) - min(ws)) >= min_gap
+               for ws in when.values()):
+            return out, None
+
+    return None, ("Could not fit a schedule with no back-to-back rematches. "
+                  "Generate again.")
+
+
+@app.get("/admin/schedule", response_class=HTMLResponse)
+def admin_schedule(request: Request, season: int = 0, seed: int = 0):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"]
+
+        teams_list = query(conn, """
+            select t.team_id, t.owner_id, t.team_name, o.username
+            from teams t join owners o on o.owner_id = t.owner_id
+            where t.season_year = %s order by o.username
+        """, (season,))
+
+        rivals = query(conn, """
+            select owner_id, rival_owner_id from rivalries
+            where season_year = %s and owner_id < rival_owner_id
+        """, (season,))
+
+        existing = query(conn, """
+            select week, count(*) as n from matchups
+            where season_year = %s and game_type = 'regular'
+            group by week order by week
+        """, (season,))
+
+        hist = meeting_history(conn, season)
+
+    ids = [t["owner_id"] for t in teams_list]
+    names = {t["owner_id"]: t["username"] for t in teams_list}
+    rival_pairs = [(r["owner_id"], r["rival_owner_id"]) for r in rivals]
+
+    problem = None
+    if not ids:
+        problem = f"No teams entered for {season}."
+    elif len(ids) % 2:
+        problem = f"{len(ids)} managers. An even number is required."
+    elif len(rival_pairs) * 2 != len(ids):
+        problem = ("Rivalries are not set for this season. "
+                   "Generate them on the Rivals page first.")
+
+    weeks, err, counts = None, None, None
+    if seed and not problem:
+        sched, err = generate_schedule(ids, hist, rival_pairs, seed)
+        if sched:
+            weeks = []
+            for w in sorted(sched):
+                weeks.append({"week": w, "rival": w == 10,
+                              "games": [(names[a], names[b]) for a, b in sched[w]]})
+            pair_n = _collections.Counter()
+            for w in sched:
+                for p in sched[w]:
+                    pair_n[p] += 1
+            counts = []
+            for p, c in sorted(pair_n.items(), key=lambda x: (-x[1], names[x[0][0]])):
+                if c > 1:
+                    counts.append({"a": names[p[0]], "b": names[p[1]],
+                                   "times": c, "before": hist.get(p, 0)})
+
+    return templates.TemplateResponse(
+        request=request, name="admin_schedule.html",
+        context={"years": years, "season": season, "seed": seed,
+                 "weeks": weeks, "counts": counts, "error": err or problem,
+                 "existing": existing, "teams": teams_list})
+
+
+@app.post("/admin/schedule/save")
+async def admin_schedule_save(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    seed = int(form["seed"])
+
+    if not form.get("confirm"):
+        return RedirectResponse(
+            url=f"/admin/schedule?season={season}&seed={seed}&error=" +
+                quote("Tick the confirm box first"), status_code=303)
+
+    with get_db() as conn:
+        teams_list = query(conn, """
+            select owner_id, team_id from teams where season_year = %s
+        """, (season,))
+        by_owner = {t["owner_id"]: t["team_id"] for t in teams_list}
+        rivals = query(conn, """
+            select owner_id, rival_owner_id from rivalries
+            where season_year = %s and owner_id < rival_owner_id
+        """, (season,))
+        hist = meeting_history(conn, season)
+
+        ids = list(by_owner)
+        pairs = [(r["owner_id"], r["rival_owner_id"]) for r in rivals]
+        sched, err = generate_schedule(ids, hist, pairs, seed)
+        if err:
+            return RedirectResponse(
+                url=f"/admin/schedule?season={season}&error=" + quote(err),
+                status_code=303)
+
+        rows = []
+        for w, ms in sched.items():
+            for a, b in ms:
+                ta, tb = by_owner[a], by_owner[b]
+                if ta > tb:
+                    ta, tb = tb, ta
+                rows.append((season, w, "regular", ta, tb))
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                delete from matchups
+                where season_year = %s and game_type = 'regular'
+                  and team_a_points is null
+            """, (season,))
+            cur.executemany("""
+                insert into matchups
+                    (season_year, week, game_type, team_a_id, team_b_id)
+                values (%s, %s, %s, %s, %s)
+                on conflict (season_year, week, team_a_id, team_b_id) do nothing
+            """, rows)
+        conn.commit()
+
+    return RedirectResponse(
+        url=f"/admin/schedule?season={season}&msg=" +
+            quote(f"{len(rows)} matchups saved"), status_code=303)
+
+
+@app.get("/health-check-tail")
+def _tail_marker():
+    return {"ok": True}
+
+

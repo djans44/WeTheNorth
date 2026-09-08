@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Schedule | We the North{% endblock %}
+
+{% block content %}
+<div class="page wide">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Create schedule</h1>
+    <p class="lede">Fourteen weeks. Every manager plays three opponents twice and
+      the rest once, favouring pairings that have met least often. Week 10 is
+      rivalry week.</p>
+  </header>
+
+  <section>
+    <form method="get" action="/admin/schedule" class="picker">
+      <label for="season">Season</label>
+      <select id="season" name="season">
+        {% for y in years %}
+          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="seed" value="{{ range(1, 999999) | random }}">
+      <button type="submit">Generate schedule</button>
+    </form>
+    {% if error %}<div class="errors">{{ error }}</div>{% endif %}
+    {% if existing %}
+      <p class="note">{{ season }} already has regular season matchups in weeks
+        {% for e in existing %}{{ e.week }}{% if not loop.last %}, {% endif %}{% endfor %}.
+        Saving replaces only those with no scores entered.</p>
+    {% endif %}
+  </section>
+
+  {% if weeks %}
+  <section>
+    <h2>Doubled opponents</h2>
+    <table class="keepers">
+      <thead><tr><th>Pair</th><th>Times this season</th><th>Met before</th></tr></thead>
+      <tbody>
+      {% for c in counts %}
+        <tr>
+          <td class="name">{{ c.a }} &amp; {{ c.b }}</td>
+          <td class="rd">{{ c.times }}</td>
+          <td>{{ c.before }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="note">Eighteen pairs, three per manager. Lower "met before" means
+      the generator is spreading things out.</p>
+  </section>
+
+  <section>
+    <h2>Weeks</h2>
+    <div class="week-grid">
+    {% for w in weeks %}
+      <div class="week-card {% if w.rival %}rival{% endif %}">
+        <h3>Week {{ w.week }}{% if w.rival %} <span class="pill live">rivalry</span>{% endif %}</h3>
+        <ul>
+        {% for a, b in w.games %}
+          <li>{{ a }} <span class="tm">v</span> {{ b }}</li>
+        {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+    </div>
+  </section>
+
+  <section class="danger">
+    <h2>Save</h2>
+    <p class="note">Writes these as matchups with no scores, ready for weekly
+      entry. Weeks with scores already recorded are left alone.</p>
+    <form method="post" action="/admin/schedule/save">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="seed" value="{{ seed }}">
+      <label class="void"><input type="checkbox" name="confirm" value="1"> I mean it</label>
+      <button type="submit">Save schedule</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
