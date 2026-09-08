@@ -72,6 +72,12 @@
       var m = /^R(\d+)/.exec(b.textContent.trim());
       if (m) { out.push(parseInt(m[1], 10)); }
     });
+    document.querySelectorAll(".voided-mark").forEach(function (v) {
+      out.push(parseInt(v.dataset.penalty, 10));
+    });
+    voids.forEach(function (v) {
+      if (v.checked) { out.push(parseInt(v.dataset.penalty, 10)); }
+    });
     return out;
   }
 
@@ -166,6 +172,12 @@
       }
     });
 
+    document.querySelectorAll(".voided-mark").forEach(function (m) {
+      lines.push({ round: parseInt(m.dataset.penalty, 10),
+                   text: "R" + m.dataset.penalty +
+                         " forced defence <span class='tm'>void, binding</span>" });
+    });
+
     var list = document.getElementById("chosen");
     list.innerHTML = "";
     lines.sort(function (a, b) { return a.round - b.round; }).forEach(function (l) {
@@ -210,4 +222,49 @@
   }
 
   render();
+})();
+
+// ---- void warning, live ----
+(function () {
+  var boxes = Array.prototype.slice.call(document.querySelectorAll(".void-box"));
+  var banner = document.getElementById("void-warning");
+  if (!boxes.length || !banner) { return; }
+
+  var namesEl = document.getElementById("void-names");
+  var submitWrap = document.getElementById("void-submit-wrap");
+
+
+  function update() {
+    var ticked = boxes.filter(function (b) { return b.checked; });
+    if (!ticked.length) {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+    namesEl.textContent = ticked.map(function (b) {
+      return b.dataset.name + " (DEF at R" + b.dataset.penalty + ")";
+    }).join(", ");
+
+    submitWrap.hidden = false;
+  }
+
+  boxes.forEach(function (b) { b.addEventListener("change", update); });
+  update();
+})();
+
+
+
+
+// ---- confirm before submitting a void that wipes plans ----
+(function () {
+  var btn = document.getElementById("void-submit-btn");
+  if (!btn) { return; }
+  btn.addEventListener("click", function (e) {
+    if (btn.dataset.hasplans !== "1") { return; }
+    var ok = window.confirm(
+      "Submitting this void will erase your saved keeper plan for every phase, " +
+      "because voiding changes which rounds are available.\n\n" +
+      "Your plan will need to be built again. Continue?");
+    if (!ok) { e.preventDefault(); }
+  });
 })();

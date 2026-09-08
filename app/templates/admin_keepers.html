@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Keeper admin | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Keeper admin</h1>
+    <p class="lede">Windows, review, and phase resolution.</p>
+  </header>
+
+  <section>
+    <form method="get" action="/admin/keepers" class="picker">
+      <label for="season">Season</label>
+      <select id="season" name="season">
+        {% for y in years %}
+          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Load</button>
+    </form>
+  </section>
+
+  {% if over %}
+  <section>
+    <div class="errors">
+      <b>More than three contracts.</b>
+      <ul>
+      {% for o in over %}<li>{{ o.username }} holds {{ o.n }}</li>{% endfor %}
+      </ul>
+      A trade should have been blocked. Someone needs to void.
+    </div>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Windows</h2>
+    <form method="post" action="/admin/keepers/windows">
+      <input type="hidden" name="season" value="{{ season }}">
+      <table class="keepers">
+        <thead>
+          <tr><th>Phase</th><th>Opens</th><th>Closes</th><th>State</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for n in [1, 2, 3] %}
+          {% set w = (windows | selectattr("phase", "equalto", n) | list | first) %}
+          <tr>
+            <td class="name">Keeper {{ n }}</td>
+            <td><input type="datetime-local" name="w{{ n }}_opens"
+                       value="{{ w.opens_at.strftime('%Y-%m-%dT%H:%M') if w else '' }}"></td>
+            <td><input type="datetime-local" name="w{{ n }}_closes"
+                       value="{{ w.closes_at.strftime('%Y-%m-%dT%H:%M') if w else '' }}"></td>
+            <td>
+              {% if not w %}<span class="tm">not set</span>
+              {% elif w.resolved_at %}<span class="pill">resolved</span>
+              {% elif w.is_open %}<span class="pill live">open</span>
+              {% else %}<span class="pill">closed</span>{% endif %}
+            </td>
+            <td>
+              {% if w and not w.resolved_at %}
+                <a href="/admin/keepers?season={{ season }}&preview={{ n }}">Preview close</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit">Save windows</button>
+    </form>
+  </section>
+
+  {% if preview and actions %}
+  <section>
+    <h2>Closing Keeper {{ preview }}</h2>
+    <p class="note">Nothing has been written. Review, then confirm.</p>
+    <table class="keepers">
+      <thead><tr><th>Manager</th><th>Action</th><th>Player</th><th>Round</th><th>Note</th></tr></thead>
+      <tbody>
+      {% for a in actions %}
+        <tr>
+          <td class="name">{{ a.owner }}</td>
+          <td class="{% if a.kind == 'forfeit' or a.kind == 'error' %}loss{% endif %}">{{ a.kind }}</td>
+          <td>{{ a.player }}</td>
+          <td class="rd">{% if a.round %}R{{ a.round }}{% endif %}</td>
+          <td class="tm">{{ a.note }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if not error %}
+    <form method="post" action="/admin/keepers/resolve">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="phase" value="{{ preview }}">
+      <button type="submit">Resolve Keeper {{ preview }}</button>
+    </form>
+    <p class="note">This cannot be undone from the site.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Awaiting review</h2>
+    {% if pending %}
+    <form method="post" action="/admin/keepers/review">
+      <input type="hidden" name="season" value="{{ season }}">
+      <table class="keepers">
+        <thead>
+          <tr><th></th><th>Phase</th><th>Manager</th><th>Player</th><th>Round</th>
+              <th>Term</th><th>Origin</th><th>Note</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for p in pending %}
+          <tr>
+            <td><input type="checkbox" name="submission" value="{{ p.submission_id }}" checked></td>
+            <td>K{{ p.phase }}</td>
+            <td class="name">{{ p.username }}</td>
+            <td class="name">{{ p.full_name }}</td>
+            <td class="rd">R{{ p.cost_round }}</td>
+            <td>{% if p.term_years %}{{ p.term_years }} yr{% endif %}</td>
+            <td class="tm">{{ p.origin }}</td>
+            <td class="tm">{{ p.note }}</td>
+            <td><a href="/admin/keepers/edit/{{ p.submission_id }}">Edit</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit" name="action" value="approve">Approve selected</button>
+      <button type="submit" name="action" value="reject" class="ghost">Reject and reopen</button>
+      <span class="tm">Rejecting deletes the submission. Their plan stays, so they can resubmit.</span>
+    </form>
+    {% else %}
+      <p class="note">Nothing waiting.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Voids</h2>
+    {% if voids %}
+    <table class="keepers">
+      <thead><tr><th>Manager</th><th>Player</th><th>Forced DEF</th><th>State</th><th></th></tr></thead>
+      <tbody>
+      {% for v in voids %}
+        <tr>
+          <td class="name">{{ v.username }}</td>
+          <td>{{ v.full_name }}</td>
+          <td class="rd">R{{ v.penalty_round }}</td>
+          <td class="tm">{% if v.confirmed_at %}binding{% else %}declared, not yet binding{% endif %}</td>
+          <td>
+            <form method="post" action="/admin/keepers/void" class="inline">
+              <input type="hidden" name="season" value="{{ season }}">
+              <input type="hidden" name="contract_id" value="{{ v.contract_id }}">
+              <button type="submit" name="action" value="cancel" class="linkish">cancel</button>
+            </form>
+            {% if v.confirmed_at %}
+            <form method="post" action="/admin/keepers/void" class="inline">
+              <input type="hidden" name="season" value="{{ season }}">
+              <input type="hidden" name="contract_id" value="{{ v.contract_id }}">
+              <button type="submit" name="action" value="unconfirm" class="linkish">reopen</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="note"><b>cancel</b> removes it entirely, the contract stands.
+      <b>reopen</b> makes it editable by the manager again.</p>
+    {% else %}
+    <p class="note">No voids declared.</p>
+    {% endif %}
+
+    {% if voidable %}
+    <h3>Void on someone's behalf</h3>
+    <p class="note">This clears that manager's saved plans, same as if they did it.</p>
+    <form method="post" action="/admin/keepers/void" class="picker">
+      <input type="hidden" name="season" value="{{ season }}">
+      <select name="contract_id" style="min-width:26rem">
+        {% for c in voidable %}
+          <option value="{{ c.contract_id }}">
+            {{ c.username }} &mdash; {{ c.full_name }} R{{ c.cost_round }}
+            &rarr; DEF at R{{ c.void_penalty_round }}
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit" name="action" value="add" class="ghost">Void it</button>
+    </form>
+    {% endif %}
+  </section>
+
+  {% if settled %}
+  <section>
+    <h2>Settled</h2>
+    <table class="keepers">
+      <thead><tr><th>Phase</th><th>Manager</th><th>Player</th><th>Round</th><th>Origin</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for s in settled %}
+        <tr>
+          <td>K{{ s.phase }}</td>
+          <td class="name">{{ s.username }}</td>
+          <td>{{ s.full_name or "forfeited" }}</td>
+          <td class="rd">{% if s.cost_round %}R{{ s.cost_round }}{% endif %}</td>
+          <td class="tm">{{ s.origin }}</td>
+          <td class="{% if s.status == 'rejected' %}loss{% elif s.status == 'approved' %}win{% endif %}">{{ s.status }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+  <section class="danger">
+    <h2>Reset</h2>
+    <p class="note">Deletes submissions, plans and voids. Contracts, rosters and
+      drafts are untouched, so eligibility rebuilds itself from the underlying data.
+      Resetting the whole season also reopens every phase.</p>
+    <form method="post" action="/admin/keepers/reset">
+      <input type="hidden" name="season" value="{{ season }}">
+      <p class="picker">
+        <label for="reset_owner">Manager</label>
+        <select id="reset_owner" name="owner_id">
+          {% for o in all_owners %}
+            <option value="{{ o.owner_id }}">{{ o.username }}</option>
+          {% endfor %}
+        </select>
+        <label class="void">
+          <input type="checkbox" name="confirm" value="1"> I mean it
+        </label>
+      </p>
+      <button type="submit" name="scope" value="owner" class="ghost">Reset this manager</button>
+      <button type="submit" name="scope" value="season" class="ghost">Reset all of {{ season }}</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+
+
+
+
+

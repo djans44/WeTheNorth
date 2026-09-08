@@ -30,6 +30,8 @@
           <li class="sep"><a href="/teams">All managers</a></li>
         </ul>
       </li>
+      <li><a href="/draft-order" {% if path.startswith('/draft') %}class="on"{% endif %}>Draft order</a></li>
+      <li><a href="/draft-prep" {% if path == '/draft-prep' %}class="on"{% endif %}>Draft prep</a></li>
       <li><a href="/keepers" {% if path.startswith('/keeper') %}class="on"{% endif %}>Keeper selection</a></li>
       <li><a href="/rules" {% if path == '/rules' %}class="on"{% endif %}>Rules</a></li>
       {% if request.session.get("is_admin") %}
@@ -37,6 +39,7 @@
         <a href="/admin/scores" {% if path.startswith('/admin') %}class="on"{% endif %}>Admin</a>
         <ul class="submenu">
           <li><a href="/admin/scores">Enter scores</a></li>
+          <li><a href="/admin/keepers">Keeper admin</a></li>
         </ul>
       </li>
       {% endif %}
@@ -47,6 +50,9 @@
   </nav>
 
   {% block content %}{% endblock %}
+  <script src="{{ static_url('app.js') }}"></script>
 </body>
 </html>
+
+
 

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Edit submission | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Override</h1>
+    <p class="lede">
+      {{ sub.username }} &middot; {{ sub.season_year }} Keeper {{ sub.phase }}
+    </p>
+  </header>
+
+  <section>
+    <p class="note">
+      Currently <b>{% if sub.full_name %}R{{ sub.cost_round }} {{ sub.full_name }}{% else %}forfeited{% endif %}</b>
+      &middot; {{ sub.origin }} &middot; {{ sub.status }}
+      {% if sub.note %}<br>{{ sub.note }}{% endif %}
+    </p>
+
+    {% if used %}
+    <p class="note">Their other phases:
+      {% for u in used %}K{{ u.phase }}{% if u.cost_round %} at R{{ u.cost_round }}{% else %} forfeited{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+    </p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Change</h2>
+    <form method="post" action="/admin/keepers/edit">
+      <input type="hidden" name="season" value="{{ sub.season_year }}">
+      <input type="hidden" name="submission_id" value="{{ sub.submission_id }}">
+
+      <p>
+        <label for="player_id">Player</label><br>
+        <select id="player_id" name="player_id" style="min-width:24rem">
+          <option value="">&mdash; forfeit this phase &mdash;</option>
+          {% for o in options %}
+            <option value="{{ o.player_id }}"
+                    {% if o.player_id == sub.player_id %}selected{% endif %}>
+              {{ o.full_name }} ({{ o.position }}) &mdash; {{ o.state }}, R{{ o.cost_round }}
+            </option>
+          {% endfor %}
+        </select>
+      </p>
+
+      <p>
+        <label for="cost_round">Round</label><br>
+        <input type="number" id="cost_round" name="cost_round" min="1" max="13"
+               value="{{ sub.cost_round or '' }}" style="width:6rem">
+        <span class="tm">Required unless forfeiting. Not checked against other phases.</span>
+      </p>
+
+      <p>
+        <label for="term_years">Contract term</label><br>
+        <select id="term_years" name="term_years">
+          <option value="" {% if not sub.term_years %}selected{% endif %}>none</option>
+          <option value="1" {% if sub.term_years == 1 %}selected{% endif %}>1 year</option>
+          <option value="3" {% if sub.term_years == 3 %}selected{% endif %}>3 years</option>
+        </select>
+      </p>
+
+      <p>
+        <label for="status">Status</label><br>
+        <select id="status" name="status">
+          <option value="approved" {% if sub.status == "approved" %}selected{% endif %}>approved</option>
+          <option value="pending" {% if sub.status == "pending" %}selected{% endif %}>pending</option>
+        </select>
+      </p>
+
+      <p>
+        <label for="note">Note</label><br>
+        <input type="text" id="note" name="note" style="min-width:24rem"
+               value="{{ sub.note or '' }}" placeholder="why this was changed">
+      </p>
+
+      <button type="submit" name="action" value="save">Save override</button>
+      <a href="/admin/keepers?season={{ sub.season_year }}" class="tm" style="margin-left:1rem">Cancel</a>
+    </form>
+  </section>
+
+  <section>
+    <h2>Remove</h2>
+    <p class="note">Deleting reopens the phase for this manager. Their plan, if any,
+      stays intact and will submit again at resolution.</p>
+    <form method="post" action="/admin/keepers/edit">
+      <input type="hidden" name="season" value="{{ sub.season_year }}">
+      <input type="hidden" name="submission_id" value="{{ sub.submission_id }}">
+      <button type="submit" name="action" value="delete" class="ghost">Delete submission</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+

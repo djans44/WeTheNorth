@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Draft prep | We the North{% endblock %}
+
+{% block content %}
+<div class="page wide">
+  <header class="page-head">
+    <div class="tape"></div>
+    <h1>Draft prep</h1>
+    <p class="lede">Keepers, contracts and voids on the board. Pick numbers skip
+      keeper slots, so they count only the picks you actually make.</p>
+  </header>
+
+  <section>
+    <form method="get" action="/draft-prep" class="picker">
+      <label for="season">Season</label>
+      <select id="season" name="season">
+        {% for y in years %}
+          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Load</button>
+    </form>
+  </section>
+
+  {% if not order %}
+  <section><p class="note">Draft slots have not been chosen yet.
+    Run the lottery and let managers pick their slots first.</p></section>
+  {% else %}
+
+  <section>
+    <h2>Keepers by manager</h2>
+    <div class="scroller">
+      <table class="board options-table">
+        <thead>
+          <tr>{% for t in by_owner %}
+            <th>{{ t.username }}<br><span class="tm">slot {{ t.slot }}</span></th>
+          {% endfor %}</tr>
+        </thead>
+        <tbody>
+          <tr>
+          {% for t in by_owner %}
+            <td class="opts">
+              {% for c in t.contracts %}
+                <div class="opt-line contract">
+                  <b>R{{ c.cost_round }}</b> {{ c.full_name }}
+                  <span class="tm">through {{ c.final_season }}</span>
+                </div>
+              {% endfor %}
+
+              {% for k in t.keepers %}
+                <div class="opt-line kept">
+                  <b>R{{ k.cost_round }}</b> {{ k.full_name }}
+                  {% if k.term_years %}<span class="tm">{{ k.term_years }} yr</span>{% endif %}
+                </div>
+              {% endfor %}
+
+              {% for v in t.voids %}
+                <div class="opt-line voided">
+                  <b>R{{ v.penalty_round }}</b> DEF
+                  <span class="tm">voided {{ v.full_name }}</span>
+                </div>
+              {% endfor %}
+
+              {% for h in t.holds %}
+                <div class="opt-line held">
+                  <b>R{{ h.cost_round }}</b> {{ h.full_name }}
+                  <form method="post" action="/draft-prep/placeholder" class="inline">
+                    <input type="hidden" name="season" value="{{ season }}">
+                    <input type="hidden" name="owner_id" value="{{ t.owner_id }}">
+                    <input type="hidden" name="player_id" value="{{ h.player_id }}">
+                    <button type="submit" name="action" value="remove" class="linkish">&times;</button>
+                  </form>
+                </div>
+              {% endfor %}
+
+              {% if not t.contracts and not t.keepers and not t.voids and not t.holds %}
+                <div class="opt-line tm">nothing yet</div>
+              {% endif %}
+
+              {% if t.options %}
+              <form method="post" action="/draft-prep/placeholder" class="add-form">
+                <input type="hidden" name="season" value="{{ season }}">
+                <input type="hidden" name="owner_id" value="{{ t.owner_id }}">
+                <select name="player_id">
+                  <option value="">add&hellip;</option>
+                  {% for o in t.options %}
+                    <option value="{{ o.player_id }}">
+                      R{{ o.cost_round }} {{ o.full_name }}{% if o.state == "must_sign" %} (sign){% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+                <button type="submit" name="action" value="add">+</button>
+              </form>
+              {% endif %}
+            </td>
+          {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      <span class="swatch real"></span> contract or submitted keeper
+      <span class="swatch hold"></span> placeholder
+      <span class="swatch void"></span> forced defence
+      &middot; the add list is that manager's own eligible roster.
+    </p>
+    <form method="post" action="/draft-prep/placeholder">
+      <input type="hidden" name="season" value="{{ season }}">
+      <button type="submit" name="action" value="clear" class="ghost">Clear all placeholders</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>The board</h2>
+    <div class="scroller">
+      <table class="board">
+        <thead>
+          <tr><th class="rhead">Pick</th>
+            {% for o in order %}<th>{{ o.slot }}</th>{% endfor %}</tr>
+          <tr><th class="rhead">Round</th>
+            {% for o in order %}<th class="who">{{ o.username }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+        {% for row in board %}
+          <tr>
+            <th class="rhead">{{ row.round }}</th>
+            {% for c in row.cells %}
+              <td class="cell {{ c.kind }}">{% if c.name %}{{ c.name }}{% else %}{{ c.pick }}{% endif %}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+

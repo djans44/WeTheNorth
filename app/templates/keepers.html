@@ -33,14 +33,6 @@
   </section>
   {% endif %}
 
-  {% if error %}
-  <section><div class="errors"><b>Not submitted.</b> {{ error }}</div></section>
-  {% endif %}
-  {% if submitted %}
-  <section><p class="note ok">Keeper {{ submitted }} submitted. It is now locked
-    and waiting for admin review.</p></section>
-  {% endif %}
-
   <form method="post" action="/keepers/plan" id="planform">
   <input type="hidden" name="season" value="{{ season }}">
   <input type="hidden" name="owner" value="{{ owner }}">
@@ -59,12 +51,17 @@
           <td class="rd">R{{ c.cost_round }}</td>
           <td>{{ c.final_season }}</td>
           <td>
-            {% if ctx.phases[0].resolved_at %}
+            {% if c.contract_id in ctx.confirmed_voids %}
+              <span class="tm voided-mark" data-penalty="{{ c.void_penalty_round }}"
+                    data-name="{{ c.full_name }}">voided, binding</span>
+            {% elif ctx.phases[0].resolved_at %}
               <span class="tm">{% if c.contract_id in ctx.voids %}voided{% else %}locked{% endif %}</span>
             {% else %}
               <label class="void">
                 <input type="checkbox" name="void" value="{{ c.contract_id }}"
                        class="void-box" data-penalty="{{ c.void_penalty_round }}"
+                       data-name="{{ c.full_name }}"
+                       data-saved="{% if c.contract_id in ctx.voids %}1{% else %}0{% endif %}"
                        {% if c.contract_id in ctx.voids %}checked{% endif %}
                        {% if not editable %}disabled{% endif %}>
                 void &rarr; DEF at R{{ c.void_penalty_round }}
@@ -75,6 +72,16 @@
       {% endfor %}
       </tbody>
     </table>
+    <div id="void-warning" class="errors" style="margin-top:1rem" hidden>
+      <b>Void not submitted.</b>
+      Marked for voiding: <span id="void-names"></span>.
+      This is not binding yet. If it is not submitted before Keeper 1 closes,
+      the void is discarded and the contract stands.
+      <div id="void-submit-wrap" style="margin-top:0.6rem" hidden>
+        <button type="submit" formaction="/keepers/void-submit" id="void-submit-btn"
+                data-hasplans="{% if ctx.has_plans %}1{% else %}0{% endif %}">Submit void</button>
+      </div>
+    </div>
   </section>
   {% endif %}
 
@@ -209,3 +216,10 @@
   {% endif %}
 </div>
 {% endblock %}
+
+
+
+
+
+
+
