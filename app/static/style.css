@@ -206,21 +206,8 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .grid th, .grid td { padding: 0.4rem 0.3rem; }
 .grid th { font-weight: 700; }
 .grid tbody th { text-align: left; white-space: nowrap; }
-/* The cell stays a cell; the stack is a box inside it. Setting display:flex
-   on the th itself takes it out of the column layout and the header row
-   collapses into a column of its own. */
 .grid .chead { text-align: center; vertical-align: bottom; }
-.grid .chead .stack {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-}
-.grid .chead .nm {
-  font-size: 0.75rem;
-  font-weight: 400;
-  white-space: nowrap;
-}
+.grid .chead .nm { font-size: 0.75rem; }
 .grid td { text-align: center; }
 .grid .self { background: repeating-linear-gradient(-45deg,
   transparent 0 4px, rgba(35,32,26,0.12) 4px 8px); }
@@ -258,6 +245,25 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* A sigil above a name, for column headers too narrow to sit them
+   side by side. The box goes INSIDE the cell -- a th set to display:flex
+   leaves the table's column layout and the header row collapses. */
+.stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+.stack .nm { font-weight: 400; white-space: nowrap; }
+
+/* Two sigils either side of a "vs". */
+.pairing {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
 }
 
 /* ---- avatar picker ---- */
@@ -916,6 +922,17 @@ select, .entry input {
 .board thead th { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .board thead .who { font-size: 0.72rem; font-weight: 400; }
 .board .rhead { background: var(--ink); color: var(--paper); width: 3rem; }
+/* A row header naming a person needs room the 3rem pick/round column
+   does not. */
+.board .rhead.namehead {
+  width: auto;
+  text-align: left;
+  white-space: nowrap;
+  padding-left: 0.5rem;
+}
+/* .tm sets its own dark colour, which on the board's ink header is
+   almost invisible. */
+.board thead .tm, .board .rhead .tm { color: var(--stone-edge); }
 .board .cell.open { color: var(--ink-soft); }
 .board .cell.real { background: #f6c9c2; font-weight: 600; text-align: left; }
 .board .cell.hold { background: #cfe0f0; font-style: italic; text-align: left; }

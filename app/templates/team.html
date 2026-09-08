@@ -42,8 +42,10 @@
   {% if rivals %}
   <section>
     <h2>Rival</h2>
-    <p class="settled"><b>{{ rivals[0].rival }}</b>
-      <span class="tm">{{ rivals[0].season_year }}</span></p>
+    <p class="settled avatar-line">
+      {{ avatar(rivals[0].rival_id, 32) }}
+      <span><b>{{ rivals[0].rival }}</b>
+        <span class="tm">{{ rivals[0].season_year }}</span></span></p>
     {% if rivals|length > 1 %}
       <p class="note">Previously:
         {% for r in rivals[1:] %}{{ r.rival }} ({{ r.season_year }}){% if not loop.last %}, {% endif %}{% endfor %}
@@ -61,7 +63,12 @@
       <tbody>
       {% for r in h2h %}
         <tr>
-          <td class="name"><a href="/team/{{ r.opponent_username|lower }}">{{ r.opponent_username }}</a></td>
+          <td class="name">
+            <span class="avatar-line">
+              {{ avatar(r.opponent_username, 24) }}
+              <a href="/team/{{ r.opponent_username|lower }}">{{ r.opponent_username }}</a>
+            </span>
+          </td>
           <td class="{% if r.wins > r.losses %}win{% elif r.wins < r.losses %}loss{% endif %}">{{ r.wins }}</td>
           <td>{{ r.losses }}</td>
           <td>{{ "%.1f"|format(r.points_for) }}</td>

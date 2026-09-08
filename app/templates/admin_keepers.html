@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import avatar %}
 {% block title %}Keeper admin | We the North{% endblock %}
 
 {% block content %}
@@ -26,7 +27,7 @@
     <div class="errors">
       <b>More than three contracts.</b>
       <ul>
-      {% for o in over %}<li>{{ o.username }} holds {{ o.n }}</li>{% endfor %}
+      {% for o in over %}<li class="avatar-line">{{ avatar(o.username, 22) }}{{ o.username }} holds {{ o.n }}</li>{% endfor %}
       </ul>
       A trade should have been blocked. Someone needs to void.
     </div>
@@ -78,7 +79,8 @@
       <tbody>
       {% for a in actions %}
         <tr>
-          <td class="name">{{ a.owner }}</td>
+          <td class="name">
+            <span class="avatar-line">{{ avatar(a.owner, 24) }}{{ a.owner }}</span></td>
           <td class="{% if a.kind == 'forfeit' or a.kind == 'error' %}loss{% endif %}">{{ a.kind }}</td>
           <td>{{ a.player }}</td>
           <td class="rd">{% if a.round %}R{{ a.round }}{% endif %}</td>
@@ -113,7 +115,8 @@
           <tr>
             <td><input type="checkbox" name="submission" value="{{ p.submission_id }}" checked></td>
             <td>K{{ p.phase }}</td>
-            <td class="name">{{ p.username }}</td>
+            <td class="name">
+              <span class="avatar-line">{{ avatar(p.username, 24) }}{{ p.username }}</span></td>
             <td class="name">{{ p.full_name }}</td>
             <td class="rd">R{{ p.cost_round }}</td>
             <td>{% if p.term_years %}{{ p.term_years }} yr{% endif %}</td>
@@ -141,7 +144,8 @@
       <tbody>
       {% for v in voids %}
         <tr>
-          <td class="name">{{ v.username }}</td>
+          <td class="name">
+            <span class="avatar-line">{{ avatar(v.username, 24) }}{{ v.username }}</span></td>
           <td>{{ v.full_name }}</td>
           <td class="rd">R{{ v.penalty_round }}</td>
           <td class="tm">{% if v.confirmed_at %}binding{% else %}declared, not yet binding{% endif %}</td>
@@ -177,6 +181,8 @@
       <select name="contract_id" style="min-width:26rem">
         {% for c in voidable %}
           <option value="{{ c.contract_id }}">
+            {# No avatar here: an <option> renders text only, so the markup
+               would collapse into the label as stray initials. #}
             {{ c.username }} &mdash; {{ c.full_name }} R{{ c.cost_round }}
             &rarr; DEF at R{{ c.void_penalty_round }}
           </option>
@@ -196,7 +202,8 @@
       {% for s in settled %}
         <tr>
           <td>K{{ s.phase }}</td>
-          <td class="name">{{ s.username }}</td>
+          <td class="name">
+            <span class="avatar-line">{{ avatar(s.username, 24) }}{{ s.username }}</span></td>
           <td>{{ s.full_name or "forfeited" }}</td>
           <td class="rd">{% if s.cost_round %}R{{ s.cost_round }}{% endif %}</td>
           <td class="tm">{{ s.origin }}</td>

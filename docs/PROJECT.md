@@ -449,8 +449,6 @@ button.
   seasons could be surfaced on manager pages
 - Real **lottery rules** (currently pure randomisation)
 - Badges (spec in `docs/features/badges.md`)
-- Avatars on draft board cells, keeper phase cards and the rivalry pairing
-  display — the rest of the feature is built, see `docs/features/avatars.md`
 
 **Known rough edges**
 - Admin overrides deliberately do **not** validate a round against the

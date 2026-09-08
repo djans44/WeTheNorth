@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import avatar %}
 {% block title %}Draft prep | We the North{% endblock %}
 
 {% block content %}
@@ -33,7 +34,13 @@
       <table class="board options-table">
         <thead>
           <tr>{% for t in by_owner %}
-            <th>{{ t.username }}<br><span class="tm">slot {{ t.slot }}</span></th>
+            <th>
+              <span class="stack">
+                {{ avatar(t.owner_id, 24) }}
+                <span class="nm">{{ t.username }}</span>
+              </span>
+              <span class="tm">slot {{ t.slot }}</span>
+            </th>
           {% endfor %}</tr>
         </thead>
         <tbody>
@@ -118,7 +125,14 @@
           <tr><th class="rhead">Pick</th>
             {% for o in order %}<th>{{ o.slot }}</th>{% endfor %}</tr>
           <tr><th class="rhead">Round</th>
-            {% for o in order %}<th class="who">{{ o.username }}</th>{% endfor %}</tr>
+            {% for o in order %}
+              <th class="who">
+                <span class="stack">
+                  {{ avatar(o.username, 22) }}
+                  <span class="nm">{{ o.username }}</span>
+                </span>
+              </th>
+            {% endfor %}</tr>
         </thead>
         <tbody>
         {% for row in board %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import avatar %}
 {% block title %}Rivals | We the North{% endblock %}
 
 {% block content %}
@@ -33,7 +34,8 @@
       <tbody>
       {% for p in proposed %}
         <tr>
-          <td class="name">{{ p.a }} &amp; {{ p.b }}</td>
+          <td class="name">
+            <span class="avatar-line">{{ avatar(p.a, 22) }}{{ p.a }} <span class="tm">&amp;</span> {{ avatar(p.b, 22) }}{{ p.b }}</span></td>
           <td class="rd">{{ p.score }}</td>
           <td>{{ p.games }}</td>
           <td>{{ p.playoff }}</td>
@@ -57,7 +59,10 @@
       <ul class="records">
       {% for c in current %}
         {% if c.owner_id < c.rival_owner_id %}
-          <li><b>{{ c.username }}</b> vs <b>{{ c.rival }}</b>
+          <li class="pairing">
+            <span class="avatar-line">{{ avatar(c.owner_id, 24) }}<b>{{ c.username }}</b></span>
+            <span class="tm">vs</span>
+            <span class="avatar-line">{{ avatar(c.rival_owner_id, 24) }}<b>{{ c.rival }}</b></span>
             <span class="tm">score {{ c.score }} &middot; {{ c.source }}</span></li>
         {% endif %}
       {% endfor %}
@@ -78,7 +83,9 @@
         <tbody>
         {% for o in owners %}
           <tr>
-            <td class="name">{{ o.username }}</td>
+            <td class="name">
+              <span class="avatar-line">{{ avatar(o.owner_id, 24) }}{{ o.username }}</span>
+            </td>
             <td>
               <select name="rival_{{ o.owner_id }}">
                 <option value="">&mdash;</option>
@@ -103,10 +110,14 @@
     <h2>Score grid</h2>
     <div class="scroller">
       <table class="board">
-        <thead><tr><th></th>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+        <thead><tr><th></th>{% for h in headers %}
+          <th class="who"><span class="stack">{{ avatar(h, 22) }}
+            <span class="nm">{{ h }}</span></span></th>
+        {% endfor %}</tr></thead>
         <tbody>
         {% for row in grid %}
-          <tr><th class="rhead">{{ row.name }}</th>
+          <tr><th class="rhead namehead">
+            <span class="avatar-line">{{ avatar(row.name, 20) }}{{ row.name }}</span></th>
           {% for c in row.cells %}
             <td class="cell {% if c is none %}self{% endif %}">{{ c if c is not none else "" }}</td>
           {% endfor %}

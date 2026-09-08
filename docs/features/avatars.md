@@ -146,20 +146,28 @@ keeps it inside the site's existing visual language.
 
 Because the macro takes a size, each of these is a one-line change.
 
-Built:
-
 - Nav, beside the signed-in owner's name, linking to `/profile` (24px)
-- Manager pages, beside the heading (96px)
-- The manager index (32px)
-- Season standings (24px)
-- All-time standings and the projection table on `/history` (24px)
-- Both axes of the head-to-head grid (24px)
+- Manager pages: the heading (96px), the rival, and the per-opponent
+  head-to-head table
+- The manager index and the admin Owners list (32px)
+- Season standings, all-time standings and the projection table (24px)
+- Both axes of the head-to-head grid and of the rivalry score grid
+- The draft board, both the keeper columns and the pick grid, stacked above
+  the name in the header
+- The draft order lottery board, the on-the-clock line and the admin override
+- Rivalry pairings, sigils either side of the "vs"
+- The keeper admin queues: review, voids, settled and the over-contract warning
+- The "Acting for" picker on `/keepers`, so an admin can see whose page they
+  are on
 
-Still to do:
+Two places deliberately left alone:
 
-- Draft board cells
-- Keeper phase cards
-- The rivalry pairing display
+- **The keeper phase cards.** All three belong to one owner, so three copies
+  of their own sigil would be decoration, not information. A sigil earns its
+  place where it tells one person from another.
+- **Anything inside a `<select>`.** An `<option>` renders text only, so the
+  markup collapses and the initials run into the label — "BOBorys — CeeDee
+  Lamb". The void picker on `/admin/keepers` stays plain text.
 
 ## Setting the colour
 
