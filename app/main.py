@@ -181,8 +181,14 @@ def owner_avatars():
     return _avatar_cache["map"]
 
 
-def bust_avatars():
+def bust_owner_caches():
+    """Anything that changes a username or an avatar invalidates both.
+
+    The nav list and the avatar registry are keyed on usernames, so a
+    rename has to clear them or the old name lingers for five minutes.
+    """
     _avatar_cache["at"] = 0.0
+    _owner_cache["at"] = 0.0
 
 
 def av(who):
@@ -442,30 +448,72 @@ def _colour_holders(rows, skip=None):
     return holders
 
 
-@app.get("/profile", response_class=HTMLResponse)
-def profile(request: Request):
-    oid = request.session["owner_id"]
-    with get_db() as conn:
-        everyone = query(conn, """
-            select owner_id, username, last_name, avatar_bg, avatar_initials
-            from owners order by username
-        """)
+def _current_season(conn):
+    return query(conn, "select max(season_year) as y from seasons")[0]["y"]
+
+
+def _owner_form(conn, oid):
+    """One owner, their current-season team, and the palette context."""
+    everyone = query(conn, """
+        select owner_id, username, last_name, email, is_admin, is_retired,
+               avatar_bg, avatar_initials
+        from owners order by username
+    """)
     me = next((r for r in everyone if r["owner_id"] == oid), None)
     if not me:
         raise HTTPException(status_code=404, detail="No such owner")
+    season = _current_season(conn)
+    teams = query(conn, """
+        select team_id, team_name from teams
+        where owner_id = %s and season_year = %s
+    """, (oid, season))
+    return {
+        "me": me,
+        "season": season,
+        "team": teams[0] if teams else None,
+        "palette": AVATAR_PALETTE,
+        "holders": _colour_holders(everyone, skip=oid),
+    }
+
+
+def _taken(conn, column, value, oid):
+    """Is this username or email already another owner's?"""
+    rows = query(conn, f"""
+        select username from owners
+        where {column} is not null and lower({column}) = lower(%s)
+          and owner_id <> %s
+    """, (value, oid))
+    return rows[0]["username"] if rows else None
+
+
+def _save_sigil(cur, oid, bg, initials):
+    cur.execute("""
+        update owners
+        set avatar_bg = %s, avatar_initials = %s, updated_at = now()
+        where owner_id = %s
+    """, (bg, initials or None, oid))
+
+
+def _clean_initials(raw):
+    return (raw or "").strip().upper()[:2]
+
+
+# ---- profile ----
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile(request: Request):
+    with get_db() as conn:
+        ctx = _owner_form(conn, request.session["owner_id"])
     return templates.TemplateResponse(
-        request=request, name="profile.html",
-        context={"me": me, "palette": AVATAR_PALETTE,
-                 "holders": _colour_holders(everyone, skip=oid)})
+        request=request, name="profile.html", context=ctx)
 
 
 @app.post("/profile")
-async def profile_save(request: Request):
+async def profile_sigil(request: Request):
     from urllib.parse import quote
     oid = request.session["owner_id"]
     form = await request.form()
     bg = (form.get("avatar_bg") or "").strip().upper()
-    initials = (form.get("avatar_initials") or "").strip().upper()[:2]
 
     if bg not in AVATAR_HEXES:
         return RedirectResponse(
@@ -474,17 +522,94 @@ async def profile_save(request: Request):
 
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                update owners
-                set avatar_bg = %s, avatar_initials = %s, updated_at = now()
-                where owner_id = %s
-            """, (bg, initials or None, oid))
+            _save_sigil(cur, oid, bg, _clean_initials(form.get("avatar_initials")))
         conn.commit()
-    bust_avatars()
+    bust_owner_caches()
 
     return RedirectResponse(
         url="/profile?msg=" + quote("Sigil saved"), status_code=303)
 
+
+@app.post("/profile/details")
+async def profile_details(request: Request):
+    from urllib.parse import quote
+    oid = request.session["owner_id"]
+    form = await request.form()
+    username = (form.get("username") or "").strip()
+    last_name = (form.get("last_name") or "").strip()
+    team_name = (form.get("team_name") or "").strip()
+    retired = form.get("is_retired") is not None
+
+    def bad(msg):
+        return RedirectResponse(
+            url="/profile?error=" + quote(msg), status_code=303)
+
+    if not username:
+        return bad("A display name is required.")
+
+    with get_db() as conn:
+        clash = _taken(conn, "username", username, oid)
+        if clash:
+            return bad(f"{clash} already uses that name.")
+
+        season = _current_season(conn)
+        with conn.cursor() as cur:
+            cur.execute("""
+                update owners
+                set username = %s, last_name = %s, is_retired = %s,
+                    updated_at = now()
+                where owner_id = %s
+            """, (username, last_name or None, retired, oid))
+            # No team row means no current-season entry, so nothing to rename.
+            if team_name:
+                cur.execute("""
+                    update teams set team_name = %s, updated_at = now()
+                    where owner_id = %s and season_year = %s
+                """, (team_name, oid, season))
+        conn.commit()
+
+    request.session["username"] = username
+    bust_owner_caches()
+
+    return RedirectResponse(
+        url="/profile?msg=" + quote("Details saved"), status_code=303)
+
+
+@app.post("/profile/email")
+async def profile_email(request: Request):
+    from urllib.parse import quote
+    oid = request.session["owner_id"]
+    form = await request.form()
+    email = (form.get("email") or "").strip()
+    confirm = (form.get("email_confirm") or "").strip()
+
+    def bad(msg):
+        return RedirectResponse(
+            url="/profile?error=" + quote(msg), status_code=303)
+
+    # Signing in is an email match and there is no reset flow, so a typo
+    # here locks the owner out until an admin fixes it. Hence the retype.
+    if email.lower() != confirm.lower():
+        return bad("The two addresses do not match.")
+    if not email:
+        return bad("Clearing your address would lock you out. Ask an admin.")
+
+    with get_db() as conn:
+        clash = _taken(conn, "email", email, oid)
+        if clash:
+            return bad(f"{clash} already uses that address.")
+        with conn.cursor() as cur:
+            cur.execute("""
+                update owners set email = %s, updated_at = now()
+                where owner_id = %s
+            """, (email, oid))
+        conn.commit()
+
+    return RedirectResponse(
+        url="/profile?msg=" + quote("Sign-in address saved"), status_code=303)
+
+
+# ---- admin: everyone at a glance, then one at a time ----
 
 @app.get("/admin/owners", response_class=HTMLResponse)
 def admin_owners(request: Request):
@@ -492,19 +617,25 @@ def admin_owners(request: Request):
         raise HTTPException(status_code=403, detail="Admins only")
 
     with get_db() as conn:
+        season = _current_season(conn)
         owners = query(conn, """
-            select owner_id, username, last_name, avatar_bg, avatar_initials,
-                   email, is_retired
-            from owners order by is_retired, username
-        """)
+            select o.owner_id, o.username, o.last_name, o.email,
+                   o.is_admin, o.is_retired, o.avatar_bg, o.avatar_initials,
+                   t.team_name
+            from owners o
+            left join teams t
+              on t.owner_id = o.owner_id and t.season_year = %s
+            order by o.is_retired, o.username
+        """, (season,))
     return templates.TemplateResponse(
         request=request, name="admin_owners.html",
         context={"owners": owners, "palette": AVATAR_PALETTE,
-                 "holders": _colour_holders(owners)})
+                 "season": season, "holders": _colour_holders(owners)})
 
 
 @app.post("/admin/owners")
 async def admin_owners_save(request: Request):
+    """The quick pass: colour and initials for everyone in one submit."""
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     from urllib.parse import quote
@@ -521,24 +652,98 @@ async def admin_owners_save(request: Request):
                 url="/admin/owners?error=" +
                     quote("That is not one of the league colours."),
                 status_code=303)
-        last = (form.get(f"last_{oid}") or "").strip()
-        initials = (form.get(f"initials_{oid}") or "").strip().upper()[:2]
-        updates.append((bg, last or None, initials or None, oid))
+        updates.append((oid, bg, _clean_initials(form.get(f"initials_{oid}"))))
 
     with get_db() as conn:
         with conn.cursor() as cur:
-            for row in updates:
-                cur.execute("""
-                    update owners
-                    set avatar_bg = %s, last_name = %s, avatar_initials = %s,
-                        updated_at = now()
-                    where owner_id = %s
-                """, row)
+            for oid, bg, initials in updates:
+                _save_sigil(cur, oid, bg, initials)
         conn.commit()
-    bust_avatars()
+    bust_owner_caches()
 
     return RedirectResponse(
         url="/admin/owners?msg=" + quote("Sigils saved"), status_code=303)
+
+
+@app.get("/admin/owners/{oid}", response_class=HTMLResponse)
+def admin_owner_edit(request: Request, oid: int):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        ctx = _owner_form(conn, oid)
+        ctx["admin_count"] = query(conn, """
+            select count(*) as n from owners where is_admin
+        """)[0]["n"]
+    return templates.TemplateResponse(
+        request=request, name="admin_owner_edit.html", context=ctx)
+
+
+@app.post("/admin/owners/{oid}")
+async def admin_owner_edit_save(request: Request, oid: int):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    username = (form.get("username") or "").strip()
+    last_name = (form.get("last_name") or "").strip()
+    email = (form.get("email") or "").strip()
+    team_name = (form.get("team_name") or "").strip()
+    bg = (form.get("avatar_bg") or "").strip().upper()
+    is_admin = form.get("is_admin") is not None
+    retired = form.get("is_retired") is not None
+
+    def bad(msg):
+        return RedirectResponse(
+            url=f"/admin/owners/{oid}?error=" + quote(msg), status_code=303)
+
+    if not username:
+        return bad("A display name is required.")
+    if bg not in AVATAR_HEXES:
+        return bad("That is not one of the league colours.")
+
+    with get_db() as conn:
+        clash = _taken(conn, "username", username, oid)
+        if clash:
+            return bad(f"{clash} already uses that name.")
+        if email:
+            clash = _taken(conn, "email", email, oid)
+            if clash:
+                return bad(f"{clash} already uses that address.")
+
+        # Removing the last admin would leave nobody able to reach this page.
+        if not is_admin:
+            others = query(conn, """
+                select count(*) as n from owners
+                where is_admin and owner_id <> %s
+            """, (oid,))[0]["n"]
+            if others == 0:
+                return bad("That is the last admin. Promote someone first.")
+
+        season = _current_season(conn)
+        with conn.cursor() as cur:
+            cur.execute("""
+                update owners
+                set username = %s, last_name = %s, email = %s,
+                    is_admin = %s, is_retired = %s, updated_at = now()
+                where owner_id = %s
+            """, (username, last_name or None, email or None,
+                  is_admin, retired, oid))
+            _save_sigil(cur, oid, bg, _clean_initials(form.get("avatar_initials")))
+            if team_name:
+                cur.execute("""
+                    update teams set team_name = %s, updated_at = now()
+                    where owner_id = %s and season_year = %s
+                """, (team_name, oid, season))
+        conn.commit()
+
+    # An admin editing themselves needs the session to follow.
+    if oid == request.session.get("owner_id"):
+        request.session["username"] = username
+        request.session["is_admin"] = is_admin
+    bust_owner_caches()
+
+    return RedirectResponse(
+        url="/admin/owners?msg=" + quote(f"{username} saved"), status_code=303)
 
 
 def keeper_context(conn, season, owner_id):

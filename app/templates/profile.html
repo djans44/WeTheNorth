@@ -1,20 +1,22 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar %}
-{% block title %}Your sigil | We the North{% endblock %}
+{% block title %}Your profile | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
   <header class="page-head">
     <div class="tape"></div>
-    <h1>Your sigil</h1>
-    <p class="lede">The colour you are known by across the league. It follows you
-      through the standings, the head-to-head grid and every table that names you.</p>
+    <h1>Your profile</h1>
+    <p class="lede">Your name, your team and the colour you are known by. All of
+      it follows you through the standings, the head-to-head grid and every
+      table that names you.</p>
   </header>
 
   <section>
+    <h2>Your sigil</h2>
     <form method="post" action="/profile">
       <div class="sigil">
-        {{ avatar(me.username, 96) }}
+        {{ avatar(me.owner_id, 96) }}
         <div>
           <b>{{ me.username }}</b>
           <span class="tm">
@@ -23,13 +25,12 @@
             {% elif me.last_name %}
               Taken from {{ me.username }} {{ me.last_name }}.
             {% else %}
-              Taken from your name. Set an override below to change it.
+              Taken from your name. Add a surname or an override to change it.
             {% endif %}
           </span>
         </div>
       </div>
 
-      <h2>Colour</h2>
       <p class="note">Sixteen to choose from. Colours are not reserved &mdash; where
         another manager already sits on one, they are named beneath it.</p>
       <div class="avatar-picker">
@@ -45,16 +46,75 @@
         {% endfor %}
       </div>
 
-      <h2>Initials</h2>
-      <p class="note">Two letters at most. Leave it blank to use the letters
-        drawn from your name.</p>
-      <p class="field">
-        <label for="avatar_initials">Override</label>
-        <input id="avatar_initials" name="avatar_initials" maxlength="2" size="2"
+      <p class="field short">
+        <label for="avatar_initials">Initials</label>
+        <input id="avatar_initials" name="avatar_initials" maxlength="2"
                value="{{ me.avatar_initials or '' }}">
+        <span class="tm">Two letters at most. Blank uses the letters from your name.</span>
       </p>
 
       <button type="submit">Save sigil</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Your details</h2>
+    <form method="post" action="/profile/details">
+      <p class="field">
+        <label for="username">Display name</label>
+        <input id="username" name="username" value="{{ me.username }}" required>
+      </p>
+      <p class="note">This is the name shown everywhere on the site, and it sets
+        your manager page address. Changing it moves you from
+        <code>/team/{{ me.username|lower }}</code> to the new name, so old links
+        stop working.</p>
+
+      <p class="field">
+        <label for="last_name">Surname</label>
+        <input id="last_name" name="last_name" value="{{ me.last_name or '' }}">
+      </p>
+      <p class="note">Only used to work out your initials. Leave it blank and
+        they come from the first two letters of your display name instead.</p>
+
+      {% if team %}
+        <p class="field">
+          <label for="team_name">Team name</label>
+          <input id="team_name" name="team_name" value="{{ team.team_name }}" required>
+        </p>
+        <p class="note">Your {{ season }} team. Earlier seasons keep the name you
+          used at the time &mdash; that history does not change.</p>
+      {% else %}
+        <p class="note">You have no {{ season }} team, so there is no team name to
+          set. An admin adds you to a season.</p>
+      {% endif %}
+
+      <p class="checkline">
+        <input type="checkbox" id="is_retired" name="is_retired"
+               {% if me.is_retired %}checked{% endif %}>
+        <label for="is_retired">I have left the league</label>
+      </p>
+      <p class="note">Marks you as retired. You keep your history and can still
+        sign in.</p>
+
+      <button type="submit">Save details</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Sign-in address</h2>
+    <p class="note">Signing in is a straight email match &mdash; there is no password
+      and no reset. Get this wrong and you are locked out until an admin fixes
+      it, so type it twice.</p>
+    <form method="post" action="/profile/email">
+      <p class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" value="{{ me.email or '' }}" required>
+      </p>
+      <p class="field">
+        <label for="email_confirm">Again</label>
+        <input id="email_confirm" name="email_confirm" type="email" required>
+      </p>
+      <button type="submit">Save address</button>
     </form>
   </section>
 </div>

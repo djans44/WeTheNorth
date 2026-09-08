@@ -1,27 +1,25 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar %}
-{% block title %}Manager avatars | We the North{% endblock %}
+{% block title %}Managers | We the North{% endblock %}
 
 {% block content %}
 <div class="page wide">
   <header class="page-head">
     <div class="tape"></div>
-    <h1>Manager avatars</h1>
-    <p class="lede">Colour, surname and initials for every manager, retired ones
-      included. Tulio has no email and cannot sign in, so this is the only way to
-      set his.</p>
+    <h1>Managers</h1>
+    <p class="lede">Colour and initials for everyone in one pass. Open a manager
+      to change their name, team, email or admin rights.</p>
   </header>
 
   <section>
-    <p class="note">Initials come from the override if there is one, otherwise
-      from the first and last name, otherwise from the first two letters of the
-      first name. A surname is the tidier fix; an override is for the cases it
-      cannot solve.</p>
+    <p class="note">Colours are not reserved. Where two managers share one, both
+      names show in the swatch tooltip.</p>
 
     <form method="post" action="/admin/owners">
       <table class="keepers owners-grid">
         <thead>
-          <tr><th>Manager</th><th>Surname</th><th>Override</th><th>Colour</th></tr>
+          <tr><th>Manager</th><th>{{ season }} team</th><th>Initials</th>
+              <th>Colour</th><th></th></tr>
         </thead>
         <tbody>
         {% for o in owners %}
@@ -29,10 +27,18 @@
             <td class="name">
               <span class="avatar-line">
                 {{ avatar(o.owner_id, 32) }}
-                <span>{{ o.username }}{% if o.is_retired %}<span class="tm">retired</span>{% endif %}</span>
+                <span>
+                  {{ o.username }}{% if o.last_name %} {{ o.last_name }}{% endif %}
+                  <span class="tm">
+                    {% if o.is_admin %}admin{% endif %}
+                    {%- if o.is_admin and o.is_retired %} &middot; {% endif -%}
+                    {% if o.is_retired %}retired{% endif %}
+                    {%- if not o.email %}{% if o.is_admin or o.is_retired %} &middot; {% endif %}no email{% endif %}
+                  </span>
+                </span>
               </span>
             </td>
-            <td><input name="last_{{ o.owner_id }}" value="{{ o.last_name or '' }}" size="12"></td>
+            <td>{{ o.team_name or "—" }}</td>
             <td><input name="initials_{{ o.owner_id }}" value="{{ o.avatar_initials or '' }}"
                        maxlength="2" size="2"></td>
             <td>
@@ -48,6 +54,7 @@
                 {% endfor %}
               </div>
             </td>
+            <td><a href="/admin/owners/{{ o.owner_id }}">Open</a></td>
           </tr>
         {% endfor %}
         </tbody>

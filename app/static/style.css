@@ -334,9 +334,32 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .owners-grid th, .owners-grid td { text-align: left; vertical-align: middle; }
 .owners-grid input[type="text"], .owners-grid input:not([type]) { text-align: left; }
 
-.field { display: flex; align-items: center; gap: 0.6rem; }
-.field label { margin: 0; }
-.field input { flex: 0 0 4rem; text-align: center; }
+/* Label/input rows. The global label rule is display:block with a bottom
+   margin, so both are undone here. */
+.field { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 0.4rem; }
+.field label { flex: 0 0 9rem; margin: 0; }
+.field input { flex: 1; }
+.field .tm { flex: 1 1 12rem; }
+.field.short input { flex: 0 0 4rem; text-align: center; }
+
+.checkline { display: flex; align-items: center; gap: 0.6rem; margin: 1.4rem 0 0; }
+.checkline label { margin: 0; }
+
+/* Without this the global input rule gives checkboxes flex:1 and 0.7rem
+   of padding, which makes them enormous. */
+input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  accent-color: var(--ink);
+}
+
+.owners-grid a { white-space: nowrap; }
+
+/* Forms that group several h2 sections need the headings to breathe. */
+form h2:not(:first-child) { margin-top: 2.25rem; }
+form button[type="submit"] { margin-top: 1.5rem; }
 
 /* ---- site navigation ---- */
 
