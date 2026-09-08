@@ -68,9 +68,13 @@
         <thead>
           <tr>
             <th></th>
-            {# Colours are not unique, so the name stays under the sigil. #}
+            {# Colours are not unique, so the name stays under the sigil.
+               The flex box goes inside the cell -- a th set to display:flex
+               drops out of the table's column layout. #}
             {% for o in order %}
-              <th class="chead">{{ avatar(o, 24) }}<span>{{ o }}</span></th>
+              <th class="chead">
+                <span class="stack">{{ avatar(o, 24) }}<span class="nm">{{ o }}</span></span>
+              </th>
             {% endfor %}
           </tr>
         </thead>

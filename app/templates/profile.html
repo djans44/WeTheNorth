@@ -35,11 +35,11 @@
       <div class="avatar-picker">
         {% for name, hex in palette %}
           {% set taken = holders.get(hex, []) %}
-          <label class="swatch" style="--sw: {{ hex }};">
+          <label class="hue" style="--sw: {{ hex }};">
             <input type="radio" name="avatar_bg" value="{{ hex }}"
                    {% if hex == me.avatar_bg %}checked{% endif %}>
             <span class="chip"></span>
-            <span class="swatch-name">{{ name }}</span>
+            <span class="hue-name">{{ name }}</span>
             {% if taken %}<span class="tm">{{ taken|join(', ') }}</span>{% endif %}
           </label>
         {% endfor %}
