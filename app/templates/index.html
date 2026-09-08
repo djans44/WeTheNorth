@@ -19,14 +19,17 @@
     <label for="email">Enter your email to be admitted</label>
     <div class="row">
       <input id="email" type="email" name="email" required
-             placeholder="you@example.com" autocomplete="email"
+             placeholder="firstname@wethenorth.com" autocomplete="email"
              {% if error %}aria-invalid="true"{% endif %}>
       <button type="submit">Sign in</button>
     </div>
     {% if error %}
-      <p class="note error">That address is not on the league roll. Try the one Yahoo has for you.</p>
+      <p class="note error">That address is not on the league roll. It is your
+        first name at wethenorth.com, nothing else.</p>
     {% else %}
-      <p class="note">Use the address attached to your Yahoo team.</p>
+      {# No real name here. This page is public and the address is the
+         credential, so an example would be a working sign-in. #}
+      <p class="note">Your first name at wethenorth.com.</p>
     {% endif %}
   </form>
 </div>

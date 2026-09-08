@@ -21,6 +21,10 @@
   var err = params.get("error");
   if (!msg && !err) { return; }
 
+  // The landing page uses ?error=1 as a flag and renders its own message
+  // in the form. Without this it also toasts a bare "1".
+  if (window.location.pathname === "/" && !msg) { return; }
+
   var bar = document.createElement("div");
   bar.className = "toast" + (err ? " bad" : "");
   bar.setAttribute("role", "status");

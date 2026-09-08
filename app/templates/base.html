@@ -11,6 +11,10 @@
   {% set path = request.url.path %}
   <nav class="sitenav">
     <a class="brand" href="/">We the North</a>
+    {# Signed out, every link here bounces back to the gate anyway, and the
+       Managers menu would list all thirteen names -- which are now the
+       sign-in addresses. #}
+    {% if request.session.get("username") %}
     <ul>
       <li class="has-menu">
         <a href="/seasons" {% if path.startswith('/season') %}class="on"{% endif %}>Seasons</a>
@@ -48,6 +52,7 @@
       </li>
       {% endif %}
     </ul>
+    {% endif %}
     {% if request.session.get("username") %}
       <span class="who">
         <a class="me" href="/profile">
