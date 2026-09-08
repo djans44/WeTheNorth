@@ -202,6 +202,10 @@ both take their entrants from the season's `teams` rows and both need an even
 count, so a new `owners` row deliberately leaves `teams` alone and stays out of
 every season-derived page until someone puts them in a season.
 
+Putting an owner *into* a season is deferred to the create-season checklist
+(`season-setup.md`), where the team-count invariant is visible rather than
+guessed at from here.
+
 **The league is capped.** An owner can only be added while fewer than
 `seasons.team_count` owners are un-retired — the same source `draft_prep` reads
 for slot counts, so the cap is not a hardcoded 12. At capacity the form is

@@ -449,8 +449,16 @@ button.
   seasons could be surfaced on manager pages
 - Real **lottery rules** (currently pure randomisation)
 - Badges (spec in `docs/features/badges.md`)
+- **Create-season checklist** (`docs/features/season-setup.md`) — every step
+  needed to stand up the next league year, in dependency order. **Adding an
+  owner to a season gets built there**, not on `/admin/owners`: the rivalry
+  and schedule generators both need an even entrant count, and the checklist
+  is where that invariant is visible against `seasons.team_count`.
 
 **Known rough edges**
+- **`seasons` and `teams` rows have no UI at all.** Both have only ever been
+  written by migrations `005` and `009`. A new season currently needs hand-written
+  SQL before any admin page will work on it. See the create-season checklist above.
 - Admin overrides deliberately do **not** validate a round against the
   manager's other phases, so an admin can create a duplicate round. It is
   visible in the Settled table but nothing blocks it.
