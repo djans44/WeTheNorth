@@ -1961,6 +1961,15 @@ def draft_order(request: Request, season: int = 0, msg: str = "", error: str = "
                      (season,))
         team_count = size[0]["team_count"] if size else 12
 
+        # Shown so the weighting is checkable rather than taken on trust.
+        _, _, finishes, weights, newcomers = lottery_entry(conn, season)
+
+    for r in rows:
+        r["finish"] = finishes.get(r["owner_id"])
+        r["ballots"] = weights.get(r["owner_id"])
+        r["is_new"] = r["owner_id"] in newcomers
+    ballot_total = sum(weights.values())
+
     taken = {r["slot"]: r["username"] for r in rows if r["slot"]}
     on_clock = next((r for r in rows if r["is_on_the_clock"]), None)
     my_turn = bool(on_clock and on_clock["owner_id"] == me)
@@ -1970,6 +1979,7 @@ def draft_order(request: Request, season: int = 0, msg: str = "", error: str = "
         context={"years": years, "season": season, "rows": rows,
                  "slots": list(range(1, team_count + 1)), "taken": taken,
                  "on_clock": on_clock, "my_turn": my_turn,
+                 "ballot_total": ballot_total, "prev_season": season - 1,
                  "is_admin": is_admin, "me": me, "msg": msg, "error": error})
 
 
@@ -2022,6 +2032,70 @@ async def draft_order_pick(request: Request):
     return RedirectResponse(url=url, status_code=303)
 
 
+# Ballots by last season's finish: 1 for a top-three finish, 2 for 4th-6th,
+# 3 for 7th and below. Twelve managers put 27 ballots in the hat.
+LOTTERY_TIERS = ((3, 1), (6, 2))
+LOTTERY_TAIL_BALLOTS = 3
+
+
+def lottery_ballots(finish):
+    """None means no finish to go on -- a new manager, who does not draw."""
+    if finish is None:
+        return None
+    for limit, ballots in LOTTERY_TIERS:
+        if finish <= limit:
+            return ballots
+    return LOTTERY_TAIL_BALLOTS
+
+
+def draw_lottery(ballots, rng):
+    """Pull names from the hat weighted by ballots, without replacement.
+
+    Once a manager is drawn they are placed, and their remaining ballots
+    leave the hat with them.
+    """
+    pool = list(ballots)
+    order = []
+    while pool:
+        total = sum(ballots[o] for o in pool)
+        pick = rng.randrange(total)
+        run = 0
+        for o in pool:
+            run += ballots[o]
+            if pick < run:
+                order.append(o)
+                pool.remove(o)
+                break
+    return order
+
+
+def lottery_entry(conn, season):
+    """Who is drawing, how many ballots each, and who skips the draw."""
+    entrants = query(conn, """
+        select t.owner_id, o.username
+        from teams t join owners o on o.owner_id = t.owner_id
+        where t.season_year = %s order by o.username
+    """, (season,))
+    finishes = {r["owner_id"]: r["final_rank"] for r in query(conn, """
+        select t.owner_id, fs.final_rank
+        from final_standings fs
+        join teams t on t.team_id = fs.team_id
+        where fs.season_year = %s
+    """, (season - 1,))}
+
+    ids = [e["owner_id"] for e in entrants]
+    names = {e["owner_id"]: e["username"] for e in entrants}
+
+    # With no ranked previous season there is nothing to weight by, and
+    # nobody is meaningfully new, so everyone draws on equal terms.
+    if not finishes:
+        return ids, names, {}, {o: 1 for o in ids}, {}
+
+    newcomers = [o for o in ids if finishes.get(o) is None]
+    weights = {o: lottery_ballots(finishes[o]) for o in ids if o not in newcomers}
+    return ids, names, finishes, weights, newcomers
+
+
 @app.post("/admin/draft-order/lottery")
 async def admin_draft_lottery(request: Request):
     if not request.session.get("is_admin"):
@@ -2036,23 +2110,34 @@ async def admin_draft_lottery(request: Request):
                 quote("Tick the confirm box first"), status_code=303)
 
     with get_db() as conn:
+        ids, names, _, weights, newcomers = lottery_entry(conn, season)
+        if not ids:
+            return RedirectResponse(
+                url=f"/draft-order?season={season}&error=" +
+                    quote(f"No teams entered for {season}."), status_code=303)
+
+        rng = _random.Random()
+        # A new manager skips the draw entirely and chooses first. More than
+        # one, and they settle it between themselves at random.
+        newcomers = list(newcomers)
+        rng.shuffle(newcomers)
+        order = newcomers + draw_lottery(weights, rng)
+
         with conn.cursor() as cur:
             cur.execute("delete from draft_order where season_year = %s", (season,))
-            cur.execute("""
-                insert into draft_order (season_year, owner_id, lottery_position)
-                select %s, t.owner_id,
-                       row_number() over (order by random())
-                from teams t
-                where t.season_year = %s
-            """, (season, season))
-            cur.execute("select count(*) as n from draft_order where season_year = %s",
-                        (season,))
-            n = cur.fetchone()["n"]
+            for position, oid in enumerate(order, start=1):
+                cur.execute("""
+                    insert into draft_order
+                        (season_year, owner_id, lottery_position)
+                    values (%s, %s, %s)
+                """, (season, oid, position))
         conn.commit()
 
+    msg = f"Lottery drawn for {len(order)} managers"
+    if newcomers:
+        msg += f". {', '.join(names[o] for o in newcomers)} first, as new"
     return RedirectResponse(
-        url=f"/draft-order?season={season}&msg=" +
-            quote(f"Lottery drawn for {n} managers"), status_code=303)
+        url=f"/draft-order?season={season}&msg=" + quote(msg), status_code=303)
 
 
 @app.post("/admin/draft-order/set")

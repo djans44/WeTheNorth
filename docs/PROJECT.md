@@ -321,10 +321,13 @@ survives, so they can adjust and resubmit.
 
 ### Draft order
 
-1. Admin runs a **randomised lottery**. The league rule is weighted ballots by
-   last season's finish — 1 ballot for 1st–3rd, 2 for 4th–6th, 3 for 7th–12th,
-   27 in the hat — and a new manager skips the draw and chooses first.
-   **Neither is implemented**: the code still draws uniformly. See `/rules`.
+1. Admin runs a **weighted lottery**. Ballots come from last season's finish:
+   1 for 1st–3rd, 2 for 4th–6th, 3 for 7th and below — 27 in the hat for
+   twelve managers. Drawn without replacement; once drawn, a manager's
+   remaining ballots leave the hat with them. A manager with no finish last
+   season is new: they skip the draw and choose first. With no ranked previous
+   season at all the draw falls back to even weights. The board shows each
+   manager's finish and ballot count so the result is checkable.
 2. That sets the **order of choosing**, not the draft order
 3. In one live session, each manager picks whichever **draft slot** they want
 4. Admin can pick for anyone or override any slot at any time
@@ -449,12 +452,6 @@ button.
 - **Trades and waivers on the season page** — data is loaded, needs a view and a template
 - 2022–2024 draft `is_keeper` flags are set, but keeper history for those
   seasons could be surfaced on manager pages
-- Real **lottery rules**. `/rules` now documents the agreed ballot tiers —
-  one ballot for finishing 1st–3rd, two for 4th–6th, three for 7th–12th —
-  but `admin_draft_lottery` still draws uniformly with
-  `row_number() over (order by random())`. **The page and the code disagree.**
-- A **new manager choosing their slot first** is on `/rules` but not in the
-  code either; the lottery has no special case for them
 - Badges (spec in `docs/features/badges.md`)
 - **Create-season checklist** (`docs/features/season-setup.md`) — every step
   needed to stand up the next league year, in dependency order. **Adding an

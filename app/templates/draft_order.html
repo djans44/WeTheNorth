@@ -50,7 +50,8 @@
       <p class="note ok">Everyone has chosen.</p>
     {% endif %}
     <table class="keepers">
-      <thead><tr><th>#</th><th>Manager</th><th>Slot</th><th>Chosen</th></tr></thead>
+      <thead><tr><th>#</th><th>Manager</th><th>{{ prev_season }}</th>
+        <th>Ballots</th><th>Slot</th><th>Chosen</th></tr></thead>
       <tbody>
       {% for r in rows %}
         <tr class="{% if r.is_on_the_clock %}picked{% endif %}">
@@ -58,12 +59,22 @@
           <td class="name">
             <span class="avatar-line">{{ avatar(r.owner_id, 24) }}{{ r.username }}</span>
           </td>
+          <td class="rd">{% if r.finish %}{{ ordinal(r.finish) }}{% endif %}</td>
+          <td class="rd">
+            {% if r.is_new %}<span class="tm">new</span>
+            {% elif r.ballots %}{{ r.ballots }}{% endif %}
+          </td>
           <td class="rd">{% if r.slot %}{{ r.slot }}{% else %}<span class="tm">waiting</span>{% endif %}</td>
           <td class="tm">{% if r.chosen_at %}{{ r.chosen_at.strftime("%b %d, %H:%M") }}{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
+    {% if ballot_total %}
+      <p class="note">{{ ballot_total }} ballots in the hat: one for a top-three
+        finish in {{ prev_season }}, two for 4th to 6th, three for 7th and below.
+        A new manager skips the draw and chooses first.</p>
+    {% endif %}
   </section>
 
   {% if on_clock and (my_turn or is_admin) %}
