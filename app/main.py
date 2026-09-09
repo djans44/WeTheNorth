@@ -1,5 +1,6 @@
 import os
 import pathlib
+import contextvars
 import time
 
 import psycopg
@@ -390,6 +391,7 @@ def owner_avatars():
                     "bg": r["avatar_bg"],
                     "initials": initials_for(
                         r["username"], r["last_name"], r["avatar_initials"]),
+                    "owner_id": r["owner_id"],
                     "ring": rings.get(r["owner_id"]),
                 }
                 found[r["owner_id"]] = entry
@@ -411,21 +413,41 @@ def bust_owner_caches():
     _owner_cache["at"] = 0.0
 
 
-def av(who):
+# Rings for one render, when the page is about a season rather than about
+# now. A ContextVar rather than a template variable because av() is an
+# environment global: macros.html is imported without context, so a macro
+# inside it cannot see the calling template's variables, and threading a
+# parameter through bracketdraw, recordlist, seedmark and the standings table
+# would put the same argument in a dozen places for one page's sake.
+#
+# Set for the length of the render and reset after. Sync route handlers run
+# in their own context, so one request's rings cannot leak into another's.
+_page_rings = contextvars.ContextVar("page_rings", default=None)
+
+
+def av(who, live=False):
     """Resolve a username, an owner_id or an owner row to avatar fields.
 
     Rows carrying someone else's name in a second column -- an opponent, a
     rival -- must pass that column explicitly rather than the whole row.
+
+    `live` opts a sigil out of any season override. The nav bar's own chip
+    uses it: that one is about who is signed in now, and it should not put
+    2023's crown on your head because you happen to be reading 2023.
     """
     if isinstance(who, dict):
         who = who.get("owner_id") or who.get("username")
     key = who if isinstance(who, int) else (who or "").strip().lower()
     entry = owner_avatars().get(key)
-    if entry:
+    if not entry:
+        label = "" if isinstance(who, int) else str(who or "")
+        return {"name": label, "bg": "#33383D", "initials": initials_for(label),
+                "owner_id": None, "ring": None}
+    rings = None if live else _page_rings.get()
+    if rings is None:
         return entry
-    label = "" if isinstance(who, int) else str(who or "")
-    return {"name": label, "bg": "#33383D", "initials": initials_for(label),
-            "ring": None}
+    # A copy: the entry is the cached one, shared by every request.
+    return dict(entry, ring=rings.get(entry["owner_id"]))
 
 
 templates.env.globals["av"] = av
@@ -979,14 +1001,31 @@ def season(request: Request, year: int):
     seeds = playoff_labels(standings, remaining)
     brackets = playoff_brackets(games)
     titles, crest_groups = season_roll(crest_rows)
-    return templates.TemplateResponse(
-        request=request, name="season.html",
-        context={"s": head[0], "standings": standings, "weeks": weeks,
-                 "records": records, "open_week": open_week,
-                 "seeds": seeds, "seed_key": seed_key(seeds, standings),
-                 "brackets": brackets, "titles": titles,
-                 "crest_groups": crest_groups,
-                 "keepers": group_runs(keepers, "username")})
+
+    # Every sigil on the page wears the title its manager held when this
+    # season closed. `titles` is already in sort_order, so setdefault keeps
+    # the same one the live ring would -- lowest first, page lists the rest.
+    #
+    # A season still being played has no snapshot to dress itself in, and the
+    # empty map is left unset rather than passed: today's rings are the right
+    # answer for today's season.
+    rings = {}
+    for c in titles:
+        rings.setdefault(c["owner_id"], {"code": c["code"], "name": c["name"],
+                                         "colour": c["colour"]})
+    token = _page_rings.set(rings) if rings else None
+    try:
+        return templates.TemplateResponse(
+            request=request, name="season.html",
+            context={"s": head[0], "standings": standings, "weeks": weeks,
+                     "records": records, "open_week": open_week,
+                     "seeds": seeds, "seed_key": seed_key(seeds, standings),
+                     "brackets": brackets, "titles": titles,
+                     "crest_groups": crest_groups,
+                     "keepers": group_runs(keepers, "username")})
+    finally:
+        if token is not None:
+            _page_rings.reset(token)
 
 
 # Order the rivalry weights are shown in on /rules, loosest to fiercest.

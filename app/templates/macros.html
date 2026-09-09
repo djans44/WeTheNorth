@@ -9,7 +9,10 @@
   pass that column explicitly rather than the whole row.
 
   av() is an environment global, so it resolves inside imported macros
-  without the calling template passing any context.
+  without the calling template passing any context. That is also why a
+  season page's rings arrive through a ContextVar rather than a variable:
+  a macro in here cannot see them any other way. Pass live=true for a sigil
+  that must ignore them and always show the present.
 
   To sit an avatar beside a name or a link, wrap the pair in
   <span class="avatar-line"> rather than reaching for another macro --
@@ -28,8 +31,8 @@
 {%- endmacro %}
 
 
-{% macro avatar(who, size=32) -%}
-  {%- set a = av(who) -%}
+{% macro avatar(who, size=32, live=false) -%}
+  {%- set a = av(who, live) -%}
   {#- A held crest rings the sigil wherever it is drawn, so the champion is
       recognisable in a table without a legend, and the mark saying which
       crest is drawn at every size with it. It overlaps the initials at the

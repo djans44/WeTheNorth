@@ -78,8 +78,11 @@
       {% endif %}
     </ul>
     <span class="who">
+      {# live: this chip is who is signed in now. A season page dresses its
+         sigils in that season's titles, and the nav is not part of the
+         season. #}
       <a class="me" href="/profile">
-        {{ avatar(request.session["username"], 24) }}{{ request.session["username"] }}
+        {{ avatar(request.session["username"], 24, live=true) }}{{ request.session["username"] }}
       </a>
       &middot; <a href="/logout">Sign out</a>
     </span>
