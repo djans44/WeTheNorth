@@ -297,6 +297,9 @@ section:last-child { border-bottom: 0; }
   border: var(--hairline);
   border-radius: 2px;
   box-shadow: 0 6px 18px rgba(29, 27, 22, 0.14);
+  /* Thirteen managers is taller than a phone; five seasons is not. */
+  max-height: 60vh;
+  overflow-y: auto;
 }
 .headpick > ul a {
   display: block;
@@ -308,8 +311,6 @@ section:last-child { border-bottom: 0; }
 }
 .headpick > ul a:hover { color: var(--accent); background: var(--gold-ghost); }
 .headpick > ul a[aria-current] { color: var(--ink); font-weight: 600; }
-/* Thirteen managers is taller than a phone; five seasons is not. */
-.headpick > ul { max-height: 60vh; overflow-y: auto; }
 
 /* h1 is centred site-wide, so the sigil and the name centre as one group. */
 .page-head h1.titled {
