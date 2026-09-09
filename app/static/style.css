@@ -868,15 +868,20 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   .sectionnav span { max-width: none; font-size: 10px; }
 }
 
-/* One week at a time, chosen from this strip. The narrow-screen dropdown
-   below is the same choice in one line; the media query swaps them. */
-.week-nav {
+/* One panel at a time, chosen from this strip -- a week on a season, a
+   season on a manager's keepers. The narrow-screen dropdown below is the
+   same choice in one line; the media query swaps them. */
+.pickstrip {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-bottom: var(--s5);
+  /* The top margin matters where a note sits above the strip, as it does on
+     a manager's keepers: the note carries no bottom margin and the buttons
+     were touching it. After a heading the two margins collapse to the same
+     16px the heading already gave, so the season page is unchanged. */
+  margin: var(--s4) 0 var(--s5);
 }
-.week-nav a {
+.pickstrip a {
   min-width: 2.1rem;
   padding: 4px 8px;
   font-family: var(--body);
@@ -887,15 +892,15 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   border: 1px solid var(--rule);
   border-radius: 2px;
 }
-.week-nav a:hover { border-color: var(--accent); color: var(--accent); }
-.week-nav a.on {
+.pickstrip a:hover { border-color: var(--accent); color: var(--accent); }
+.pickstrip a.on {
   color: var(--panel-bg);
   background: var(--accent);
   border-color: var(--accent);
 }
 /* Scheduled but not played: still selectable, just quieter. */
-.week-nav a.unplayed { color: #a49c8c; border-style: dashed; }
-.week-nav a.unplayed.on { color: var(--panel-bg); border-style: solid; }
+.pickstrip a.unplayed { color: #a49c8c; border-style: dashed; }
+.pickstrip a.unplayed.on { color: var(--panel-bg); border-style: solid; }
 
 /* Off until the strip runs out of room. */
 .week-picker { display: none; margin-bottom: var(--s5); }
@@ -906,11 +911,11 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    league's mark of consequence and this is the one week the schedule is
    built around. Restrained on purpose: a tinted ground, a gold rule and
    crossed swords where the "vs" goes. The panel is not repainted. */
-.week-nav a.rivalry {
+.pickstrip a.rivalry {
   border-color: var(--gold);
   box-shadow: inset 0 -2px 0 var(--gold);
 }
-.week-nav a.rivalry.on { box-shadow: none; }
+.pickstrip a.rivalry.on { box-shadow: none; }
 
 .rivalbar {
   display: flex;
@@ -1295,6 +1300,11 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   padding-bottom: 0.9rem;
   border-bottom: var(--hairline);
 }
+/* On a manager's page the year heads the panel rather than sitting inside
+   the grid, which now holds the keepers themselves. */
+.keeper-season > h3 { margin: var(--s4) 0 0; }
+.keeper-season > .keeper-grid { margin-top: 0.6rem; }
+
 .keeper-grid h3 { font-weight: 700; color: var(--ink); }
 .keeper-grid h3 a { text-decoration: none; }
 .keeper-grid h3 a:hover { text-decoration: underline; }
@@ -1656,9 +1666,11 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }
 
-  /* Seventeen buttons ran to three rows here, so the strip gives way to
-     the dropdown, which is one line. Same control, same JS. */
-  .week-nav { display: none; }
+  /* Seventeen buttons ran to three rows here, so the week strip gives way
+     to the dropdown, which is one line. Same control, same JS. By id, not by
+     class: the keeper strip is three years and fits, and hiding every strip
+     left a manager's keepers stuck on one season with no way to change it. */
+  #weekstrip { display: none; }
   .week-picker { display: flex; }
 
   /* Fixtures: each game stacks instead of squeezing six columns into

@@ -117,49 +117,57 @@
     });
   }
 
-  // ---- season page: one week at a time ----
-  // The server renders every week and marks one open. Without this script
-  // they all stay visible and the nav links simply jump to them, so the
+  // ---- one panel at a time, chosen from a strip ----
+  // The server renders every panel and marks one open. Without this script
+  // they all stay visible and the strip's links simply jump to them, so the
   // page still works.
   //
-  // Two controls choose the week -- a strip of seventeen on wide screens, a
-  // select on narrow ones -- and CSS shows one at a time. Both are updated on
-  // every change rather than only the visible one, so resizing or rotating
-  // never reveals a control pointing at a different week.
-  var weekNav = document.querySelector(".week-nav");
-  var weekPick = document.getElementById("weekpick");
-  if (weekNav || weekPick) {
-    var weeks = document.querySelectorAll(".week");
-    var links = weekNav ? weekNav.querySelectorAll("a") : [];
+  // A season's weeks have two controls -- a strip of seventeen on wide
+  // screens, a select on narrow ones -- and CSS shows one at a time. Both are
+  // updated on every change rather than only the visible one, so resizing or
+  // rotating never reveals a control pointing at a different panel. A
+  // manager's keeper seasons have the strip alone; three buttons need no
+  // dropdown.
+  var strips = function (stripSel, panelSel, attr, selectId) {
+    var nav = document.querySelector(stripSel);
+    var pick = selectId ? document.getElementById(selectId) : null;
+    if (!nav && !pick) { return; }
+
+    var panels = document.querySelectorAll(panelSel);
+    var links = nav ? nav.querySelectorAll("a") : [];
 
     var show = function (n) {
       var i;
-      for (i = 0; i < weeks.length; i++) {
-        weeks[i].hidden = weeks[i].getAttribute("data-week") !== n;
+      for (i = 0; i < panels.length; i++) {
+        panels[i].hidden = panels[i].getAttribute(attr) !== n;
       }
       for (i = 0; i < links.length; i++) {
-        var on = links[i].getAttribute("data-week") === n;
+        var on = links[i].getAttribute(attr) === n;
         links[i].className = links[i].className.replace(/\s*\bon\b/, "");
         if (on) { links[i].className += " on"; }
       }
-      if (weekPick) { weekPick.value = n; }
+      if (pick) { pick.value = n; }
     };
 
-    var opening = (weekNav && weekNav.querySelector("a.on")) || links[0];
-    show(weekPick ? weekPick.value : opening.getAttribute("data-week"));
+    var opening = (nav && nav.querySelector("a.on")) || links[0];
+    if (!pick && !opening) { return; }
+    show(pick ? pick.value : opening.getAttribute(attr));
 
-    if (weekNav) {
-      weekNav.addEventListener("click", function (e) {
-        var a = e.target.closest("a[data-week]");
+    if (nav) {
+      nav.addEventListener("click", function (e) {
+        var a = e.target.closest("a[" + attr + "]");
         if (!a) { return; }
         e.preventDefault();
-        show(a.getAttribute("data-week"));
+        show(a.getAttribute(attr));
       });
     }
-    if (weekPick) {
-      weekPick.addEventListener("change", function () { show(weekPick.value); });
+    if (pick) {
+      pick.addEventListener("change", function () { show(pick.value); });
     }
-  }
+  };
+
+  strips("#weekstrip", ".week", "data-week", "weekpick");
+  strips("#keeperstrip", ".keeper-season", "data-season", null);
 
   // ---- toast ----
   var params = new URLSearchParams(window.location.search);

@@ -148,7 +148,7 @@
        newly visible one showing a different week. Anchors, not buttons, so
        without JS they still jump to the week -- and every week is visible,
        because nothing has been hidden. #}
-    <nav class="week-nav">
+    <nav class="pickstrip" id="weekstrip">
       {% for w in weeks %}
         {# The rivalry class is a gold underline. Without a mark on the
            control, the one week that looks different is the one week nobody

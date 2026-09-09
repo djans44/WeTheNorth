@@ -148,25 +148,40 @@
 
    Both /history and a season page draw their records through this, so the
    two cannot drift into formatting the same number differently.
-   show_year=false on a season page, where every row is that season. #}
-{% macro recordlist(kind, rows, name, show_year=true) -%}
+   show_year=false on a season page, where every row is that season, and
+   show_name=false on a manager's, where every row is that manager. #}
+{% macro recordlist(kind, rows, name, show_year=true, show_name=true) -%}
+  {# Nothing at all rather than a heading over an empty list. Laura's two
+     playoff games were both defeats, so her narrowest win does not exist. #}
+  {% if rows %}
   <div class="record-set">
     <h3>{{ name }}</h3>
     <ol class="records">
     {% for r in rows %}
       {% if kind in ("high", "low") %}
-        <li><b>{{ "%.2f"|format(r.points_for) }}</b> {{ r.username }}
+        <li><b>{{ "%.2f"|format(r.points_for) }}</b>{% if show_name %} {{ r.username }}{% endif %}
           <span class="rec-detail">vs {{ r.opponent_username }},
+            {% if show_year %}{{ r.season_year }} {% endif %}week {{ r.week }}</span></li>
+      {% elif kind == "streak" %}
+        <li><b>{{ r.len }}</b> in a row
+          <span class="rec-detail">{{ r.season_year }},
+            weeks {{ r.first }}&ndash;{{ r.last }}</span></li>
+      {% elif kind == "heartbreaks" %}
+        <li><b>{{ "%.2f"|format(r.margin) }}</b>{% if show_name %} {{ r.username }}{% endif %}
+          short of {{ r.opponent_username }}
+          <span class="rec-detail">{{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }},
             {% if show_year %}{{ r.season_year }} {% endif %}week {{ r.week }}</span></li>
       {% elif kind == "shootouts" %}
         <li><b>{{ "%.2f"|format(r.combined) }}</b> {{ r.username }} and {{ r.opponent_username }}
           <span class="rec-detail">{% if show_year %}{{ r.season_year }} {% endif %}week {{ r.week }}</span></li>
       {% else %}
-        <li><b>{{ "%.2f"|format(r.margin) }}</b> {{ r.username }} over {{ r.opponent_username }}
+        <li><b>{{ "%.2f"|format(r.margin) }}</b>{% if show_name %} {{ r.username }}{% endif %}
+          over {{ r.opponent_username }}
           <span class="rec-detail">{{ "%.2f"|format(r.points_for) }}&ndash;{{ "%.2f"|format(r.points_against) }},
             {% if show_year %}{{ r.season_year }} {% endif %}week {{ r.week }}</span></li>
       {% endif %}
     {% endfor %}
     </ol>
   </div>
+  {% endif %}
 {%- endmacro %}

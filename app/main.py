@@ -116,6 +116,14 @@ RECORD_SQL = {
                points_for + points_against as combined
         from game_log where {scope} and result = 'W'
         order by combined desc limit {n}""",
+    # The losing half of nailbiters. Margin is written the way round that
+    # makes it a positive number of points short.
+    "heartbreaks": """
+        select username, opponent_username, season_year, week,
+               points_for, points_against,
+               points_against - points_for as margin
+        from game_log where {scope} and result = 'L'
+        order by margin asc limit {n}""",
 }
 
 # Named in the same voice on both pages, so the same record is not called two
@@ -126,6 +134,7 @@ RECORD_NAMES = {
     "blowouts": "Greatest routs",
     "nailbiters": "Narrowest escapes",
     "shootouts": "Bloodiest fields",
+    "heartbreaks": "Cruellest defeats",
 }
 
 ALL_RECORDS = ("high", "low", "blowouts", "nailbiters", "shootouts")
@@ -137,6 +146,42 @@ ALL_RECORDS = ("high", "low", "blowouts", "nailbiters", "shootouts")
 BRACKET_TYPES = ("quarterfinal", "semifinal", "championship",
                  "third_place", "fifth_place")
 BRACKET_SCOPE = "game_type in (%s)" % ", ".join("'%s'" % g for g in BRACKET_TYPES)
+
+
+def streaks(conn, owner_id, result, n=3):
+    """The longest unbroken runs of one result, longest first.
+
+    Walked in Python rather than solved in SQL: the gaps-and-islands query
+    for this is harder to read than the loop, and there are 56 rows.
+
+    A run does not cross a season boundary. Winning the last week of one year
+    and the first of the next is two runs, not one -- there is a draft and a
+    keeper deadline in between. Runs of one are dropped: "1 in a row" is not
+    a streak, and Theo's third-longest win run is exactly that.
+    """
+    games = query(conn, """
+        select season_year, week, result from game_log
+        where owner_id = %s and game_type = 'regular'
+        order by season_year, week
+    """, (owner_id,))
+
+    runs, live = [], None
+    for g in games:
+        if g["result"] != result:
+            live = None
+            continue
+        if (live and live["season_year"] == g["season_year"]
+                and live["last"] == g["week"] - 1):
+            live["len"] += 1
+            live["last"] = g["week"]
+        else:
+            live = {"season_year": g["season_year"], "first": g["week"],
+                    "last": g["week"], "len": 1}
+            runs.append(live)
+
+    runs = [r for r in runs if r["len"] > 1]
+    runs.sort(key=lambda r: (-r["len"], -r["season_year"], -r["first"]))
+    return runs[:n]
 
 
 def records_for(conn, keys, scope, params=(), n=5):
@@ -400,14 +445,26 @@ def team(request: Request, name: str):
             select * from owner_head_to_head where owner_id = %s
             order by wins - losses desc, opponent_username
         """, (oid,))
-        best = query(conn, """
-            select season_year, week, points_for, opponent_username, result
-            from game_log where owner_id = %s order by points_for desc limit 3
-        """, (oid,))
-        worst = query(conn, """
-            select season_year, week, points_for, opponent_username, result
-            from game_log where owner_id = %s order by points_for asc limit 3
-        """, (oid,))
+        # Split the way /history and a season page split theirs, through the
+        # same shapes. Left merged, a manager's best week could be a playoff
+        # game while the pages either side of this one had stopped counting
+        # those.
+        weeks_regular = records_for(conn, ("high", "low", "nailbiters",
+                                           "heartbreaks"),
+                                    "owner_id = %s and game_type = 'regular'",
+                                    (oid,), 3)
+        # Half the pool, capped at three, so the two lists cannot name the
+        # same game twice. Chris has played two bracket games: a top three and
+        # a bottom three of two games is the same pair printed backwards.
+        bracket_games = query(conn, """
+            select count(*) as n from game_log
+            where owner_id = %s and """ + BRACKET_SCOPE, (oid,))[0]["n"]
+        weeks_playoff = records_for(
+            conn, ("high", "low", "nailbiters", "heartbreaks"),
+            "owner_id = %s and " + BRACKET_SCOPE, (oid,),
+            min(3, bracket_games // 2)) if bracket_games > 1 else None
+        wins_streak = streaks(conn, oid, "W")
+        losses_streak = streaks(conn, oid, "L")
         proj_rows = query(conn, """
             select * from owner_projection_stats where owner_id = %s
         """, (oid,))
@@ -423,6 +480,18 @@ def team(request: Request, name: str):
             order by ks.season_year desc, ks.cost_round
         """, (oid,))
         newest = _current_season(conn)
+        # The keeper panel opens on the league's newest keeper season, so
+        # every manager's page opens on the same year. Theo's last was 2023
+        # and he has none since, so his falls back to his own newest rather
+        # than opening on an empty panel.
+        latest_keeper = query(conn, """
+            select max(season_year) as y from keeper_selections
+        """)[0]["y"]
+    keeper_groups = group_runs(keepers, "season_year")
+    keeper_years = [g["key"] for g in keeper_groups]
+    keeper_open = (latest_keeper if latest_keeper in keeper_years
+                   else (keeper_years[0] if keeper_years else None))
+
     # Rivalries collapse into spells rather than a row per season. Twelve of
     # the thirteen managers have had the same rival every year -- the pairing
     # is solved from past meetings and comes out stable -- so a list by season
@@ -446,9 +515,11 @@ def team(request: Request, name: str):
     return templates.TemplateResponse(
         request=request, name="team.html",
         context={"owner": owner, "seasons": seasons, "h2h": h2h,
-                 "best": best, "worst": worst, "rival_spells": rival_spells,
+                 "weeks_regular": weeks_regular, "weeks_playoff": weeks_playoff,
+                 "wins_streak": wins_streak, "losses_streak": losses_streak,
+                 "rival_spells": rival_spells,
                  "rival_current": rival_current,
-                 "keepers": group_runs(keepers, "season_year"),
+                 "keepers": keeper_groups, "keeper_open": keeper_open,
                  "projection": proj_rows[0] if proj_rows else None})
 
 
