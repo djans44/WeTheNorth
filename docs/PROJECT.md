@@ -472,7 +472,7 @@ button.
 
 **Not built**
 - **Trades and waivers on the season page** — data is loaded, needs a view and a template
-- Badges (spec in `docs/features/badges.md`)
+- Crests of honour (spec in `docs/features/crests.md`)
 - **Create-season checklist** (`docs/features/season-setup.md`) — every step
   needed to stand up the next league year, in dependency order. **Adding an
   owner to a season gets built there**, not on `/admin/owners`: the rivalry
