@@ -20,10 +20,11 @@ Three shapes, and the difference is when the answer can be known:
   season   A superlative over a whole season: the best week of the year, the
            most points. Not awarded for a season still being played, because
            in week three it would name whoever happens to lead.
-  career   Spans seasons. Every held crest is career-shaped -- one holder, no
-           season to belong to -- and they are recomputed on every run,
-           including a single-season one, because a week's play can take one
-           off its holder.
+  career   Spans seasons. Every held crest is career-shaped and is recomputed
+           on every run, including a single-season one, because a week's play
+           can take one off its holder. Each is written twice over: once with
+           no season, which is who holds it today, and once per finished
+           season, which is who held it when that season closed.
 """
 
 import argparse
@@ -372,12 +373,19 @@ def rivalry(conn, seasons):
     return out
 
 
-def held(conn):
+def held(conn, as_of=None):
     """The seven crests only one manager holds at a time.
 
     Recomputed on every run, including a single-season one: a week's play can
     take one of these off its holder, and a weekly recompute that skipped them
     would leave the rings wrong until someone remembered to run a full one.
+
+    `as_of` cuts every input at the end of that season and stamps the rows
+    with it. That is what a season page needs: 2023's sigils should wear the
+    rings as they stood when 2023 finished, not the ones being worn today,
+    and a manager who held a title once and lost it should be able to say so.
+    Called with no year the rows carry no season, which is what they have
+    always meant -- who holds each title now.
 
     The tallies count from game_log rather than from owner_crests rows.
     Counting rows would make one crest depend on another having been computed
@@ -385,37 +393,59 @@ def held(conn):
     order it happened to run in.
     """
     out = collections.defaultdict(list)
+    # Every rule below is the same query cut at a season, so the cut is a
+    # bound parameter and a live run passes a year no season will reach.
+    # Cheaper than seven queries in two versions that then have to be kept
+    # saying the same thing as each other.
+    cut = 9999 if as_of is None else as_of
+    year = as_of
+
     done = q(conn, "select max(season_year) as y from season_results "
-                   "where is_complete")[0]["y"]
+                   "where is_complete and season_year <= %s", (cut,))[0]["y"]
     if done:
         for r in q(conn, "select champion_owner_id as o from season_results "
                          "where season_year = %s", (done,)):
             out["reigning_champion"].append(
-                (r["o"], None, None, f"champion of {done}", 0))
+                (r["o"], year, None, f"champion of {done}", 0))
         for r in q(conn, "select owner_id as o from team_season_stats "
                          "where season_year = %s and final_rank = 12", (done,)):
             out["reigning_sacko"].append(
-                (r["o"], None, None, f"last in {done}", 0))
+                (r["o"], year, None, f"last in {done}", 0))
 
     # Best win rate in league history. Two seasons minimum: a newcomer at 10-4
-    # would otherwise hold it off fourteen games.
+    # would otherwise hold it off fourteen games. Aggregated here rather than
+    # read from owner_all_time_stats, which is this same sum over every season
+    # there has ever been and so cannot be cut at one.
     for r in leaders(q(conn, """
-        select owner_id, wins, losses, win_pct from owner_all_time_stats
-        where seasons_played >= %s
-    """, (RECORD_SEASONS,)), "win_pct"):
+        select owner_id, sum(wins) as wins, sum(losses) as losses,
+               round((sum(wins) + sum(ties) * 0.5)
+                     / nullif(sum(wins) + sum(losses) + sum(ties), 0), 3)
+                   as win_pct
+        from team_season_stats
+        where season_year <= %s
+        group by owner_id
+        having count(*) filter (where games_played > 0) >= %s
+    """, (cut, RECORD_SEASONS)), "win_pct"):
         out["best_record"].append(
-            (r["owner_id"], None, None,
+            (r["owner_id"], year, None,
              f"{r['wins']}-{r['losses']}, {r['win_pct']:.3f}", 0))
 
-    # Each manager's newest rival, then their record against that person over
-    # every meeting there has ever been.
-    h2h = {(r["owner_id"], r["opponent_owner_id"]): r
-           for r in q(conn, "select * from owner_head_to_head")}
+    # Each manager's newest rival as at the cut, then their record against
+    # that person over every meeting up to it. Aggregated here for the same
+    # reason: owner_head_to_head counts every game ever played.
+    h2h = {(r["owner_id"], r["opponent_owner_id"]): r for r in q(conn, """
+        select owner_id, opponent_owner_id, count(*) as games,
+               count(*) filter (where result = 'W') as wins,
+               count(*) filter (where result = 'L') as losses
+        from game_log where season_year <= %s
+        group by owner_id, opponent_owner_id
+    """, (cut,))}
     rivals = []
     for r in q(conn, """
         select distinct on (r.owner_id) r.owner_id, r.rival_owner_id
-        from rivalries r order by r.owner_id, r.season_year desc
-    """):
+        from rivalries r where r.season_year <= %s
+        order by r.owner_id, r.season_year desc
+    """, (cut,)):
         rec = h2h.get((r["owner_id"], r["rival_owner_id"]))
         if rec and rec["games"] >= RIVAL_MEETINGS:
             rivals.append({"owner_id": r["owner_id"], "games": rec["games"],
@@ -423,7 +453,7 @@ def held(conn):
                            "wins": rec["wins"], "losses": rec["losses"]})
     for r in leaders(leaders(rivals, "rate"), "games"):
         out["fiercest_rival"].append(
-            (r["owner_id"], None, None,
+            (r["owner_id"], year, None,
              f"{r['wins']}-{r['losses']} against their rival", 0))
 
     # Most weeks topping the league's scoring.
@@ -431,11 +461,12 @@ def held(conn):
         select owner_id, count(*) as n from (
             select owner_id, rank() over (
                        partition by season_year, week order by points_for desc) as rk
-            from game_log where game_type = 'regular') t
+            from game_log
+            where game_type = 'regular' and season_year <= %s) t
         where rk = 1 group by owner_id
-    """), "n"):
+    """, (cut,)), "n"):
         out["most_weekly_highs"].append(
-            (r["owner_id"], None, None, f"{r['n']} weeks", 0))
+            (r["owner_id"], year, None, f"{r['n']} weeks", 0))
 
     # Most games won, and lost, by under a point. Both come out as four-way
     # ties on two apiece, so a count alone cannot decide a crest only one
@@ -448,12 +479,13 @@ def held(conn):
         rows = q(conn, f"""
             select owner_id, count(*) as n, sum({margin}) as total
             from game_log
-            where game_type = 'regular' and result = %s and {margin} < %s
+            where game_type = 'regular' and season_year <= %s
+              and result = %s and {margin} < %s
             group by owner_id
-        """, (result, WHISKER))
+        """, (cut, result, WHISKER))
         for r in lowest(leaders(rows, "n"), "total"):
             out[code].append(
-                (r["owner_id"], None, None,
+                (r["owner_id"], year, None,
                  f"{r['n']}, {r['total']:.2f} between them", 0))
     return out
 
@@ -475,8 +507,14 @@ def main():
                      transactions, rivalry):
             for code, rows in rule(conn, seasons).items():
                 awards[code] += rows
+        # Who holds each title now, and who held it at the close of every
+        # finished season in scope. The second lot is what lets a season page
+        # ring its sigils with that year's titles rather than today's.
         for code, rows in held(conn).items():
             awards[code] += rows
+        for y in complete_seasons(conn, seasons):
+            for code, rows in held(conn, y).items():
+                awards[code] += rows
 
         dropped = 0
         for code in list(awards):
@@ -518,14 +556,17 @@ def main():
             return
 
         with conn.cursor() as cur:
-            # Held crests are career-wide, so a season-scoped run still has to
-            # clear and rewrite them or the rings go stale.
+            # A season-scoped run still has to clear the live held rows or
+            # the rings go stale -- but only those and that season's own. The
+            # old clause took every held row, which would now delete the
+            # other seasons' snapshots without computing replacements.
             if args.season:
                 cur.execute("""
                     delete from owner_crests oc using crests c
                      where c.crest_id = oc.crest_id and c.award_mode = 'auto'
                        and oc.awarded_by is null
-                       and (oc.season_year = %s or c.standing = 'held')
+                       and (oc.season_year = %s
+                            or (c.standing = 'held' and oc.season_year is null))
                 """, (args.season,))
             else:
                 cur.execute("""

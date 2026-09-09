@@ -242,11 +242,16 @@ def crest_case(catalogue, mine):
             if c["category"] != category or c["crest_id"] not in won:
                 continue
             got = won[c["crest_id"]]
-            entry = dict(c, count=len(got), instances=got, latest=got[0])
             if c["standing"] == "held":
-                held.append(entry)
-            else:
-                row.append(entry)
+                # Held rows come in two kinds. The one with no season is who
+                # holds the title now; the rest are end-of-season snapshots,
+                # kept so a season page can ring its sigils with that year's
+                # titles. Only the first is a title this manager holds.
+                live = [r for r in got if r["season_year"] is None]
+                if live:
+                    held.append(dict(c, count=1, instances=live, latest=live[0]))
+                continue
+            row.append(dict(c, count=len(got), instances=got, latest=got[0]))
         if row:
             groups.append({"label": label, "crests": row})
     held.sort(key=lambda c: c["sort_order"])
@@ -339,13 +344,17 @@ def owner_avatars():
                 # their page lists both. Looked up here rather than in every
                 # query because a sigil is drawn from a username as often as
                 # from an owner_id.
+                #
+                # season_year is null is the live holder. The rows that carry
+                # a season are who held it when that season closed, and the
+                # season page reaches for those instead.
                 rings = {}
                 for r in query(conn, """
                     select distinct on (oc.owner_id)
                            oc.owner_id, c.code, c.name, c.colour
                     from owner_crests oc
                     join crests c on c.crest_id = oc.crest_id
-                    where c.standing = 'held'
+                    where c.standing = 'held' and oc.season_year is null
                     order by oc.owner_id, c.sort_order
                 """):
                     rings[r["owner_id"]] = {"code": r["code"], "name": r["name"],
