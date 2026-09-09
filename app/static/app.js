@@ -69,6 +69,57 @@
     });
   }
 
+  // ---- a sticky manager header condenses once it sticks ----
+  // Enhancement only: without this the header still sticks, it just stays at
+  // full height. The class goes on past the header's own height so the change
+  // happens after it has actually reached the top, not while it is still
+  // scrolling towards it.
+  var stuck = document.querySelector(".page-head.stuck");
+  if (stuck) {
+    var fullHeight = 0;
+    var frozen = function () {
+      return window.getComputedStyle(stuck).position === "sticky";
+    };
+
+    var measure = function () {
+      stuck.classList.remove("condensed");
+      stuck.style.marginBottom = "";
+      fullHeight = stuck.offsetHeight;
+    };
+
+    // The header keeps its place in the flow while stuck, so shrinking it
+    // pulled everything below up by the difference -- a 177px jolt. The
+    // margin gives that space back: the visible bar is small, the space it
+    // occupies is unchanged, and nothing moves.
+    //
+    // A wrapper would have been the obvious way to hold that space, and it
+    // does not work: a sticky element cannot travel outside its parent, so a
+    // wrapper the height of the header stops it sticking at all.
+    //
+    // Condensed the moment it starts to stick, rather than part way down the
+    // page: whole at the top, a bar once you have left it, nothing between.
+    var syncStuck = function () {
+      if (!frozen()) {
+        stuck.classList.remove("condensed");
+        stuck.style.marginBottom = "";
+        return;
+      }
+      var want = window.scrollY > 4;
+      if (want === stuck.classList.contains("condensed")) { return; }
+      stuck.classList.toggle("condensed", want);
+      stuck.style.marginBottom =
+          want ? (fullHeight - stuck.offsetHeight) + "px" : "";
+    };
+
+    measure();
+    syncStuck();
+    window.addEventListener("scroll", syncStuck, { passive: true });
+    window.addEventListener("resize", function () {
+      if (window.scrollY <= 4) { measure(); }
+      syncStuck();
+    });
+  }
+
   // ---- season page: close the year picker on an outside click ----
   // <details> stays open until it is clicked again, which is right for a
   // disclosure and wrong for a menu. Enhancement only: without this the

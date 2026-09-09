@@ -80,7 +80,25 @@ def ordinal(n):
 
 
 templates.env.globals["static_url"] = static_url
+def crest_when(row):
+    """When a crest was won, and what earned it, on one line.
+
+    Season, week and detail are each optional -- a career crest has no season,
+    a season crest has no week, and some crests carry no number worth naming --
+    so the parts are joined only where they exist rather than assembled into
+    "None, week None".
+    """
+    parts = []
+    if row.get("season_year"):
+        parts.append(str(row["season_year"])
+                     + (f" week {row['week']}" if row.get("week") else ""))
+    if row.get("detail"):
+        parts.append(row["detail"])
+    return " · ".join(parts)
+
+
 templates.env.globals["ordinal"] = ordinal
+templates.env.globals["crest_when"] = crest_when
 
 
 # --- records ----------------------------------------------------------
@@ -187,6 +205,52 @@ def streaks(conn, owner_id, result, n=3):
 def records_for(conn, keys, scope, params=(), n=5):
     return {k: query(conn, RECORD_SQL[k].format(scope=scope, n=n), params)
             for k in keys}
+
+
+# --- crests of honour -----------------------------------------------------
+
+# The order the case is read in, and what each group is called on the page.
+CREST_GROUPS = (
+    ("silverware", "Silverware"),
+    ("scoring", "Over a season"),
+    ("weekly", "Week by week"),
+    ("keepers", "Keepers"),
+    ("transactions", "The market"),
+    ("rivalry", "Rivalry"),
+    ("honours", "Honours"),
+)
+
+
+def crest_case(catalogue, mine):
+    """A manager's case: what they hold, and what they have won.
+
+    Only what they have won. An unwon crest is a fact about the catalogue
+    rather than about this manager, and twenty greyed-out names crowded out
+    the eight that meant something.
+
+    `mine` arrives newest first, so instances[0] is the most recent -- the one
+    worth showing before the rest are expanded.
+    """
+    won = {}
+    for r in mine:
+        won.setdefault(r["crest_id"], []).append(r)
+
+    held, groups = [], []
+    for category, label in CREST_GROUPS:
+        row = []
+        for c in catalogue:
+            if c["category"] != category or c["crest_id"] not in won:
+                continue
+            got = won[c["crest_id"]]
+            entry = dict(c, count=len(got), instances=got, latest=got[0])
+            if c["standing"] == "held":
+                held.append(entry)
+            else:
+                row.append(entry)
+        if row:
+            groups.append({"label": label, "crests": row})
+    held.sort(key=lambda c: c["sort_order"])
+    return held, groups
 
 
 def get_db():
@@ -480,6 +544,16 @@ def team(request: Request, name: str):
             order by ks.season_year desc, ks.cost_round
         """, (oid,))
         newest = _current_season(conn)
+        crest_list = query(conn, """
+            select crest_id, code, name, description, category, standing,
+                   colour, sort_order
+            from crests where active order by sort_order
+        """)
+        my_crests = query(conn, """
+            select crest_id, season_year, week, detail from owner_crests
+            where owner_id = %s
+            order by season_year desc nulls first, week desc nulls first
+        """, (oid,))
         # The keeper panel opens on the league's newest keeper season, so
         # every manager's page opens on the same year. Theo's last was 2023
         # and he has none since, so his falls back to his own newest rather
@@ -487,6 +561,8 @@ def team(request: Request, name: str):
         latest_keeper = query(conn, """
             select max(season_year) as y from keeper_selections
         """)[0]["y"]
+    held_crests, crest_groups = crest_case(crest_list, my_crests)
+
     keeper_groups = group_runs(keepers, "season_year")
     keeper_years = [g["key"] for g in keeper_groups]
     keeper_open = (latest_keeper if latest_keeper in keeper_years
@@ -519,6 +595,7 @@ def team(request: Request, name: str):
                  "wins_streak": wins_streak, "losses_streak": losses_streak,
                  "rival_spells": rival_spells,
                  "rival_current": rival_current,
+                 "held_crests": held_crests, "crest_groups": crest_groups,
                  "keepers": keeper_groups, "keeper_open": keeper_open,
                  "projection": proj_rows[0] if proj_rows else None})
 

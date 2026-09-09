@@ -15,6 +15,10 @@
   <link rel="stylesheet" href="{{ static_url('style.css') }}">
 </head>
 <body>
+  {# The document's own top, above the nav. A "back to top" that landed on
+     the page panel stopped short of the navigation, which is most of what
+     you go back up for. #}
+  <span id="top"></span>
   {% set path = request.url.path %}
   {# No nav at all when signed out. Every link bounces back to the gate, the
      Managers menu would list all thirteen names -- which are now the sign-in

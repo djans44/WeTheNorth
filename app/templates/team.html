@@ -16,6 +16,17 @@
     </svg>
     <span>Seasons</span>
   </a>
+  <a href="#crests">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M10 2.6l6.2 2.2v5.4c0 3.4-2.9 5.9-6.2 7.2-3.3-1.3-6.2-3.8-6.2-7.2V4.8z"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+      <path d="M10 7.4l1.2 2.5 2.6.4-1.9 1.8.5 2.6L10 13.5l-2.4 1.2.5-2.6L6.2 10.3l2.6-.4z"
+            fill="none" stroke="currentColor" stroke-width="1.1"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Crests</span>
+  </a>
   <a href="#records">
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
       <path d="M6.5 3h7v4a3.5 3.5 0 0 1-7 0zM10 10.5V14M7 17h6"
@@ -60,7 +71,7 @@
   {# The name is the control that changes the manager, the same <details> the
      season page uses for its year. Ordinary links inside a disclosure, so it
      still opens and still works with the script off. #}
-  <header class="page-head">
+  <header class="page-head stuck">
     <details class="headpick">
       <summary>
         <h1 class="titled">
@@ -79,6 +90,7 @@
     </details>
     {# The lede restated the numbers in the tables below it. The rival does
        not appear anywhere else and is the thing a manager wants named. #}
+    <div class="headline">
     {% if rival_spells %}
       <p class="rivalline">
         <span class="lbl">{{ "Current rival" if rival_current else "Last rival" }}</span>
@@ -88,17 +100,37 @@
           <span class="tm">{{ rival_spells[0].span }}</span>
         </span>
       </p>
-      {% if rival_spells|length > 1 %}
-        <p class="pastrivals">Before that,
-          {% for r in rival_spells[1:] %}
-            {{ r.rival }} {{ r.span }}{% if not loop.last %}; {% endif %}
-          {%- endfor %}.
-        </p>
-      {% endif %}
+    {% endif %}
+
+    {# Titles sit beside the rival rather than under it: both say who this
+       manager currently is, and they are one line's worth of fact. #}
+    {% if held_crests %}
+      <p class="held-case">
+        {% for c in held_crests %}
+          <span class="held-crest {{ c.colour }}" title="{{ c.description }}">
+            <b>{{ c.name }}</b>
+            <span class="tm">{{ c.latest.detail }}</span>
+          </span>
+        {% endfor %}
+      </p>
+    {% endif %}
+    </div>
+
+    {% if rival_spells|length > 1 %}
+      <p class="pastrivals">Before that,
+        {% for r in rival_spells[1:] %}
+          {{ r.rival }} {{ r.span }}{% if not loop.last %}; {% endif %}
+        {%- endfor %}.
+      </p>
     {% endif %}
     {% if owner.is_retired %}
       <p class="pastrivals">No longer in the league.</p>
     {% endif %}
+
+    {# Only reachable once the header has condensed, which is to say once
+       there is somewhere to go back from. A plain anchor, so it works with
+       the script off and the browser does the scrolling. #}
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section id="seasons">
@@ -123,6 +155,62 @@
       {% endfor %}
       </tbody>
     </table>
+  </section>
+
+  <section id="crests">
+    <h2>Crests of honour</h2>
+
+    {% if not crest_groups and not held_crests %}
+      <p class="note">Nothing won yet.</p>
+    {% endif %}
+
+    {# The header names the titles; this is where they explain themselves. A
+       chip in a bar that condenses on scroll has nowhere to open into. #}
+    {% if held_crests %}
+      <h3 class="record-group">Titles held</h3>
+      <div class="crest-grid">
+        {% for c in held_crests %}
+          <details class="crest held {{ c.colour }}">
+            {# The description lives inside the summary, hidden until opened,
+               so it appears directly under the title rather than below the
+               line saying when it was won. #}
+            <summary title="{{ c.description }}">
+              <span class="crest-name">{{ c.name }}</span>
+              <span class="crest-more" aria-hidden="true"></span>
+              <span class="crest-what">{{ c.description }}</span>
+              <span class="tm">{{ c.latest.detail }}</span>
+            </summary>
+          </details>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% for group in crest_groups %}
+      <h3 class="record-group">{{ group.label }}</h3>
+      <div class="crest-grid">
+        {% for c in group.crests %}
+          {# A <details> so the same control does both jobs: the title
+             attribute explains the crest on hover, and opening it explains it
+             on a phone, where there is no hover, alongside every instance. #}
+          <details class="crest">
+            <summary title="{{ c.description }}">
+              <span class="crest-name">{{ c.name }}</span>
+              {% if c.count > 1 %}<span class="crest-n">&times;{{ c.count }}</span>{% endif %}
+              <span class="crest-more" aria-hidden="true"></span>
+              <span class="crest-what">{{ c.description }}</span>
+              <span class="tm">{{ crest_when(c.latest) }}</span>
+            </summary>
+            {% if c.count > 1 %}
+              <ol class="crest-all">
+                {% for i in c.instances %}
+                  <li>{{ crest_when(i) }}</li>
+                {% endfor %}
+              </ol>
+            {% endif %}
+          </details>
+        {% endfor %}
+      </div>
+    {% endfor %}
   </section>
 
   <section id="records">

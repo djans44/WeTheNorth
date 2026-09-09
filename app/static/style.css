@@ -144,7 +144,100 @@ section {
 }
 section:last-child { border-bottom: 0; }
 
-.page-head { padding-bottom: var(--s5); border-bottom: var(--hairline); }
+.page-head {
+  padding-bottom: var(--s5);
+  border-bottom: var(--hairline);
+}
+
+/* A manager's header stays put while the case scrolls under it, so whose
+   crests these are never leaves the screen. Only that one: it is the only
+   header carrying an identity rather than a title. The panel colour is set
+   explicitly because a sticky element with a transparent ground shows the
+   content sliding beneath it. */
+.page-head.stuck {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: var(--panel-bg);
+  /* flow-root so the heading's top margin is contained rather than collapsing
+     out through the header. Uncontained, the measured height was 24px short
+     of the space actually occupied, and the page still shifted by that much
+     when the header condensed. The condensed state is a flex container, which
+     contains margins already. */
+  display: flow-root;
+}
+
+/* The slot holds the header's full height for good. A sticky element still
+   occupies its original place in the flow, so shrinking one while it is stuck
+   dragged everything below it up by the difference -- a 193px jolt the moment
+   you started scrolling. app.js measures the header once and pins the slot to
+   that, and nothing moves afterwards. */
+/* Frozen at full height the header took 311px, better than a third of a
+   laptop screen, to say something the reader already knew. It condenses as
+   soon as it starts to stick -- not part way down the page -- so the header
+   is either whole at the top or a bar once you have left it. The leaf and the
+   rival line are page furniture and go. .condensed is added by app.js, so
+   without the script the header simply stays whole. */
+.page-head.stuck.condensed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 var(--s4);
+  padding: 0.3rem var(--pad-gutter);
+  border-bottom: 1px solid var(--rule);
+  box-shadow: 0 4px 10px rgba(29, 27, 22, 0.06);
+}
+.page-head.stuck.condensed .leaf,
+.page-head.stuck.condensed .rivalline,
+.page-head.stuck.condensed .pastrivals { display: none; }
+.page-head.stuck.condensed .headline { display: contents; }
+.page-head.stuck.condensed h1.titled {
+  gap: var(--s3);
+  margin: 0;
+  padding: 0.35rem 0;
+  font-size: 1.5rem;
+}
+.page-head.stuck.condensed h1.titled .avatar {
+  --av-size: 34px;
+  --av-font: 14px;
+}
+/* The negative margin exists to keep the title centred under the leaf. The
+   leaf is gone here and the chevron was overlapping the first title, so it
+   takes its own width back. */
+.page-head.stuck.condensed h1.titled::after { margin-right: 0; }
+.page-head.stuck.condensed .held-case { margin: 0; }
+.page-head.stuck.condensed .held-crest .tm { display: none; }
+
+/* Hidden until the header condenses: at the top of the page there is nowhere
+   to go back to. An anchor rather than a script, so the browser does the
+   scrolling and it works with JavaScript off. */
+/* The marker sits at the document's own origin rather than wherever the body
+   padding puts it. Inside the padding it landed 16px down, which is past the
+   point where the header decides it has been scrolled, so going back to the
+   top left the header condensed. */
+#top { position: absolute; top: 0; left: 0; width: 0; height: 0; }
+
+.to-top { display: none; }
+.page-head.stuck.condensed .to-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  text-decoration: none;
+  color: var(--ink-muted);
+}
+.page-head.stuck.condensed .to-top::before {
+  content: "";
+  width: 0.4em;
+  height: 0.4em;
+  margin-top: 0.2em;
+  border-left: 1.5px solid currentColor;
+  border-top: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.page-head.stuck.condensed .to-top:hover { color: var(--accent); }
 
 /* A header carrying only a title does not need the room one with a lede
    below it does. */
@@ -247,6 +340,16 @@ section:last-child { border-bottom: 0; }
   max-width: 46ch;
   font-family: var(--prose);
   color: var(--ink-muted);
+}
+
+/* The rival and the titles on one line, centred under the name. Both say who
+   this manager currently is; they are one line's worth of fact between them. */
+.headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2) var(--s4);
 }
 
 /* The rival, under a manager's name. Centred with the title above it rather
@@ -1309,6 +1412,105 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .keeper-grid h3 a { text-decoration: none; }
 .keeper-grid h3 a:hover { text-decoration: underline; }
 
+/* ---- crests of honour ---- */
+
+/* Held crests ride in the page header, beside the name: they say who this
+   manager currently is, which is a different claim from what they once did. */
+.held-case {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s2);
+  margin: 0;
+}
+.held-crest {
+  padding: 0.2rem var(--s3);
+  text-align: left;
+  background: var(--field-bg);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  border-radius: 2px;
+}
+/* Three colours, the same three the sigil ring uses. */
+.held-crest.gold   { border-left-color: var(--gold); }
+.held-crest.silver { border-left-color: var(--silver); }
+.held-crest.bronze { border-left-color: var(--bronze); }
+.held-crest b {
+  display: block;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+}
+.held-crest .tm { display: block; font-size: 0.72rem; }
+
+.crest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--s2) var(--s4);
+  margin: var(--s3) 0 var(--s4);
+}
+.crest > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.crest > summary::-webkit-details-marker { display: none; }
+.crest .crest-name { color: var(--ink); border-bottom: 1px dotted var(--rule); }
+.crest > summary:hover .crest-name { color: var(--accent); border-bottom-color: var(--accent); }
+.crest .tm { display: block; }
+
+/* A chevron, so a crest reads as something that opens. Drawn rather than
+   using the browser's own marker, which sits outside the summary and cannot
+   be put after the name. */
+.crest-more {
+  display: inline-block;
+  width: 0.4em;
+  height: 0.4em;
+  margin: 0 0 0.15em 0.45em;
+  border-right: 1.5px solid var(--ink-muted);
+  border-bottom: 1.5px solid var(--ink-muted);
+  transform: rotate(45deg);
+  vertical-align: middle;
+  transition: transform 0.15s ease;
+}
+.crest[open] > summary .crest-more { transform: rotate(-135deg); margin-bottom: 0; }
+
+/* A held crest in the case carries the same colour it wears in the header
+   and on the sigil ring, so the three places agree at a glance. */
+.crest.held { padding-left: var(--s3); border-left: 3px solid var(--rule); }
+.crest.held.gold   { border-left-color: var(--gold); }
+.crest.held.silver { border-left-color: var(--silver); }
+.crest.held.bronze { border-left-color: var(--bronze); }
+.crest > summary:hover .crest-more { border-color: var(--accent); }
+
+/* Won more than once. The count matters more than any single instance for a
+   weekly crest, where a manager can hold a dozen. */
+.crest-n {
+  margin-left: 0.3rem;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 700;
+  color: var(--gold-deep);
+}
+
+/* What the crest is for. Inside the summary and hidden until opened, so it
+   lands directly under the title rather than below the line saying when it
+   was won. The title attribute says the same thing on hover; this is how it
+   reads on a phone, where there is no hover to have. */
+.crest-what { display: none; }
+.crest[open] > summary .crest-what {
+  display: block;
+  margin: 0.15rem 0 0.1rem;
+  font-family: var(--prose);
+  font-size: var(--t-sm);
+  font-style: italic;
+  color: var(--ink-muted);
+}
+.crest-all {
+  margin: 0.3rem 0 0;
+  padding-left: 1.2rem;
+  font-size: var(--t-sm);
+  color: var(--ink-muted);
+}
+
 .kept { margin: 0.35rem 0 0; font-size: var(--t-base); }
 .kept .rd { margin-right: 0.15rem; }
 .kept .tm { display: inline; margin-left: 0.3rem; }
@@ -1663,6 +1865,29 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   .bracket.settled > .fifth  { order: 4; }
   .bracket.settled > .qf     { order: 5; }
 
+  /* Both navigation bars scroll away here -- pinned, they and the header
+     took the top third of an 844px screen before the page began. The header
+     stays, but as a thin strip: the name, the titles, and a way back up. It
+     is the one thing worth the room, because a phone screen of crests says
+     nothing about whose they are. */
+  .sectionnav { position: static; }
+
+  .page-head.stuck.condensed {
+    padding: 0.25rem var(--s3);
+    gap: 0 var(--s3);
+  }
+  .page-head.stuck.condensed h1.titled {
+    gap: var(--s2);
+    padding: 0.15rem 0;
+    font-size: 1.1rem;
+  }
+  .page-head.stuck.condensed h1.titled .avatar {
+    --av-size: 26px;
+    --av-font: 11px;
+  }
+  .page-head.stuck.condensed .held-crest { padding: 0.1rem 0.4rem; }
+  .page-head.stuck.condensed .held-crest b { font-size: 0.68rem; }
+
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }
 
@@ -1715,15 +1940,11 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   .field { flex-wrap: wrap; }
   .field > label { flex-basis: 100%; }
 
-  /* Both bars stay put while the page scrolls. The site nav needs an opaque
-     background once it is sticky, or the page shows through it. */
-  .sitenav {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    padding-top: var(--s2);
-    background: var(--page-bg);
-  }
+  /* Nothing stays put on a phone. Two pinned strips and a header took the
+     top third of an 844px screen before the page began, and the page is what
+     the phone is for. Everything scrolls; the section rail is a jump list at
+     the top rather than a permanent fixture. */
+  .sitenav { padding-top: var(--s2); }
 
   .keeper-grid { gap: var(--s4); }
   .toast { left: var(--s2); right: var(--s2); bottom: var(--s2); transform: none; max-width: none; }
