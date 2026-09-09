@@ -709,7 +709,11 @@ thead th {
   color: var(--ink-muted);
 }
 
-th:first-child, td:first-child, td.name, .year { text-align: left; }
+/* Numbers right, text left. .name marks a text column, and the header has
+   to carry it too -- without th.name the word "Owner" sat hard against the
+   right edge of a wide column while the names underneath started at the
+   left, with the whole column's width between them. */
+th:first-child, td:first-child, td.name, th.name, .year { text-align: left; }
 tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 
 .scroller { overflow-x: auto; }

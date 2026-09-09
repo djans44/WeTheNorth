@@ -52,7 +52,7 @@
       <p class="note ok">Everyone has chosen.</p>
     {% endif %}
     <table class="keepers">
-      <thead><tr><th>#</th><th>Manager</th><th>{{ prev_season }}</th>
+      <thead><tr><th>#</th><th class="name">Manager</th><th>{{ prev_season }}</th>
         <th>Ballots</th><th>Slot</th><th>Chosen</th></tr></thead>
       <tbody>
       {% for r in rows %}
@@ -104,7 +104,7 @@
     <form method="post" action="/admin/draft-order/set">
       <input type="hidden" name="season" value="{{ season }}">
       <table class="keepers">
-        <thead><tr><th>#</th><th>Manager</th><th>Slot</th></tr></thead>
+        <thead><tr><th>#</th><th class="name">Manager</th><th>Slot</th></tr></thead>
         <tbody>
         {% for r in rows %}
           <tr>
