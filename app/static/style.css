@@ -636,6 +636,16 @@ h3 {
 .field.titlepicker select { flex: 0 0 auto; min-width: 9rem; }
 
 .titles td.name { font-family: var(--body); }
+/* The crest's rule, under its name and indented past the mark so the two
+   lines of text align and the glyph keeps its own column. Left to wrap:
+   these run to a sentence and a half. */
+.titles td.name .rule {
+  max-width: 34rem;
+  margin-top: 0.15rem;
+  padding-left: calc(1em + var(--s2));
+  font-style: italic;
+  white-space: normal;
+}
 .titles th:not(:first-child), .titles td:not(:first-child) { white-space: nowrap; }
 .titles td a { color: var(--ink); text-decoration: none; }
 .titles td a:hover { color: var(--accent); }

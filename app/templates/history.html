@@ -113,9 +113,16 @@
       {% for c in titles %}
         <tr>
           {# The mark from the sigil ring, at reading size, so the table and
-             the rings on this page say the same thing without a legend. #}
-          <td class="name" data-label="Title" title="{{ c.description }}">
+             the rings on this page say the same thing without a legend.
+
+             The rule is written under the name rather than parked in a title
+             attribute. Two columns leave the room for it, and a hover is a
+             poor place for the one sentence that says what a crest is for --
+             it cannot be seen at a glance, and on a phone it cannot be seen
+             at all. #}
+          <td class="name" data-label="Title">
             <span class="titlemark {{ c.colour }}">{{ sigilmark(c.code) }}</span>{{ c.name }}
+            <span class="tm rule">{{ c.description }}</span>
           </td>
           <td class="yr" data-year="now" data-label="Held now">
             {% if c.now %}
