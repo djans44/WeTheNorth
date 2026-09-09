@@ -223,7 +223,7 @@ CREST_GROUPS = (
 
 
 def crest_case(catalogue, mine):
-    """A manager's case: what they hold, and what they have won.
+    """A manager's case: what they hold, what they used to, what they won.
 
     Only what they have won. An unwon crest is a fact about the catalogue
     rather than about this manager, and twenty greyed-out names crowded out
@@ -231,12 +231,19 @@ def crest_case(catalogue, mine):
 
     `mine` arrives newest first, so instances[0] is the most recent -- the one
     worth showing before the rest are expanded.
+
+    Held rows come in two kinds. The one with no season is who holds the title
+    now; the rest are end-of-season snapshots, written so a season page can
+    ring its sigils with that year's titles. A manager with snapshots and no
+    live row held the title once and lost it, which is worth saying: these
+    change hands, and a page that only ever showed the current holder made
+    every past one disappear.
     """
     won = {}
     for r in mine:
         won.setdefault(r["crest_id"], []).append(r)
 
-    held, groups = [], []
+    held, past, groups = [], [], []
     for category, label in CREST_GROUPS:
         row = []
         for c in catalogue:
@@ -244,19 +251,20 @@ def crest_case(catalogue, mine):
                 continue
             got = won[c["crest_id"]]
             if c["standing"] == "held":
-                # Held rows come in two kinds. The one with no season is who
-                # holds the title now; the rest are end-of-season snapshots,
-                # kept so a season page can ring its sigils with that year's
-                # titles. Only the first is a title this manager holds.
                 live = [r for r in got if r["season_year"] is None]
-                if live:
-                    held.append(dict(c, count=1, instances=live, latest=live[0]))
+                years = sorted(r["season_year"] for r in got
+                               if r["season_year"] is not None)
+                shown = live or got
+                entry = dict(c, count=1, instances=shown, latest=shown[0],
+                             seasons=years)
+                (held if live else past).append(entry)
                 continue
             row.append(dict(c, count=len(got), instances=got, latest=got[0]))
         if row:
             groups.append({"label": label, "crests": row})
     held.sort(key=lambda c: c["sort_order"])
-    return held, groups
+    past.sort(key=lambda c: c["sort_order"])
+    return held, past, groups
 
 
 def season_roll(rows):
@@ -634,7 +642,7 @@ def team(request: Request, name: str):
         latest_keeper = query(conn, """
             select max(season_year) as y from keeper_selections
         """)[0]["y"]
-    held_crests, crest_groups = crest_case(crest_list, my_crests)
+    held_crests, past_crests, crest_groups = crest_case(crest_list, my_crests)
 
     keeper_groups = group_runs(keepers, "season_year")
     keeper_years = [g["key"] for g in keeper_groups]
@@ -668,7 +676,8 @@ def team(request: Request, name: str):
                  "wins_streak": wins_streak, "losses_streak": losses_streak,
                  "rival_spells": rival_spells,
                  "rival_current": rival_current,
-                 "held_crests": held_crests, "crest_groups": crest_groups,
+                 "held_crests": held_crests, "past_crests": past_crests,
+                 "crest_groups": crest_groups,
                  "keepers": keeper_groups, "keeper_open": keeper_open,
                  "projection": proj_rows[0] if proj_rows else None})
 

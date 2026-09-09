@@ -1488,6 +1488,12 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .crest.held.gold   { border-left-color: var(--gold); }
 .crest.held.silver { border-left-color: var(--silver); }
 .crest.held.bronze { border-left-color: var(--bronze); }
+/* A title that has moved on. The colour stays, because it is still which
+   crest it was; the border goes dotted, because they no longer hold it. Said
+   with the line rather than by dimming the card -- these are won titles, not
+   faded ones, and the heading above them already says they are over. */
+.crest.held.past { border-left-style: dotted; }
+
 .crest > summary:hover .crest-more { border-color: var(--accent); }
 
 /* Won more than once. The count matters more than any single instance for a

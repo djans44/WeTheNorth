@@ -150,7 +150,7 @@
   <section id="crests">
     <h2>Crests of honour</h2>
 
-    {% if not crest_groups and not held_crests %}
+    {% if not crest_groups and not held_crests and not past_crests %}
       <p class="note">Nothing won yet.</p>
     {% endif %}
 
@@ -169,6 +169,29 @@
               <span class="crest-more" aria-hidden="true"></span>
               <span class="crest-what">{{ c.description }}</span>
               <span class="tm">{{ c.latest.detail }}</span>
+              {% if c.seasons %}
+                <span class="tm">At the close of {{ c.seasons|join(", ") }}</span>
+              {% endif %}
+            </summary>
+          </details>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# Titles change hands, so a page that showed only the current holder
+       made every past one disappear. Same card, same colours, and the
+       seasons in place of the standing to say it is over. #}
+    {% if past_crests %}
+      <h3 class="record-group">Titles once held</h3>
+      <div class="crest-grid">
+        {% for c in past_crests %}
+          <details class="crest held past {{ c.colour }}">
+            <summary title="{{ c.description }}">
+              <span class="crest-name">{{ c.name }}</span>
+              <span class="crest-more" aria-hidden="true"></span>
+              <span class="crest-what">{{ c.description }}</span>
+              <span class="tm">At the close of {{ c.seasons|join(", ") }}</span>
+              <span class="tm">{{ c.latest.detail if c.latest.detail }}</span>
             </summary>
           </details>
         {% endfor %}
