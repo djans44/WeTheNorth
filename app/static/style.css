@@ -67,6 +67,17 @@
   --field-bg:    #faf7ee;
 
   /* --- board and keeper marks --- */
+  /* A crest's field, one per category. Six of the seven are the palette's
+     own inks darkened enough to carry parchment on top; only the scoring
+     blue is new, because nothing in the palette was a blue. */
+  --crest-silverware:   var(--gold-deep);
+  --crest-scoring:      #2f4a63;
+  --crest-weekly:       #5f6470;
+  --crest-keepers:      var(--win);
+  --crest-transactions: #8a5626;
+  --crest-rivalry:      var(--accent);
+  --crest-honours:      var(--ground-soft);
+
   --mark-kept: #e6cdc4;
   --mark-hold: #cfd9e2;
   --mark-void: #d8cfe0;
@@ -1562,6 +1573,45 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .keeper-grid h3 a:hover { text-decoration: underline; }
 
 /* ---- crests of honour ---- */
+
+/* The shield. A field in the crest's category colour, a dark edge, and the
+   charge in parchment on top. Sized by a variable rather than width/height
+   attributes so one macro serves the card and the catalogue. */
+.crest-shield {
+  flex: 0 0 auto;
+  width: var(--shield, 56px);
+  height: calc(var(--shield, 56px) * 1.2);
+}
+.crest-shield .field { fill: var(--crest-cat, var(--ink-soft)); }
+.crest-shield .edge {
+  fill: none;
+  stroke: var(--ink);
+  stroke-opacity: 0.55;
+  stroke-width: 2;
+}
+.crest-shield .charge { fill: var(--parchment); fill-rule: evenodd; }
+/* Two charges are drawn as outlines rather than fills -- the coin stacks
+   because filled ellipses that close merge into one blob, the harp because
+   strings are lines. */
+.crest-shield .line { fill: none; stroke: var(--parchment); }
+/* And two are numerals, which say three contracts and third place more
+   plainly than any device for either. */
+.crest-shield .numeral { fill: var(--parchment); font-family: var(--display); font-weight: 600; }
+
+.crest-shield.silverware   { --crest-cat: var(--crest-silverware); }
+.crest-shield.scoring      { --crest-cat: var(--crest-scoring); }
+.crest-shield.weekly       { --crest-cat: var(--crest-weekly); }
+.crest-shield.keepers      { --crest-cat: var(--crest-keepers); }
+.crest-shield.transactions { --crest-cat: var(--crest-transactions); }
+.crest-shield.rivalry      { --crest-cat: var(--crest-rivalry); }
+.crest-shield.honours      { --crest-cat: var(--crest-honours); }
+
+/* A card with a shield puts it beside the text rather than above it: the
+   grid is already only 15rem wide and the shield is as tall as the two
+   lines it sits next to. */
+.crest.blazoned > summary { display: flex; align-items: flex-start; gap: var(--s3); }
+.crest.blazoned > summary > .lines { flex: 1 1 auto; min-width: 0; }
+.crest.blazoned > .crest-all { margin-left: calc(56px + var(--s3)); }
 
 .crest-grid {
   display: grid;

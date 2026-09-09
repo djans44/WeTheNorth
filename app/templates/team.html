@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar, leaf, recordlist %}
+{% from "crestart.html" import crestshield %}
 {% block title %}{{ owner.username }} | We the North{% endblock %}
 
 {% block content %}
@@ -204,14 +205,20 @@
         {% for c in group.crests %}
           {# A <details> so the same control does both jobs: the title
              attribute explains the crest on hover, and opening it explains it
-             on a phone, where there is no hover, alongside every instance. #}
-          <details class="crest">
+             on a phone, where there is no hover, alongside every instance.
+
+             The shield sits beside the text, not above it: it is as tall as
+             the two lines next to it, which is what decided 56px. #}
+          <details class="crest blazoned">
             <summary title="{{ c.description }}">
-              <span class="crest-name">{{ c.name }}</span>
-              {% if c.count > 1 %}<span class="crest-n">&times;{{ c.count }}</span>{% endif %}
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="tm">{{ crest_when(c.latest) }}</span>
+              {{ crestshield(c.code, c.category) }}
+              <span class="lines">
+                <span class="crest-name">{{ c.name }}</span>
+                {% if c.count > 1 %}<span class="crest-n">&times;{{ c.count }}</span>{% endif %}
+                <span class="crest-more" aria-hidden="true"></span>
+                <span class="crest-what">{{ c.description }}</span>
+                <span class="tm">{{ crest_when(c.latest) }}</span>
+              </span>
             </summary>
             {% if c.count > 1 %}
               <ol class="crest-all">
