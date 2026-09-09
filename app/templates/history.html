@@ -74,27 +74,31 @@
   {% if titles %}
   <section id="titles">
     <h2>Titles held</h2>
-    <p class="note">Seven crests only one manager holds at a time. Every one
-      of them can be taken; pick a season to see who held it then.</p>
+    <p class="note">Seven crests only one manager holds at a time, and every
+      one of them can be taken. Who holds each now, or who held it at the
+      close of any season.</p>
 
-    {# One season at a time, not all of them at once: a column per year is a
-       table that gets worse every September. The same strip and the same
-       script the week and keeper pickers use -- it hides by attribute, and
-       a table cell hides as happily as a panel. With the script off every
-       column stays on screen, which is the old table and still correct. #}
-    {% if title_years %}
-      <nav class="pickstrip" id="yearstrip">
+    {# One column at a time, not all of them at once: a column per season is
+       a table that gets worse every September. The same script the week and
+       keeper pickers use -- it hides by attribute, and a table cell hides as
+       happily as a panel, so a heading and its column go together. With the
+       script off every column stays on screen, which is the whole lineage
+       and still correct. #}
+    <p class="field short titlepicker">
+      <label for="titlepick">Show</label>
+      <select id="titlepick">
+        <option value="now">Held now</option>
         {% for y in title_years %}
-          <a href="#titles" data-year="{{ y }}"
-             class="{% if loop.first %}on{% endif %}">{{ y }}</a>
+          <option value="{{ y }}">{{ y }}</option>
         {% endfor %}
-      </nav>
-    {% endif %}
+      </select>
+    </p>
 
     <table class="titles">
       <thead>
         <tr>
-          <th>Title</th><th>Held now</th>
+          <th>Title</th>
+          <th class="yr" data-year="now">Held now</th>
           {% for y in title_years %}
             <th class="yr" data-year="{{ y }}">At the close of {{ y }}</th>
           {% endfor %}
@@ -108,7 +112,7 @@
           <td class="name" data-label="Title" title="{{ c.description }}">
             <span class="titlemark {{ c.colour }}">{{ sigilmark(c.code) }}</span>{{ c.name }}
           </td>
-          <td data-label="Held now">
+          <td class="yr" data-year="now" data-label="Held now">
             {% if c.now %}
               <span class="avatar-line">
                 {{ avatar(c.now.owner_id, 24) }}

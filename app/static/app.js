@@ -180,7 +180,7 @@
   // manager's keeper seasons have the strip alone; three buttons need no
   // dropdown.
   var strips = function (stripSel, panelSel, attr, selectId) {
-    var nav = document.querySelector(stripSel);
+    var nav = stripSel ? document.querySelector(stripSel) : null;
     var pick = selectId ? document.getElementById(selectId) : null;
     if (!nav && !pick) { return; }
 
@@ -219,9 +219,10 @@
 
   strips("#weekstrip", ".week", "data-week", "weekpick");
   strips("#keeperstrip", ".keeper-season", "data-season", null);
-  // Table columns rather than panels, and the helper does not care
-  // which: it hides whatever the selector matches.
-  strips("#yearstrip", ".yr", "data-year", null);
+  // Table columns rather than panels, and a dropdown with no strip beside
+  // it. The helper cares about neither: it hides whatever the selector
+  // matches, and it drives from the select when there is no strip.
+  strips(null, ".yr", "data-year", "titlepick");
 
   // ---- toast ----
   var params = new URLSearchParams(window.location.search);

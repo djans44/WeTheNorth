@@ -615,6 +615,13 @@ h3 {
 /* The lineage of the titles that change hands. The first two columns carry
    the title and its current holder and want the room; the season columns are
    one name each and should not wrap. */
+/* .field sets a 9rem label column for the admin forms, which left "Show"
+   marooned from its own dropdown. Both classes, so this wins wherever it
+   sits in the file. */
+.field.titlepicker { margin-bottom: var(--s4); }
+.field.titlepicker > label { flex: 0 0 auto; }
+.field.titlepicker select { flex: 0 0 auto; min-width: 9rem; }
+
 .titles td.name { font-family: var(--body); }
 .titles th:not(:first-child), .titles td:not(:first-child) { white-space: nowrap; }
 .titles td a { color: var(--ink); text-decoration: none; }
