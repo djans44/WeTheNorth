@@ -1500,6 +1500,20 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   color: var(--gold-deep);
 }
 
+/* Whose it is. Only the season page's crests carry a name -- a manager's
+   own page has the name at the top of it -- so this sits between the title
+   and the detail there and simply never appears here. display is set rather
+   than inherited from .avatar-line's inline-flex, because the name has to
+   take its own line under the title. */
+.crest-who {
+  display: flex;
+  margin-top: 0.2rem;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+}
+.crest-who a { color: var(--ink); text-decoration: none; font-weight: 600; }
+.crest-who a:hover { color: var(--accent); }
+
 /* What the crest is for. Inside the summary and hidden until opened, so it
    lands directly under the title rather than below the line saying when it
    was won. The title attribute says the same thing on hover; this is how it

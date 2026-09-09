@@ -258,6 +258,30 @@ def crest_case(catalogue, mine):
     return held, groups
 
 
+def season_roll(rows):
+    """A season's honour roll: the titles it closed holding, then what it
+    handed out.
+
+    The mirror of crest_case(). That groups one manager's crests and needs no
+    name on them; this groups one season's and needs a name on every one. The
+    same grid renders both, so the shape has to match: a list of held crests
+    in sort order, then earned ones grouped by category.
+
+    Weekly crests are excluded by the caller. Sixty-odd of them would bury
+    the twelve that settle a season, and they belong beside the week that
+    produced them.
+    """
+    held = sorted((r for r in rows if r["standing"] == "held"),
+                  key=lambda r: r["sort_order"])
+    groups = []
+    for category, label in CREST_GROUPS:
+        won = [r for r in rows
+               if r["standing"] == "earned" and r["category"] == category]
+        if won:
+            groups.append({"label": label, "crests": won})
+    return held, groups
+
+
 def get_db():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -909,6 +933,20 @@ def season(request: Request, year: int):
             join owners ob on ob.owner_id = r.rival_owner_id
             where r.season_year = %s
         """, (year,))}
+        # The season's crests, and who took them. Held rows carrying this
+        # season are who held each title when it closed, which is not who
+        # holds it now -- see migration 038. Weekly crests are left out here
+        # and drawn beside their own week instead.
+        crest_rows = query(conn, """
+            select c.code, c.name, c.description, c.category, c.standing,
+                   c.colour, c.sort_order, oc.detail,
+                   o.owner_id, o.username
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where oc.season_year = %s and oc.week is null
+            order by c.sort_order, o.username
+        """, (year,))
         keepers = query(conn, KEEPER_HISTORY_SQL + """
             where ks.season_year = %s
             order by o.username, ks.cost_round
@@ -940,12 +978,14 @@ def season(request: Request, year: int):
 
     seeds = playoff_labels(standings, remaining)
     brackets = playoff_brackets(games)
+    titles, crest_groups = season_roll(crest_rows)
     return templates.TemplateResponse(
         request=request, name="season.html",
         context={"s": head[0], "standings": standings, "weeks": weeks,
                  "records": records, "open_week": open_week,
                  "seeds": seeds, "seed_key": seed_key(seeds, standings),
-                 "brackets": brackets,
+                 "brackets": brackets, "titles": titles,
+                 "crest_groups": crest_groups,
                  "keepers": group_runs(keepers, "username")})
 
 
