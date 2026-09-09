@@ -416,8 +416,15 @@ def held(conn, as_of=None):
     # would otherwise hold it off fourteen games. Aggregated here rather than
     # read from owner_all_time_stats, which is this same sum over every season
     # there has ever been and so cannot be cut at one.
-    for r in leaders(q(conn, """
+    #
+    # A tie on rate goes to the most points scored. Records repeat -- 2023
+    # closed with three managers on 18-10 apiece -- and a crest only one
+    # manager holds cannot be settled by the thing they are tied on. Points
+    # for is the league's own tiebreak everywhere else it needs one, from the
+    # wildcard seeds up.
+    for r in leaders(leaders(q(conn, """
         select owner_id, sum(wins) as wins, sum(losses) as losses,
+               sum(points_for) as points_for,
                round((sum(wins) + sum(ties) * 0.5)
                      / nullif(sum(wins) + sum(losses) + sum(ties), 0), 3)
                    as win_pct
@@ -425,7 +432,7 @@ def held(conn, as_of=None):
         where season_year <= %s
         group by owner_id
         having count(*) filter (where games_played > 0) >= %s
-    """, (cut, RECORD_SEASONS)), "win_pct"):
+    """, (cut, RECORD_SEASONS)), "win_pct"), "points_for"):
         out["best_record"].append(
             (r["owner_id"], year, None,
              f"{r['wins']}-{r['losses']}, {r['win_pct']:.3f}", 0))
