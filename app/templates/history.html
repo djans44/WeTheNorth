@@ -72,14 +72,22 @@
           {# data-label rather than a content string in the stylesheet: the
              narrow layout drops the header row, and the label belongs next
              to the column it names. #}
+          {# The sigil goes in avatar-line, which is inline-flex, so the pair
+             right-aligns as one group. The team name stays outside it: .tm is
+             a block and would otherwise become a third flex item on the same
+             line instead of dropping beneath. #}
           <td class="win" data-label="Champion">
-            {{ s.champion }}<span class="tm">{{ s.champion_team }}</span></td>
+            <span class="avatar-line">{{ avatar(s.champion, 24) }}{{ s.champion }}</span>
+            <span class="tm">{{ s.champion_team }}</span></td>
           <td data-label="Runner-up">
-            {{ s.runner_up }}<span class="tm">{{ s.runner_up_team }}</span></td>
+            <span class="avatar-line">{{ avatar(s.runner_up, 24) }}{{ s.runner_up }}</span>
+            <span class="tm">{{ s.runner_up_team }}</span></td>
           <td data-label="Third">
-            {{ s.third_place }}<span class="tm">{{ s.third_place_team }}</span></td>
+            <span class="avatar-line">{{ avatar(s.third_place, 24) }}{{ s.third_place }}</span>
+            <span class="tm">{{ s.third_place_team }}</span></td>
           <td data-label="Best record">
-            {{ s.regular_season_leader }}<span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span></td>
+            <span class="avatar-line">{{ avatar(s.regular_season_leader, 24) }}{{ s.regular_season_leader }}</span>
+            <span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span></td>
         </tr>
       {% endfor %}
       </tbody>
