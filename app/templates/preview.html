@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, leaf %}
+{% block title %}We the North{% endblock %}
+
+{# The top of /history, standing on its own for someone who has not signed in.
+   No section rail and no site nav -- the whole point is that it goes nowhere.
+   The tables and their narrow-screen rules are shared with /history, which is
+   why the section ids are the same ones. #}
+{% block content %}
+<div class="page">
+  <header class="page-head tight">
+    <h1>{{ leaf(20) }}We the North</h1>
+  </header>
+
+  <section id="champions">
+    <h2>Champions</h2>
+    <table>
+      <thead>
+        <tr><th>Season</th><th class="name">Champion</th><th class="name">Runner-up</th>
+            <th class="name">Third</th><th class="name">Best record</th></tr>
+      </thead>
+      <tbody>
+      {% for s in seasons %}
+        <tr>
+          {# Not a link. Every season page is behind the gate, and a preview
+             that dead-ends on a redirect is worse than no link at all. #}
+          <td class="year">{{ s.season_year }}</td>
+          <td class="win" data-label="Champion">
+            <span class="avatar-line">{{ avatar(s.champion, 24) }}{{ s.champion }}</span>
+            <span class="tm">{{ s.champion_team }}</span></td>
+          <td data-label="Runner-up">
+            <span class="avatar-line">{{ avatar(s.runner_up, 24) }}{{ s.runner_up }}</span>
+            <span class="tm">{{ s.runner_up_team }}</span></td>
+          <td data-label="Third">
+            <span class="avatar-line">{{ avatar(s.third_place, 24) }}{{ s.third_place }}</span>
+            <span class="tm">{{ s.third_place_team }}</span></td>
+          <td data-label="Best record">
+            <span class="avatar-line">{{ avatar(s.regular_season_leader, 24) }}{{ s.regular_season_leader }}</span>
+            <span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section id="alltime">
+    <h2>All-time standings</h2>
+    <table>
+      <thead>
+        <tr>
+          <th class="name">Owner</th><th>Sea</th><th>W</th><th>L</th><th>Pct</th>
+          <th>PF</th><th>PPG</th><th>Playoffs</th><th>Best</th><th>Titles</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for o in standings %}
+        <tr>
+          <td class="name">
+            <span class="avatar-line">{{ avatar(o.username, 24) }}{{ o.username }}</span>
+          </td>
+          <td>{{ o.seasons_played }}</td>
+          <td>{{ o.wins }}</td>
+          <td>{{ o.losses }}</td>
+          <td>{{ "%.3f"|format(o.win_pct) }}</td>
+          <td>{{ "%.1f"|format(o.points_for) }}</td>
+          <td>{{ "%.1f"|format(o.points_per_game) }}</td>
+          <td>{{ o.playoff_appearances }}</td>
+          <td>{{ ordinal(o.best_finish) }}</td>
+          <td class="{% if o.titles %}win{% endif %}">{{ o.titles }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="decree">
+    <p>Every week of every season, the keepers, the contracts, the draft
+      board and the head-to-head roll are kept behind the gate.</p>
+    <p><a class="go" href="/">Enter the hall</a></p>
+  </section>
+</div>
+{% endblock %}

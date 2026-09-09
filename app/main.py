@@ -14,7 +14,7 @@ from starlette.middleware.sessions import SessionMiddleware
 load_dotenv()
 
 STATIC_DIR = pathlib.Path("app/static")
-PUBLIC_PATHS = {"/", "/login", "/logout", "/health"}
+PUBLIC_PATHS = {"/", "/login", "/logout", "/health", "/preview"}
 
 # Sixteen swatches for thirteen owners. Every one is dark enough that
 # parchment text sits on it legibly, which is why nothing in this codebase
@@ -345,6 +345,28 @@ def history(request: Request):
                  "grid": grid, "projections": projections,
                  "regular": regular, "postseason": postseason,
                  "record_names": RECORD_NAMES, "record_keys": ALL_RECORDS})
+
+
+@app.get("/preview", response_class=HTMLResponse)
+def preview(request: Request):
+    """A public page to send to someone who has not signed in yet.
+
+    The top of /history -- champions and the all-time table -- and nothing
+    else: no nav, no section rail, no way further in. Public on purpose, so
+    the link works before the recipient has a session.
+    """
+    with get_db() as conn:
+        seasons = query(conn, """
+            select * from season_results where champion is not null
+            order by season_year desc
+        """)
+        standings = query(conn, """
+            select * from owner_all_time_stats where seasons_played > 0
+            order by win_pct desc, points_for desc
+        """)
+    return templates.TemplateResponse(
+        request=request, name="preview.html",
+        context={"seasons": seasons, "standings": standings, "bare": True})
 
 
 @app.get("/teams", response_class=HTMLResponse)

@@ -18,8 +18,12 @@
   {% set path = request.url.path %}
   {# No nav at all when signed out. Every link bounces back to the gate, the
      Managers menu would list all thirteen names -- which are now the sign-in
-     addresses -- and the lone wordmark just repeats the gate's own title. #}
-  {% if request.session.get("username") %}
+     addresses -- and the lone wordmark just repeats the gate's own title.
+
+     `bare` drops it for a signed-in visitor too. The preview is a page to
+     send to someone outside, and it should look the same whoever opens it
+     rather than sprouting a menu for whoever happens to have a session. #}
+  {% if request.session.get("username") and not bare %}
   <nav class="sitenav">
     <a class="brand" href="/">We the North</a>
     <ul>
