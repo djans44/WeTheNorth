@@ -191,7 +191,6 @@ section:last-child { border-bottom: 0; }
 .page-head.stuck.condensed .leaf,
 .page-head.stuck.condensed .rivalline,
 .page-head.stuck.condensed .pastrivals { display: none; }
-.page-head.stuck.condensed .headline { display: contents; }
 .page-head.stuck.condensed h1.titled {
   gap: var(--s3);
   margin: 0;
@@ -206,8 +205,6 @@ section:last-child { border-bottom: 0; }
    leaf is gone here and the chevron was overlapping the first title, so it
    takes its own width back. */
 .page-head.stuck.condensed h1.titled::after { margin-right: 0; }
-.page-head.stuck.condensed .held-case { margin: 0; }
-.page-head.stuck.condensed .held-crest .tm { display: none; }
 
 /* Hidden until the header condenses: at the top of the page there is nowhere
    to go back to. An anchor rather than a script, so the browser does the
@@ -340,16 +337,6 @@ section:last-child { border-bottom: 0; }
   max-width: 46ch;
   font-family: var(--prose);
   color: var(--ink-muted);
-}
-
-/* The rival and the titles on one line, centred under the name. Both say who
-   this manager currently is; they are one line's worth of fact between them. */
-.headline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s2) var(--s4);
 }
 
 /* The rival, under a manager's name. Centred with the title above it rather
@@ -1104,6 +1091,56 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   user-select: none;
 }
 
+/* A held crest rings the sigil. The ring replaces the hairline rather than
+   sitting outside it, so a ringed sigil and a plain one are the same size and
+   sit on the same line -- an outline or an extra border would have nudged
+   every table row a pixel or two. */
+.avatar.ringed {
+  position: relative;
+  /* Proportional rather than a flat width: 3px is a ring on a 24px sigil in a
+     table and a hairline on the 96px one in a header. Clamped at both ends so
+     it never thins to nothing or swallows the initials. box-sizing is
+     border-box site-wide, so a thicker ring eats into the sigil rather than
+     growing it, and a ringed sigil still lines up with a plain one.
+
+     The outer hairline is what makes it read at 24px. Without it the ring's
+     outside edge dissolves into the cream and only the inner edge shows, so
+     the ring looked half its width. It is a shadow rather than a second
+     border because a shadow costs no layout. */
+  border-width: clamp(3px, calc(var(--av-size) * 0.1), 8px);
+  border-style: solid;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px rgba(29, 27, 22, 0.35);
+}
+.avatar.ringed.gold   { --ring: var(--gold); }
+/* A lighter silver than the seed marks use: theirs sits on parchment, this
+   one has to hold its own against a dark sigil on one side and cream on the
+   other. */
+.avatar.ringed.silver { --ring: #a9acb7; }
+.avatar.ringed.bronze { --ring: var(--bronze); }
+
+/* The mark that says which crest, bottom-right on a disc of the page ground
+   so it reads against the sigil rather than on it. Clamped rather than a flat
+   percentage: 40% of a 24px sigil is 10px, which is under the size these
+   shapes survive, and 40% of the 96px header sigil would be a dinner plate.
+   It overlaps the initials at the small end on purpose -- a sigil nearly
+   always sits beside its manager's name, so the initials are what can afford
+   to be covered. */
+.sigil-mark {
+  position: absolute;
+  right: -8%;
+  bottom: -8%;
+  width: clamp(11px, 42%, 30px);
+  height: clamp(11px, 42%, 30px);
+  padding: clamp(1px, 4%, 4px);
+  box-sizing: content-box;
+  border-radius: 50%;
+  background: var(--panel-bg);
+}
+/* The mark takes the ring's own colour, so the two read as one thing. */
+.ringed .sigil-mark { fill: var(--ring); }
+.ringed.silver .sigil-mark { fill: var(--silver); }
+
 .avatar-line { display: inline-flex; align-items: center; gap: var(--s2); }
 
 /* A sigil above a name, for column headers too narrow to sit them side
@@ -1413,34 +1450,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .keeper-grid h3 a:hover { text-decoration: underline; }
 
 /* ---- crests of honour ---- */
-
-/* Held crests ride in the page header, beside the name: they say who this
-   manager currently is, which is a different claim from what they once did. */
-.held-case {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--s2);
-  margin: 0;
-}
-.held-crest {
-  padding: 0.2rem var(--s3);
-  text-align: left;
-  background: var(--field-bg);
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--rule);
-  border-radius: 2px;
-}
-/* Three colours, the same three the sigil ring uses. */
-.held-crest.gold   { border-left-color: var(--gold); }
-.held-crest.silver { border-left-color: var(--silver); }
-.held-crest.bronze { border-left-color: var(--bronze); }
-.held-crest b {
-  display: block;
-  font-family: var(--body);
-  font-size: var(--t-sm);
-}
-.held-crest .tm { display: block; font-size: 0.72rem; }
 
 .crest-grid {
   display: grid;
@@ -1867,7 +1876,7 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
 
   /* Both navigation bars scroll away here -- pinned, they and the header
      took the top third of an 844px screen before the page began. The header
-     stays, but as a thin strip: the name, the titles, and a way back up. It
+     stays, but as a thin strip: the sigil, the name, and a way back up. It
      is the one thing worth the room, because a phone screen of crests says
      nothing about whose they are. */
   .sectionnav { position: static; }
@@ -1885,8 +1894,6 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
     --av-size: 26px;
     --av-font: 11px;
   }
-  .page-head.stuck.condensed .held-crest { padding: 0.1rem 0.4rem; }
-  .page-head.stuck.condensed .held-crest b { font-size: 0.68rem; }
 
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }

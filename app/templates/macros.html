@@ -30,9 +30,53 @@
 
 {% macro avatar(who, size=32) -%}
   {%- set a = av(who) -%}
-  <span class="avatar"
+  {#- A held crest rings the sigil wherever it is drawn, so the champion is
+      recognisable in a table without a legend, and the mark saying which
+      crest is drawn at every size with it. It overlaps the initials at the
+      small end, which is the trade made deliberately: a sigil almost always
+      has its manager's name beside it, so the initials are the part that can
+      afford to be covered. -#}
+  <span class="avatar{% if a.ring %} ringed {{ a.ring.colour }}{% endif %}"
         style="--av-bg: {{ a.bg }}; --av-size: {{ size }}px; --av-font: {{ (size * 0.4)|round|int }}px;"
-        title="{{ a.name }}">{{ a.initials }}</span>
+        title="{{ a.name }}{% if a.ring %} &mdash; {{ a.ring.name }}{% endif %}">
+    {{- a.initials -}}
+    {%- if a.ring %}{{ sigilmark(a.ring.code) }}{% endif -%}
+  </span>
+{%- endmacro %}
+
+
+{# The mark on a ringed sigil. Seven held crests, but the ring's colour has
+   already narrowed it: gold is the champion alone, bronze is one of two, and
+   only silver has four to tell apart. So these need to be distinct from each
+   other, not from all twenty-eight. Blunt shapes, nothing finer than a
+   stroke, because even at 44px the mark is about 14px across. #}
+{% macro sigilmark(code) -%}
+  <svg class="sigil-mark" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+    {%- if code == "reigning_champion" %}
+      <path d="M2.8 15.6V5.2l4 3.4L10 3.4l3.2 5.2 4-3.4v10.4z"/>
+    {%- elif code == "best_record" %}
+      <path d="M10 2.6l2.3 4.8 5.2.7-3.8 3.7.9 5.2-4.6-2.5-4.6 2.5.9-5.2L2.5 8.1l5.2-.7z"/>
+    {%- elif code == "fiercest_rival" %}
+      {#- Crossed swords. Two pointed blades corner to corner and a horizontal
+          bar across each for a crossguard -- horizontal rather than square to
+          the blade, because a 45-degree bar samples into a row of diamonds
+          once the mark is under 20px. At 11px what survives is a bold X,
+          which is all it has to do there: tell itself apart from the crown,
+          the star and the bolt. The points and the guards are for the 96px
+          sigil on the manager page. -#}
+      <path d="M19 1L17.96 4.16 3.66 18.46 1.54 16.34 15.84 2.04z
+               M1 1L2.04 4.16 16.34 18.46 18.46 16.34 4.16 2.04z
+               M2.9 13.4h5.6v1.8H2.9z M11.5 13.4h5.6v1.8h-5.6z"/>
+    {%- elif code == "most_weekly_highs" %}
+      <path d="M11.8 2.2L4.2 11h4.3l-1 6.8L16 8.6h-4.6z"/>
+    {%- elif code == "most_narrow_wins" %}
+      <path d="M13.6 2.8a7.6 7.6 0 1 0 3.6 10.4 6 6 0 0 1-3.6-10.4z"/>
+    {%- elif code == "most_narrow_losses" %}
+      <path d="M10 2.4c3.4 4.3 5.2 7.2 5.2 9.3a5.2 5.2 0 0 1-10.4 0c0-2.1 1.8-5 5.2-9.3z"/>
+    {%- else %}
+      <path d="M10 17.4L3.4 8.2h4V2.8h5.2v5.4h4z"/>
+    {%- endif %}
+  </svg>
 {%- endmacro %}
 
 

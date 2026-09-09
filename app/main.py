@@ -334,6 +334,22 @@ def owner_avatars():
                            avatar_bg, avatar_initials
                     from owners
                 """)
+                # The held crest each manager wears on their sigil. One
+                # apiece: whoever holds two wears the lower sort_order, and
+                # their page lists both. Looked up here rather than in every
+                # query because a sigil is drawn from a username as often as
+                # from an owner_id.
+                rings = {}
+                for r in query(conn, """
+                    select distinct on (oc.owner_id)
+                           oc.owner_id, c.code, c.name, c.colour
+                    from owner_crests oc
+                    join crests c on c.crest_id = oc.crest_id
+                    where c.standing = 'held'
+                    order by oc.owner_id, c.sort_order
+                """):
+                    rings[r["owner_id"]] = {"code": r["code"], "name": r["name"],
+                                            "colour": r["colour"]}
             found = {}
             for r in rows:
                 entry = {
@@ -341,6 +357,7 @@ def owner_avatars():
                     "bg": r["avatar_bg"],
                     "initials": initials_for(
                         r["username"], r["last_name"], r["avatar_initials"]),
+                    "ring": rings.get(r["owner_id"]),
                 }
                 found[r["owner_id"]] = entry
                 found[r["username"].lower()] = entry
@@ -374,7 +391,8 @@ def av(who):
     if entry:
         return entry
     label = "" if isinstance(who, int) else str(who or "")
-    return {"name": label, "bg": "#33383D", "initials": initials_for(label)}
+    return {"name": label, "bg": "#33383D", "initials": initials_for(label),
+            "ring": None}
 
 
 templates.env.globals["av"] = av

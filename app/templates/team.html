@@ -89,8 +89,12 @@
       </ul>
     </details>
     {# The lede restated the numbers in the tables below it. The rival does
-       not appear anywhere else and is the thing a manager wants named. #}
-    <div class="headline">
+       not appear anywhere else and is the thing a manager wants named.
+
+       The titles held used to sit beside it. The sigil says them now -- the
+       ring's colour and the mark on it are the same three colours and the
+       same seven crests -- so a row of chips alongside was the name said
+       twice. They keep their full entry in the crests section below. #}
     {% if rival_spells %}
       <p class="rivalline">
         <span class="lbl">{{ "Current rival" if rival_current else "Last rival" }}</span>
@@ -101,20 +105,6 @@
         </span>
       </p>
     {% endif %}
-
-    {# Titles sit beside the rival rather than under it: both say who this
-       manager currently is, and they are one line's worth of fact. #}
-    {% if held_crests %}
-      <p class="held-case">
-        {% for c in held_crests %}
-          <span class="held-crest {{ c.colour }}" title="{{ c.description }}">
-            <b>{{ c.name }}</b>
-            <span class="tm">{{ c.latest.detail }}</span>
-          </span>
-        {% endfor %}
-      </p>
-    {% endif %}
-    </div>
 
     {% if rival_spells|length > 1 %}
       <p class="pastrivals">Before that,
@@ -164,8 +154,8 @@
       <p class="note">Nothing won yet.</p>
     {% endif %}
 
-    {# The header names the titles; this is where they explain themselves. A
-       chip in a bar that condenses on scroll has nowhere to open into. #}
+    {# The sigil's ring says a manager holds something; this is the only place
+       that says what, and what it took. #}
     {% if held_crests %}
       <h3 class="record-group">Titles held</h3>
       <div class="crest-grid">
