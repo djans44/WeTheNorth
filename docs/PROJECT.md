@@ -389,11 +389,10 @@ Everything else requires a session (middleware redirects to `/`).
 ### League
 | Route | Purpose |
 |---|---|
-| `GET /history` | Champions, all-time standings, head-to-head grid, records, projection stats |
-| `GET /teams` | All managers |
-| `GET /team/{name}` | One manager: season by season, keepers, rival, head-to-head, best/worst weeks, projections |
-| `GET /seasons` | Season index |
-| `GET /season/{year}` | Standings, keepers, and week-by-week results |
+| `GET /history` | Champions, all-time standings, records split regular season and playoffs, head-to-head grid, projection stats |
+| `GET /team/{name}` | One manager: season by season, keepers, rival, head-to-head, best/worst weeks, projections. The Managers tab points at your own; the submenu reaches everyone else |
+| `GET /season/{year}` | Standings or the two playoff brackets, week-by-week results, records, keepers |
+| `GET /preview` | Public. Champions and the all-time table, no nav and no links, to send to someone who has not signed in |
 | `GET /current` | Redirects to the newest season |
 | `GET /rules` | The full league rules. Rivalry weights and league size come from the code and the `seasons` row, not prose |
 | `GET /draft-order`, `POST /draft-order/pick` | Lottery board and slot selection |

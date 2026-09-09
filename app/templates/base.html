@@ -39,12 +39,16 @@
       </li>
       <li><a href="/history" {% if path == '/history' %}class="on"{% endif %}>History</a></li>
       <li class="has-menu">
-        <a href="/teams" {% if path.startswith('/team') %}class="on"{% endif %}>Managers</a>
+        {# Your own page, not an index. There was a /teams list; it ranked
+           everyone by win percentage, which /history already does better,
+           and nobody was going there to read it. The submenu is how you
+           reach someone else. #}
+        <a href="/team/{{ request.session['username']|lower }}"
+           {% if path.startswith('/team') %}class="on"{% endif %}>Managers</a>
         <ul class="submenu">
           {% for o in nav_owners() %}
             <li><a href="/team/{{ o.username|lower }}">{{ o.username }}</a></li>
           {% endfor %}
-          <li class="sep"><a href="/teams">All managers</a></li>
         </ul>
       </li>
       <li class="has-menu">

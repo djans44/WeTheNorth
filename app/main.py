@@ -369,19 +369,6 @@ def preview(request: Request):
         context={"seasons": seasons, "standings": standings, "bare": True})
 
 
-@app.get("/teams", response_class=HTMLResponse)
-def teams(request: Request):
-    with get_db() as conn:
-        owners = query(conn, """
-            select o.*, ow.is_retired from owner_all_time_stats o
-            join owners ow on ow.owner_id = o.owner_id
-            where o.seasons_played > 0
-            order by o.win_pct desc, o.points_for desc
-        """)
-    return templates.TemplateResponse(
-        request=request, name="teams.html", context={"owners": owners})
-
-
 @app.get("/team/{name}", response_class=HTMLResponse)
 def team(request: Request, name: str):
     with get_db() as conn:
