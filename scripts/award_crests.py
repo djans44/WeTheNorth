@@ -440,10 +440,17 @@ def held(conn, as_of=None):
     # Each manager's newest rival as at the cut, then their record against
     # that person over every meeting up to it. Aggregated here for the same
     # reason: owner_head_to_head counts every game ever played.
+    #
+    # Rate first, then meetings, then points scored in those meetings. A
+    # perfect record is easy to tie -- 2023 closed with Joey and Tom both 4-0
+    # over four games -- and this is a crest about one rivalry, so the last
+    # word goes to how they scored inside it rather than to a career total
+    # made up mostly of games against everybody else.
     h2h = {(r["owner_id"], r["opponent_owner_id"]): r for r in q(conn, """
         select owner_id, opponent_owner_id, count(*) as games,
                count(*) filter (where result = 'W') as wins,
-               count(*) filter (where result = 'L') as losses
+               count(*) filter (where result = 'L') as losses,
+               sum(points_for) as points_for
         from game_log where season_year <= %s
         group by owner_id, opponent_owner_id
     """, (cut,))}
@@ -457,21 +464,31 @@ def held(conn, as_of=None):
         if rec and rec["games"] >= RIVAL_MEETINGS:
             rivals.append({"owner_id": r["owner_id"], "games": rec["games"],
                            "rate": rec["wins"] / rec["games"],
+                           "points_for": rec["points_for"],
                            "wins": rec["wins"], "losses": rec["losses"]})
-    for r in leaders(leaders(rivals, "rate"), "games"):
+    for r in leaders(leaders(leaders(rivals, "rate"), "games"), "points_for"):
         out["fiercest_rival"].append(
             (r["owner_id"], year, None,
              f"{r['wins']}-{r['losses']} against their rival", 0))
 
-    # Most weeks topping the league's scoring.
-    for r in leaders(q(conn, """
-        select owner_id, count(*) as n from (
-            select owner_id, rank() over (
+    # Most weeks topping the league's scoring, a tie going to the most points
+    # scored. Two managers on three weeks apiece was how 2022 closed, and a
+    # count that low ties easily.
+    #
+    # The filter counts the top weeks while the sum runs over every regular
+    # season game, which is why the rank is computed in the subquery and
+    # tested in the outer one rather than filtered there.
+    for r in leaders(leaders(q(conn, """
+        select owner_id,
+               count(*) filter (where rk = 1) as n,
+               sum(points_for) as points_for
+        from (
+            select owner_id, points_for, rank() over (
                        partition by season_year, week order by points_for desc) as rk
             from game_log
             where game_type = 'regular' and season_year <= %s) t
-        where rk = 1 group by owner_id
-    """, (cut,)), "n"):
+        group by owner_id
+    """, (cut,)), "n"), "points_for"):
         out["most_weekly_highs"].append(
             (r["owner_id"], year, None, f"{r['n']} weeks", 0))
 
