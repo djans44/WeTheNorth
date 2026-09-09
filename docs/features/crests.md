@@ -31,9 +31,9 @@ one is a record, the other is a title.
 
 | Code | Name | Held by |
 |---|---|---|
-| `reigning_champion` | The reigning champion | Winner of the most recent completed championship |
-| `reigning_sacko` | Holder of the Sacko | Whoever finished twelfth most recently |
-| `fiercest_rival` | Fiercest rival | The best win rate against their own rival, minimum four meetings |
+| `reigning_champion` | Sitter of the Iron Throne | Winner of the most recent completed championship |
+| `fiercest_rival` | Bane of Their Rival | The best win rate against their own rival, minimum four meetings |
+| `reigning_sacko` | Lord of the Wastes | Whoever finished twelfth most recently |
 
 More can be added; these three are enough to prove the mechanism.
 
@@ -89,6 +89,12 @@ allowed to get noisy:
 ## What the data can actually support
 
 Checked against the database rather than assumed:
+
+The names are titles rather than descriptions -- Crowned, The Besieged,
+Oathbreaker, Master of Coin -- and the catalogue in `sql/migrations/` is the
+list of record. Two came straight from the site's existing language: a highest
+week is a Storm-Bringer where the records call it a mightiest week, and the
+biggest margin is The Field of Fire where they call it a greatest rout.
 
 | Source | Rows | Seasons | Consequence |
 |---|---|---|---|
@@ -240,12 +246,11 @@ shared.
 expected, not a bug — an unearned crest still shows dimmed in the case, which is
 the point of showing what is available to chase.
 
-### Tenure
+### Tenure — dropped
 
-| Code | Name | Earned by |
-|---|---|---|
-| `founding_member` | Founding member | Played in 2022 |
-| `veteran` | Veteran | Five seasons played |
+There are none. A crest for having been in the league rewards turning up, not
+doing anything, and the seasons table already says how long someone has played.
+`founding_member` and `veteran` were seeded in 031 and removed in 032.
 
 ### Honours — manual only, deferred
 
