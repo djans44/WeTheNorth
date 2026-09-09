@@ -399,23 +399,6 @@ h3 {
   color: var(--ink);
 }
 
-/* The way in, from the preview. A link rather than a button: it navigates,
-   and it is the only thing on that page that goes anywhere. */
-.go {
-  display: inline-block;
-  margin-top: var(--s3);
-  padding: 0.45rem var(--s5);
-  font-family: var(--body);
-  font-size: var(--t-md);
-  font-style: normal;
-  text-decoration: none;
-  color: var(--panel-bg);
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 2px;
-}
-.go:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
-
 .settled { margin: 0.4rem 0 0; font-size: var(--t-md); }
 
 /* Bracket or standings, one at a time. Two buttons rather than a select:
