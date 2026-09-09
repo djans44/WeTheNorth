@@ -29,13 +29,24 @@ one is a record, the other is a title.
 
 ### Held crests
 
-| Code | Name | Held by |
-|---|---|---|
-| `reigning_champion` | Sitter of the Iron Throne | Winner of the most recent completed championship |
-| `fiercest_rival` | Bane of Their Rival | The best win rate against their own rival, minimum four meetings |
-| `reigning_sacko` | Lord of the Wastes | Whoever finished twelfth most recently |
+| Code | Name | Ring | Held by |
+|---|---|---|---|
+| `reigning_champion` | Sitter of the Iron Throne | gold | Winner of the most recent completed championship |
+| `best_record` | The Ever-Victorious | silver | The best win rate in league history, minimum two seasons |
+| `fiercest_rival` | Bane of Their Rival | silver | The best win rate against their own rival, minimum four meetings |
+| `most_weekly_highs` | Master of Storms | silver | Has topped the league's scoring in more weeks than anyone |
+| `most_narrow_wins` | The Fortunate | silver | Has won more games by under a point than anyone |
+| `most_narrow_losses` | Hounded by Fate | bronze | Has lost more games by under a point than anyone |
+| `reigning_sacko` | Lord of the Wastes | bronze | Whoever finished twelfth most recently |
 
-More can be added; these three are enough to prove the mechanism.
+**Three ring colours, not seven.** Gold is the champion and nothing else,
+silver is a crest it is good to hold, bronze is one it is not. Seven colours
+around a 24px circle would have asked it to carry seven meanings; three it can
+manage, and the mark overlaid on the sigil says which crest. A manager wearing
+bronze is wearing it for one of two reasons, and the mark is what separates the
+wooden spoon from a habit of losing by inches.
+
+More can be added; these seven are enough to prove the mechanism.
 
 **Each crest carries its own tiebreak**, written into its rule rather than left
 to a policy at the top of the file -- what separates two champions is not what
@@ -46,8 +57,23 @@ every holder rather than to one of them picked arbitrarily.
 | Code | Tiebreak |
 |---|---|
 | `reigning_champion` | None needed; one championship game, one winner |
-| `reigning_sacko` | None needed; one twelfth place |
+| `best_record` | Shared. Two managers on the same rate over different game counts are equally right |
 | `fiercest_rival` | Meetings played, then shared |
+| `most_weekly_highs` | Shared |
+| `most_narrow_wins` | The margins added together, smallest winning |
+| `most_narrow_losses` | The margins added together, smallest winning |
+| `reigning_sacko` | None needed; one twelfth place |
+
+The two margin tallies need their tiebreak more than the others: both come out
+as four-way ties on two apiece. Summing rather than taking the tightest single
+game is the right question -- two wins by 0.34 and 0.38 is a closer run than
+two by 0.23 and 0.75, though the second holds the tighter one. It is also the
+difference between David and Curtis holding The Fortunate.
+
+Both rate crests carry a floor, for the same reason. `best_record` needs two
+seasons: a newcomer at 10-4 would otherwise hold the best record in league
+history off fourteen games. As it stands Josh holds it at 35-21, with Niall
+second on .607 from half the games.
 
 ### The avatar ring and mark
 
@@ -112,9 +138,22 @@ imported, not because twelve managers all sat on their hands. Computing it over
 those seasons would award it to everyone. A season with no transaction rows at
 all must be skipped, not read as zero.
 
-`four_year_man` is in the catalogue but is currently unearnable: there have been
-three keeper seasons and the longest any player has been held is three years.
-It becomes reachable in 2026.
+Three crests were seeded and then dropped in 033, having turned out to be
+unawardable rather than merely unawarded:
+
+- `four_year_man`, holding a player four straight seasons. Three keeper seasons
+  exist and the longest hold is three.
+- `set_and_forget`, a season with no waiver adds. Over 2022-2024 it would have
+  gone to all twelve, the table being empty rather than the managers idle.
+- `forfeit`, missing a keeper window. `keeper_submissions` holds no rows, so
+  nothing can tell a forfeit from a manager who had fewer than three to keep.
+  Left in, it would have read as "nobody has ever missed one" when in truth
+  nothing was looking.
+
+Three more are in the catalogue, computed, and currently held by nobody. That is
+the honest state rather than a gap: `dynasty` waits on a repeat champion,
+`gauntlet` on someone beating every opponent they face, and `rivalry_week_high`
+on 2026 week 10 being played.
 
 ## Schema
 
@@ -230,7 +269,7 @@ meeting, and it is 2026's tenth.
 
 | Code | Name | Scope | Earned by |
 |---|---|---|---|
-| `fiercest_rival` | Fiercest rival | career | The best win rate against your own rival, across every meeting ever |
+| `fiercest_rival` | Bane of Their Rival | career | The best win rate against your own rival, across every meeting ever |
 | `rivalry_week_high` | Lord of the grudge | season | Highest score of anyone in rivalry week |
 
 `fiercest_rival` is honest backfill: it counts real head-to-head results, and
