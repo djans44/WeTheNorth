@@ -249,6 +249,35 @@ section:last-child { border-bottom: 0; }
   color: var(--ink-muted);
 }
 
+/* The rival, under a manager's name. Centred with the title above it rather
+   than set to the gutter like a lede: it belongs to the name, not to the
+   page. */
+.rivalline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem var(--s3);
+  margin: 0;
+}
+.rivalline .lbl {
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  color: var(--ink-muted);
+}
+.rivalline a { font-weight: 600; color: var(--ink); text-decoration: none; }
+.rivalline a:hover { color: var(--accent); }
+.rivalline .tm { display: inline; }
+
+.pastrivals {
+  margin: 0.35rem 0 0;
+  font-family: var(--prose);
+  font-size: var(--t-sm);
+  font-style: italic;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
 .crumbs { margin: var(--s4) var(--pad-gutter) 0; }
 .crumbs a { color: var(--ink-soft); }
 

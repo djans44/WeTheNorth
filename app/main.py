@@ -422,10 +422,32 @@ def team(request: Request, name: str):
             where t.owner_id = %s
             order by ks.season_year desc, ks.cost_round
         """, (oid,))
+        newest = _current_season(conn)
+    # Rivalries collapse into spells rather than a row per season. Twelve of
+    # the thirteen managers have had the same rival every year -- the pairing
+    # is solved from past meetings and comes out stable -- so a list by season
+    # printed one name five times over. Only Curtis has two, Niall having
+    # taken over when Theo retired.
+    rival_spells = []
+    for run in group_runs(rivals, "rival"):
+        years = [r["season_year"] for r in run["rows"]]
+        first, last = min(years), max(years)
+        rival_spells.append({
+            "rival": run["key"],
+            "rival_id": run["rows"][0]["rival_id"],
+            "span": str(first) if first == last else f"{first}–{last}",
+            "last": last,
+        })
+    # "Current" only if the spell reaches the newest season. Theo's ran to
+    # 2023 and he has not been in the league since; calling that current
+    # would be a plain untruth on his page.
+    rival_current = bool(rival_spells) and rival_spells[0]["last"] == newest
+
     return templates.TemplateResponse(
         request=request, name="team.html",
         context={"owner": owner, "seasons": seasons, "h2h": h2h,
-                 "best": best, "worst": worst, "rivals": rivals,
+                 "best": best, "worst": worst, "rival_spells": rival_spells,
+                 "rival_current": rival_current,
                  "keepers": group_runs(keepers, "season_year"),
                  "projection": proj_rows[0] if proj_rows else None})
 

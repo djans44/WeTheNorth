@@ -24,13 +24,28 @@
         {% endfor %}
       </ul>
     </details>
-    <p class="lede">
-      {{ owner.wins }}&ndash;{{ owner.losses }} across {{ owner.seasons_played }} season{{ "s" if owner.seasons_played != 1 }},
-      {{ owner.playoff_appearances }} playoff appearance{{ "s" if owner.playoff_appearances != 1 }},
-      {{ owner.titles }} title{{ "s" if owner.titles != 1 }}.
-      Best finish {{ ordinal(owner.best_finish) }}, average {{ owner.avg_finish }}.
-      {% if owner.is_retired %}No longer in the league.{% endif %}
-    </p>
+    {# The lede restated the numbers in the tables below it. The rival does
+       not appear anywhere else and is the thing a manager wants named. #}
+    {% if rival_spells %}
+      <p class="rivalline">
+        <span class="lbl">{{ "Current rival" if rival_current else "Last rival" }}</span>
+        <span class="avatar-line">
+          {{ avatar(rival_spells[0].rival_id, 28) }}
+          <a href="/team/{{ rival_spells[0].rival|lower }}">{{ rival_spells[0].rival }}</a>
+          <span class="tm">{{ rival_spells[0].span }}</span>
+        </span>
+      </p>
+      {% if rival_spells|length > 1 %}
+        <p class="pastrivals">Before that,
+          {% for r in rival_spells[1:] %}
+            {{ r.rival }} {{ r.span }}{% if not loop.last %}; {% endif %}
+          {%- endfor %}.
+        </p>
+      {% endif %}
+    {% endif %}
+    {% if owner.is_retired %}
+      <p class="pastrivals">No longer in the league.</p>
+    {% endif %}
   </header>
 
   <section>
@@ -76,21 +91,6 @@
         </div>
       {% endfor %}
     </div>
-  </section>
-  {% endif %}
-
-  {% if rivals %}
-  <section>
-    <h2>Rival</h2>
-    <p class="settled avatar-line">
-      {{ avatar(rivals[0].rival_id, 32) }}
-      <span><b>{{ rivals[0].rival }}</b>
-        <span class="tm">{{ rivals[0].season_year }}</span></span></p>
-    {% if rivals|length > 1 %}
-      <p class="note">Previously:
-        {% for r in rivals[1:] %}{{ r.rival }} ({{ r.season_year }}){% if not loop.last %}, {% endif %}{% endfor %}
-      </p>
-    {% endif %}
   </section>
   {% endif %}
 
