@@ -120,6 +120,23 @@
     });
   }
 
+  // ---- head-to-head: click a row to leave it lit ----
+  // Enhancement only: hovering already highlights a row in CSS. This is for
+  // a touch screen, which has no hover, and for reading down a column
+  // without losing which row you are on.
+  var h2h = document.querySelector("#h2h .grid tbody");
+  if (h2h) {
+    h2h.addEventListener("click", function (e) {
+      var tr = e.target.closest("tr");
+      if (!tr || !h2h.contains(tr)) { return; }
+      var already = tr.classList.contains("lit");
+      var i;
+      var lit = h2h.querySelectorAll("tr.lit");
+      for (i = 0; i < lit.length; i++) { lit[i].classList.remove("lit"); }
+      if (!already) { tr.classList.add("lit"); }
+    });
+  }
+
   // ---- season page: close the year picker on an outside click ----
   // <details> stays open until it is clicked again, which is right for a
   // disclosure and wrong for a menu. Enhancement only: without this the

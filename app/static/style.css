@@ -933,13 +933,43 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 
 .scroller { overflow-x: auto; }
 
-/* Head-to-head and rivalry grids: twelve columns of names. */
+/* Head-to-head and rivalry grids: twelve columns. */
 .grid { font-size: var(--t-sm); min-width: 46rem; }
+
+/* Sigils rather than names took the head-to-head from 46rem to something a
+   panel holds without scrolling at all on a desktop. */
+#h2h .grid { min-width: 32rem; }
+#h2h .grid tbody th { text-align: center; }
+
+/* The row's own sigil stays put while the grid scrolls sideways, which is
+   what a phone does with thirteen columns. Without it you scroll to a
+   column and no longer know whose row you are on.
+   The edge is drawn with an inset shadow rather than a border: the table
+   collapses its borders, so a border on a sticky cell belongs to the table
+   and slides away with everything else. */
+#h2h .grid tbody th,
+#h2h .grid thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel-bg);
+  box-shadow: inset -1px 0 0 var(--rule), inset 0 -1px 0 var(--rule);
+}
+
+/* Follow a row across thirteen columns. Hover for a pointer; click to leave
+   one lit, which is the only way to hold a row on a touch screen and useful
+   on a desktop too when you are reading down a column.
+   background-color, not background: the drawn-out diagonal on the cells a
+   manager cannot play sets background-image, so tinting only the colour
+   leaves the hatch on top of it rather than wiping it. .lit is added by
+   app.js -- without the script the hover still works. */
+#h2h .grid tbody tr:hover > *,
+#h2h .grid tbody tr.lit > * { background-color: var(--gold-ghost); }
+#h2h .grid tbody tr { cursor: pointer; }
 .grid th, .grid td { padding: 0.4rem 0.3rem; }
 .grid th { font-weight: 700; }
 .grid tbody th { text-align: left; white-space: nowrap; }
 .grid .chead { text-align: center; vertical-align: bottom; }
-.grid .chead .nm { font-size: 0.75rem; }
 .grid td { text-align: center; }
 .grid .self {
   background: repeating-linear-gradient(-45deg,

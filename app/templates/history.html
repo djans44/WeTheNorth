@@ -243,26 +243,27 @@
 
   <section id="h2h">
     <h2>Head to head</h2>
-    <p class="note">Rows are the owner, columns the opponent. All games, playoffs included.</p>
+    <p class="note">Rows are the owner, columns the opponent. All games,
+      playoffs included. The sigils name themselves &mdash; initials on the
+      face, the full name on hover.</p>
     <div class="scroller">
       <table class="grid">
         <thead>
           <tr>
             <th></th>
-            {# Colours are not unique, so the name stays under the sigil.
-               The flex box goes inside the cell -- a th set to display:flex
-               drops out of the table's column layout. #}
+            {# Sigils alone. Thirteen names across the top and thirteen down
+               the side were most of the grid's width, and the sigil already
+               carries the initials on its face and the name in its title --
+               which is what a 13x13 grid of two-digit records has room for. #}
             {% for o in order %}
-              <th class="chead">
-                <span class="stack">{{ avatar(o, 30) }}<span class="nm">{{ o }}</span></span>
-              </th>
+              <th class="chead">{{ avatar(o, 30) }}</th>
             {% endfor %}
           </tr>
         </thead>
         <tbody>
         {% for a in order %}
           <tr>
-            <th><span class="avatar-line">{{ avatar(a, 30) }}{{ a }}</span></th>
+            <th>{{ avatar(a, 30) }}</th>
             {% for b in order %}
               {% if a == b %}
                 <td class="self"></td>
