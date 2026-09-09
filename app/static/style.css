@@ -37,6 +37,9 @@
   /* Second and third metal, for the playoff marks in the standings. Chosen
      against the panel rather than by eye: 3.92:1 and 4.72:1, both clear of
      the 3:1 WCAG asks of a graphical object. Gold itself is 3.08:1. */
+  /* Gold is 3.08:1 -- fine for a mark, short of the 4.5:1 a word needs, so
+     the rivalry heading uses a darker cut of it at 5.13:1. */
+  --gold-deep:   #7a6020;
   --silver:      #7d7f88;
   --bronze:      #a1642e;
 
@@ -853,6 +856,43 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .week-picker { display: none; margin-bottom: var(--s5); }
 .week-picker > label { flex: 0 0 auto; }
 .week-picker select { flex: 0 0 auto; min-width: 12rem; }
+
+/* Rivalry week. Gold rather than the oxblood accent, because gold is the
+   league's mark of consequence and this is the one week the schedule is
+   built around. Restrained on purpose: a tinted ground, a gold rule and
+   crossed swords where the "vs" goes. The panel is not repainted. */
+.week-nav a.rivalry {
+  border-color: var(--gold);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.week-nav a.rivalry.on { box-shadow: none; }
+
+.rivalbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s3);
+  margin: 0 0 var(--s3);
+  padding-bottom: var(--s2);
+  border-bottom: 2px solid var(--gold);
+}
+.rivalbar > span:first-child {
+  font-family: var(--display);
+  font-size: var(--t-md);
+  letter-spacing: 0.06em;
+  color: var(--gold-deep);
+}
+.rivalbar .sub {
+  font-family: var(--prose);
+  font-style: italic;
+  font-size: var(--t-sm);
+  color: var(--ink-muted);
+}
+
+.scores.rivalry td { background: var(--gold-ghost); border-bottom-color: rgba(176, 141, 50, 0.4); }
+/* The swords carry the meaning in the row, so they are set larger than the
+   "vs" they replace -- at the body size the glyph shrinks to a smudge. */
+.scores.rivalry .vs { color: var(--gold-deep); font-size: 1.25rem; line-height: 1; }
 
 .week h3 { margin-top: 0; }
 

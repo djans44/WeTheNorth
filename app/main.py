@@ -715,6 +715,16 @@ def season(request: Request, year: int):
         # Records section would still claim a spot in the section nav.
         if not records["high"]:
             records = None
+        # Rivalry pairings, so a week can be recognised rather than declared.
+        # Written both ways round in the table, so this set already holds
+        # both orientations and the matchup can be looked up as it comes.
+        rival_pairs = {(r["a"], r["b"]) for r in query(conn, """
+            select oa.username as a, ob.username as b
+            from rivalries r
+            join owners oa on oa.owner_id = r.owner_id
+            join owners ob on ob.owner_id = r.rival_owner_id
+            where r.season_year = %s
+        """, (year,))}
         keepers = query(conn, KEEPER_HISTORY_SQL + """
             where ks.season_year = %s
             order by o.username, ks.cost_round
@@ -723,9 +733,20 @@ def season(request: Request, year: int):
     for g in games:
         if not weeks or weeks[-1]["week"] != g["week"]:
             weeks.append({"week": g["week"], "games": [], "played": False})
+        g["rival"] = (g["owner_a"], g["owner_b"]) in rival_pairs
         weeks[-1]["games"].append(g)
         if g["points_a"] is not None:
             weeks[-1]["played"] = True
+
+    # Rivalry week is the week where every game is a rival meeting, which is
+    # read off the fixtures rather than pinned to a number. The schedule
+    # generator puts it in week 10, but a week that merely happens to be
+    # numbered 10 is not rivalry week: the pre-2026 schedules came from Yahoo
+    # and know nothing about rivalries. Across all five seasons this is true
+    # of exactly one week -- 2026's tenth -- and of no other. A lone rival
+    # meeting elsewhere, of which there are several, does not qualify.
+    for w in weeks:
+        w["rivalry"] = len(w["games"]) > 1 and all(g["rival"] for g in w["games"])
 
     # Open on the last week that has scores, so a season in progress lands on
     # what just happened rather than on week 1. Before a ball is kicked, and
