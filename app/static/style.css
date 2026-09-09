@@ -149,11 +149,12 @@ section:last-child { border-bottom: 0; }
   border-bottom: var(--hairline);
 }
 
-/* A manager's header stays put while the case scrolls under it, so whose
-   crests these are never leaves the screen. Only that one: it is the only
-   header carrying an identity rather than a title. The panel colour is set
-   explicitly because a sticky element with a transparent ground shows the
-   content sliding beneath it. */
+/* The header stays put while the page scrolls under it, so what you are
+   reading -- whose crests, which season, which league -- never leaves the
+   screen. On the three pages long enough to lose it: a manager, a season,
+   and the league history. The panel colour is set explicitly because a
+   sticky element with a transparent ground shows the content sliding
+   beneath it. */
 .page-head.stuck {
   position: sticky;
   top: 0;
@@ -172,12 +173,12 @@ section:last-child { border-bottom: 0; }
    dragged everything below it up by the difference -- a 193px jolt the moment
    you started scrolling. app.js measures the header once and pins the slot to
    that, and nothing moves afterwards. */
-/* Frozen at full height the header took 311px, better than a third of a
-   laptop screen, to say something the reader already knew. It condenses as
-   soon as it starts to stick -- not part way down the page -- so the header
-   is either whole at the top or a bar once you have left it. The leaf and the
-   rival line are page furniture and go. .condensed is added by app.js, so
-   without the script the header simply stays whole. */
+/* Frozen at full height the manager header took 311px, better than a third
+   of a laptop screen, to say something the reader already knew. It condenses
+   as soon as it starts to stick -- not part way down the page -- so the
+   header is either whole at the top or a bar once you have left it. The leaf
+   and the rival line are page furniture and go. .condensed is added by
+   app.js, so without the script the header simply stays whole. */
 .page-head.stuck.condensed {
   display: flex;
   flex-wrap: wrap;
@@ -191,20 +192,24 @@ section:last-child { border-bottom: 0; }
 .page-head.stuck.condensed .leaf,
 .page-head.stuck.condensed .rivalline,
 .page-head.stuck.condensed .pastrivals { display: none; }
-.page-head.stuck.condensed h1.titled {
+/* h1 rather than h1.titled: a season and the league history have a plain
+   heading here, and the three classes still beat both .page-head h1 and
+   .page-head.tight h1. gap does nothing on a heading that is not a flex
+   container, which is two of the three. */
+.page-head.stuck.condensed h1 {
   gap: var(--s3);
   margin: 0;
   padding: 0.35rem 0;
   font-size: 1.5rem;
 }
-.page-head.stuck.condensed h1.titled .avatar {
+.page-head.stuck.condensed h1 .avatar {
   --av-size: 34px;
   --av-font: 14px;
 }
 /* The negative margin exists to keep the title centred under the leaf. The
    leaf is gone here and the chevron was overlapping the first title, so it
    takes its own width back. */
-.page-head.stuck.condensed h1.titled::after { margin-right: 0; }
+.page-head.stuck.condensed h1::after { margin-right: 0; }
 
 /* Hidden until the header condenses: at the top of the page there is nowhere
    to go back to. An anchor rather than a script, so the browser does the
@@ -2013,12 +2018,14 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
     padding: 0.25rem var(--s3);
     gap: 0 var(--s3);
   }
-  .page-head.stuck.condensed h1.titled {
+  /* h1, not h1.titled: a season and the league history condense here too
+     and their headings are plain. */
+  .page-head.stuck.condensed h1 {
     gap: var(--s2);
     padding: 0.15rem 0;
     font-size: 1.1rem;
   }
-  .page-head.stuck.condensed h1.titled .avatar {
+  .page-head.stuck.condensed h1 .avatar {
     --av-size: 26px;
     --av-font: 11px;
   }

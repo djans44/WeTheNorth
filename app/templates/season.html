@@ -74,7 +74,7 @@
      ordinary links: with JavaScript off the list still opens and still works.
      A heading is allowed inside <summary>, so the h1 keeps its place in the
      document outline. #}
-  <header class="page-head tight">
+  <header class="page-head tight stuck">
     <details class="headpick">
       <summary>
         <h1>{{ leaf(20) }}{{ s.season_year }}</h1>
@@ -89,6 +89,10 @@
         {% endfor %}
       </ul>
     </details>
+    {# Only reachable once the header has condensed, which is to say once
+       there is somewhere to go back from. A plain anchor, so it works with
+       the script off and the browser does the scrolling. #}
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section id="standings">

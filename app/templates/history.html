@@ -67,8 +67,12 @@
 <div class="page">
   {# tight, not the standard head: with the lede gone there is only a title
      here, and that is what the modifier is for. #}
-  <header class="page-head tight">
+  <header class="page-head tight stuck">
     <h1>{{ leaf(20) }}League History</h1>
+    {# Only reachable once the header has condensed, which is to say once
+       there is somewhere to go back from. A plain anchor, so it works with
+       the script off and the browser does the scrolling. #}
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   {% if titles %}
