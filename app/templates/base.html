@@ -41,7 +41,14 @@
           {% endfor %}
         </ul>
       </li>
-      <li><a href="/history" {% if path == '/history' %}class="on"{% endif %}>History</a></li>
+      <li class="has-menu">
+        <a href="/history"
+           {% if path in ('/history', '/crests') %}class="on"{% endif %}>History</a>
+        <ul class="submenu">
+          <li><a href="/history">League history</a></li>
+          <li><a href="/crests">Crests of honour</a></li>
+        </ul>
+      </li>
       <li class="has-menu">
         {# Your own page, not an index. There was a /teams list; it ranked
            everyone by win percentage, which /history already does better,

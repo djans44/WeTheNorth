@@ -574,6 +574,54 @@ def history(request: Request):
                  "record_names": RECORD_NAMES, "record_keys": ALL_RECORDS})
 
 
+@app.get("/crests", response_class=HTMLResponse)
+def crests(request: Request):
+    """The whole catalogue, won or not.
+
+    Every other page shows crests that have been earned. This one answers the
+    question those pages cannot: what is there to win, and has anyone ever
+    managed it. Three of them have never been awarded, which is worth being
+    able to see.
+    """
+    with get_db() as conn:
+        catalogue = query(conn, """
+            select crest_id, code, name, description, category, standing,
+                   colour, award_mode, sort_order
+            from crests where active order by sort_order
+        """)
+        # Earned: how often, and to how many managers. Held rows are counted
+        # separately because a season snapshot is not another award.
+        tally = {r["crest_id"]: r for r in query(conn, """
+            select oc.crest_id, count(*) as awards,
+                   count(distinct oc.owner_id) as owners
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            where c.standing = 'earned'
+            group by oc.crest_id
+        """)}
+        holders = {r["crest_id"]: r for r in query(conn, """
+            select oc.crest_id, o.owner_id, o.username, oc.detail
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where c.standing = 'held' and oc.season_year is null
+        """)}
+
+    groups = []
+    for category, label in CREST_GROUPS:
+        rows = [dict(c, tally=tally.get(c["crest_id"]),
+                     holder=holders.get(c["crest_id"]))
+                for c in catalogue if c["category"] == category]
+        if rows:
+            groups.append({"label": label, "crests": rows})
+    return templates.TemplateResponse(
+        request=request, name="crests.html",
+        context={"groups": groups,
+                 "unwon": sum(1 for c in catalogue
+                              if c["standing"] == "earned"
+                              and c["crest_id"] not in tally)})
+
+
 @app.get("/preview", response_class=HTMLResponse)
 def preview(request: Request):
     """A public page to send to someone who has not signed in yet.

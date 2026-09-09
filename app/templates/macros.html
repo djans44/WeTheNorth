@@ -65,6 +65,15 @@
    stroke, because even at 44px the mark is about 14px across. #}
 {% macro sigilmark(code) -%}
   <svg class="sigil-mark" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+    {{- sigilcharge(code) -}}
+  </svg>
+{%- endmacro %}
+
+
+{# The paths alone, without the <svg> around them. The catalogue draws these
+   same seven marks inside a roundel, and an <svg> cannot be nested into
+   another one and still be styled. #}
+{% macro sigilcharge(code) -%}
     {%- if code == "reigning_champion" %}
       <path d="M2.8 15.6V5.2l4 3.4L10 3.4l3.2 5.2 4-3.4v10.4z"/>
     {%- elif code == "best_record" %}
@@ -89,7 +98,6 @@
     {%- else %}
       <path d="M10 17.4L3.4 8.2h4V2.8h5.2v5.4h4z"/>
     {%- endif %}
-  </svg>
 {%- endmacro %}
 
 

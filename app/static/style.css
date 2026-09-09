@@ -1598,6 +1598,70 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    plainly than any device for either. */
 .crest-shield .numeral { fill: var(--parchment); font-family: var(--display); font-weight: 600; }
 
+/* A held crest's roundel: the same colours it rings a sigil with, so the
+   catalogue and the sigil agree. Shares .crest-shield's sizing and charge
+   rules -- only the shape and the three colours differ. */
+.crest-roundel {
+  flex: 0 0 auto;
+  width: var(--shield, 56px);
+  height: calc(var(--shield, 56px) * 1.2);
+}
+.crest-roundel .field { fill: var(--crest-cat, var(--ink-soft)); }
+.crest-roundel .edge {
+  fill: none;
+  stroke: var(--ink);
+  stroke-opacity: 0.55;
+  stroke-width: 2;
+}
+.crest-roundel .charge { fill: var(--parchment); fill-rule: evenodd; }
+.crest-roundel.gold   { --crest-cat: var(--gold-deep); }
+.crest-roundel.silver { --crest-cat: var(--silver); }
+.crest-roundel.bronze { --crest-cat: var(--bronze); }
+
+/* ---- the catalogue ---- */
+
+/* Wider than the crest grid on a manager's page: this one carries the rule
+   in full rather than hiding it behind a disclosure, because reading what
+   there is to win is the whole point of the page. */
+.catalogue {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: var(--s5) var(--s6);
+  margin-top: var(--s4);
+}
+/* min-width on the grid item, not just the text: a grid track's automatic
+   minimum is its min-content, so a long rule pushed the column wider than
+   the panel and ran off the edge. */
+.catalogue .entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s4);
+  min-width: 0;
+}
+.catalogue .lines { flex: 1 1 auto; min-width: 0; }
+.catalogue h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+.catalogue .what {
+  margin: 0.2rem 0 0;
+  font-family: var(--prose);
+  font-size: var(--t-sm);
+  font-style: italic;
+  color: var(--ink-muted);
+}
+.catalogue .who { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem var(--s2); margin: var(--s2) 0 0; }
+.catalogue .who .lbl { font-family: var(--body); font-size: var(--t-xs); color: var(--ink-soft); }
+.catalogue .who a { color: var(--ink); text-decoration: none; font-weight: 600; }
+.catalogue .who a:hover { color: var(--accent); }
+.catalogue .who .tm { display: inline; }
+/* Nobody has managed it yet. Dimmed, not hidden: an unwon crest is the most
+   interesting row on the page. */
+.catalogue .entry.unwon { opacity: 0.62; }
+
 .crest-shield.silverware   { --crest-cat: var(--crest-silverware); }
 .crest-shield.scoring      { --crest-cat: var(--crest-scoring); }
 .crest-shield.weekly       { --crest-cat: var(--crest-weekly); }

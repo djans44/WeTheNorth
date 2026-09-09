@@ -23,6 +23,22 @@
   die, the slits in the broom.
 #}
 
+{% from "macros.html" import sigilcharge %}
+
+{# A held crest is a roundel, not a shield: a circle in the colour it rings a
+   sigil with, carrying the same mark. Circles are people and what they hold;
+   shields are what they have won. Keeping the two shapes apart is the whole
+   reason the held crests were left out of the shields. #}
+{% macro crestroundel(code, colour, size=56) -%}
+  <svg class="crest-roundel {{ colour }}" viewBox="0 0 40 48"
+       style="--shield: {{ size }}px" aria-hidden="true" focusable="false">
+    <circle class="field" cx="20" cy="21" r="17"/>
+    <circle class="edge" cx="20" cy="21" r="17"/>
+    <g class="charge" transform="translate(10,11)">{{ sigilcharge(code) }}</g>
+  </svg>
+{%- endmacro %}
+
+
 {% macro crestshield(code, category, size=56) -%}
   <svg class="crest-shield {{ category }}" viewBox="0 0 40 48"
        style="--shield: {{ size }}px" aria-hidden="true" focusable="false">

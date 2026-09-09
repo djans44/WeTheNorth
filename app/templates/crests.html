@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf, avatar %}
+{% from "crestart.html" import crestshield, crestroundel %}
+{% block title %}Crests of honour | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    <h1>{{ leaf(20) }}Crests of Honour</h1>
+    {# Only reachable once the header has condensed, which is to say once
+       there is somewhere to go back from. A plain anchor, so it works with
+       the script off and the browser does the scrolling. #}
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  <section>
+    <p class="note">Every crest there is, won or not. The seven titles at the
+      top change hands and only one manager holds each; the rest are kept for
+      good by whoever earns them.{% if unwon %} {{ unwon }} have never been
+      awarded to anyone.{% endif %}</p>
+  </section>
+
+  {% for group in groups %}
+  <section>
+    <h2>{{ group.label }}</h2>
+    <div class="catalogue">
+      {% for c in group.crests %}
+        {# A held crest gets the roundel it rings a sigil with, an earned one
+           its shield. The shape is the difference between a title someone
+           holds today and a thing that was won and stays won. #}
+        <div class="entry{% if c.standing == 'held' %} title{% endif %}
+                    {%- if not c.tally and not c.holder %} unwon{% endif %}">
+          {% if c.standing == "held" %}
+            {{ crestroundel(c.code, c.colour, 84) }}
+          {% else %}
+            {{ crestshield(c.code, c.category, 84) }}
+          {% endif %}
+          <div class="lines">
+            <h3>{{ c.name }}</h3>
+            <p class="what">{{ c.description }}</p>
+
+            {% if c.standing == "held" %}
+              {% if c.holder %}
+                <p class="who">
+                  <span class="lbl">Held by</span>
+                  <span class="avatar-line">
+                    {{ avatar(c.holder.owner_id, 30) }}
+                    <a href="/team/{{ c.holder.username|lower }}">{{ c.holder.username }}</a>
+                  </span>
+                  {% if c.holder.detail %}<span class="tm">{{ c.holder.detail }}</span>{% endif %}
+                </p>
+              {% else %}
+                <p class="who"><span class="tm">Held by nobody yet.</span></p>
+              {% endif %}
+            {% elif c.tally %}
+              <p class="who"><span class="tm">
+                Awarded {{ c.tally.awards }}
+                time{% if c.tally.awards != 1 %}s{% endif %}
+                to {{ c.tally.owners }}
+                manager{% if c.tally.owners != 1 %}s{% endif %}.
+              </span></p>
+            {% else %}
+              <p class="who"><span class="tm">
+                {% if c.award_mode == "manual" %}
+                  Given by the commissioner. Never yet given.
+                {% else %}
+                  Never awarded.
+                {% endif %}
+              </span></p>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}
