@@ -615,25 +615,26 @@ h3 {
 /* The lineage of the titles that change hands. The first two columns carry
    the title and its current holder and want the room; the season columns are
    one name each and should not wrap. */
-/* The note and the picker on one line under the heading: the note takes
-   the room it needs and the control is pushed to the right edge, over the
-   column it changes. margin-left:auto rather than justify-content, so it
-   stays right after the note wraps it onto a line of its own. */
-.titlehead {
+/* A section's note and its picker on one line under the heading: the note
+   takes the room it needs and the control is pushed to the right edge, over
+   the column or the panel it changes. The titles table on /history and the
+   keeper years on a manager page both use it. */
+.pickhead {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s3) var(--s4);
   margin: 0 0 var(--s4);
 }
-.titlehead .note { flex: 1 1 22rem; margin: 0; }
+.pickhead .note { flex: 1 1 22rem; margin: 0; }
 
 /* .field sets a 9rem label column for the admin forms, which left "Show"
-   marooned from its own dropdown. Both classes, so this wins wherever it
-   sits in the file. */
-.field.titlepicker { flex: 0 0 auto; margin: 0 0 0 auto; }
-.field.titlepicker > label { flex: 0 0 auto; }
-.field.titlepicker select { flex: 0 0 auto; min-width: 9rem; }
+   marooned from its own dropdown. margin-left:auto rather than
+   justify-content on the row, so the control stays right when a narrow
+   screen wraps it onto a line of its own. */
+.pickhead .field { flex: 0 0 auto; margin: 0 0 0 auto; }
+.pickhead .field > label { flex: 0 0 auto; }
+.pickhead .field select { flex: 0 0 auto; min-width: 9rem; }
 
 .titles td.name { font-family: var(--body); }
 /* The crest's rule, under its name and indented past the mark so the two
@@ -2027,8 +2028,9 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
 
   /* Seventeen buttons ran to three rows here, so the week strip gives way
      to the dropdown, which is one line. Same control, same JS. By id, not by
-     class: the keeper strip is three years and fits, and hiding every strip
-     left a manager's keepers stuck on one season with no way to change it. */
+     class, from when the keeper years were a strip too and fitted. They are
+     a dropdown now and .pickstrip has one user left, but the id still says
+     which strip this is about. */
   #weekstrip { display: none; }
   .week-picker { display: flex; }
 

@@ -254,17 +254,24 @@
   {% if keepers %}
   <section id="keepers">
     <h2>Keepers</h2>
-    <p class="note">Every player held onto, and the round it cost.</p>
-
     {# One season at a time: three years of three keepers each ran longer
-       than everything above it. Anchors, so without the script every season
-       is simply on the page as before. #}
-    <nav class="pickstrip" id="keeperstrip">
-      {% for group in keepers %}
-        <a href="#keepers-{{ group.key }}" data-season="{{ group.key }}"
-           class="{% if group.key == keeper_open %}on{% endif %}">{{ group.key }}</a>
-      {% endfor %}
-    </nav>
+       than everything above it. The same dropdown the titles table on
+       /history uses, on the same line as the note and against the right
+       edge. Without the script every season is simply on the page, as
+       before. #}
+    <div class="pickhead">
+      <p class="note">Every player held onto, and the round it cost.</p>
+      <p class="field short">
+        <label for="keeperpick">Show</label>
+        <select id="keeperpick">
+          {% for group in keepers %}
+            <option value="{{ group.key }}"
+                    {% if group.key == keeper_open %}selected{% endif %}>
+              {{ group.key }}</option>
+          {% endfor %}
+        </select>
+      </p>
+    </div>
 
     {% for group in keepers %}
       <div class="keeper-season" id="keepers-{{ group.key }}"

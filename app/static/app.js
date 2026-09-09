@@ -218,7 +218,7 @@
   };
 
   strips("#weekstrip", ".week", "data-week", "weekpick");
-  strips("#keeperstrip", ".keeper-season", "data-season", null);
+  strips(null, ".keeper-season", "data-season", "keeperpick");
   // Table columns rather than panels, and a dropdown with no strip beside
   // it. The helper cares about neither: it hides whatever the selector
   // matches, and it drives from the select when there is no strip.
