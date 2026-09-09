@@ -17,17 +17,6 @@
     </svg>
     <span>Standings</span>
   </a>
-  {% if weeks %}
-  <a href="#fixtures">
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <rect x="3" y="4" width="14" height="13" rx="1"
-            fill="none" stroke="currentColor" stroke-width="1.3"/>
-      <path d="M3 8h14M7 2.5v3M13 2.5v3"
-            fill="none" stroke="currentColor" stroke-width="1.3"/>
-    </svg>
-    <span>{% if s.champion %}Results{% else %}Fixtures{% endif %}</span>
-  </a>
-  {% endif %}
   {% if titles or crest_groups %}
   {# The same shield the manager page's rail uses for its crests. Two rails
      naming the same thing should not draw it two ways. #}
@@ -41,6 +30,17 @@
             stroke-linejoin="round"/>
     </svg>
     <span>Crests</span>
+  </a>
+  {% endif %}
+  {% if weeks %}
+  <a href="#fixtures">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <rect x="3" y="4" width="14" height="13" rx="1"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M3 8h14M7 2.5v3M13 2.5v3"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+    </svg>
+    <span>{% if s.champion %}Results{% else %}Fixtures{% endif %}</span>
   </a>
   {% endif %}
   {% if records %}
@@ -153,6 +153,59 @@
     {% endif %}
   </section>
 
+  {% if titles or crest_groups %}
+  <section id="crests">
+    <h2>Crests of honour</h2>
+
+    {# Who ended the season wearing each title. Not who wears it now: these
+       change hands, and 2023's page should show 2023's holders. The sigils
+       on this page agree with the list, because they are drawn from the same
+       rows. #}
+    {% if titles %}
+      <h3 class="record-group">Titles at the close</h3>
+      <div class="crest-grid">
+        {% for c in titles %}
+          <details class="crest held {{ c.colour }}">
+            <summary title="{{ c.description }}">
+              <span class="crest-name">{{ c.name }}</span>
+              <span class="crest-more" aria-hidden="true"></span>
+              <span class="crest-what">{{ c.description }}</span>
+              <span class="crest-who avatar-line">
+                {{ avatar(c.owner_id, 22) }}
+                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+              </span>
+              <span class="tm">{{ c.detail if c.detail }}</span>
+            </summary>
+          </details>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# Earned crests keep their season forever, so these are settled. The
+       weekly ones are not here -- they sit with the week that produced
+       them, where the score that won one is on the same screen. #}
+    {% for group in crest_groups %}
+      <h3 class="record-group">{{ group.label }}</h3>
+      <div class="crest-grid">
+        {% for c in group.crests %}
+          <details class="crest">
+            <summary title="{{ c.description }}">
+              <span class="crest-name">{{ c.name }}</span>
+              <span class="crest-more" aria-hidden="true"></span>
+              <span class="crest-what">{{ c.description }}</span>
+              <span class="crest-who avatar-line">
+                {{ avatar(c.owner_id, 22) }}
+                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+              </span>
+              <span class="tm">{{ c.detail if c.detail }}</span>
+            </summary>
+          </details>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
   {% if weeks %}
   <section id="fixtures">
     <h2>{% if s.champion %}Results{% else %}Fixtures and results{% endif %}</h2>
@@ -221,58 +274,6 @@
   </section>
   {% endif %}
 
-  {% if titles or crest_groups %}
-  <section id="crests">
-    <h2>Crests of honour</h2>
-
-    {# Who ended the season wearing each title. Not who wears it now: these
-       change hands, and 2023's page should show 2023's holders. The sigils
-       on this page agree with the list, because they are drawn from the same
-       rows. #}
-    {% if titles %}
-      <h3 class="record-group">Titles at the close</h3>
-      <div class="crest-grid">
-        {% for c in titles %}
-          <details class="crest held {{ c.colour }}">
-            <summary title="{{ c.description }}">
-              <span class="crest-name">{{ c.name }}</span>
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="crest-who avatar-line">
-                {{ avatar(c.owner_id, 22) }}
-                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
-              </span>
-              <span class="tm">{{ c.detail if c.detail }}</span>
-            </summary>
-          </details>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    {# Earned crests keep their season forever, so these are settled. The
-       weekly ones are not here -- they sit with the week that produced
-       them, where the score that won one is on the same screen. #}
-    {% for group in crest_groups %}
-      <h3 class="record-group">{{ group.label }}</h3>
-      <div class="crest-grid">
-        {% for c in group.crests %}
-          <details class="crest">
-            <summary title="{{ c.description }}">
-              <span class="crest-name">{{ c.name }}</span>
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="crest-who avatar-line">
-                {{ avatar(c.owner_id, 22) }}
-                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
-              </span>
-              <span class="tm">{{ c.detail if c.detail }}</span>
-            </summary>
-          </details>
-        {% endfor %}
-      </div>
-    {% endfor %}
-  </section>
-  {% endif %}
 
   {% if records %}
   <section id="records">
