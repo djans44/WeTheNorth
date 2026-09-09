@@ -1457,6 +1457,17 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   gap: var(--s2) var(--s4);
   margin: var(--s3) 0 var(--s4);
 }
+/* The same grid inside a week panel, pulled tight and ruled off from the
+   scores above it. A modifier rather than a second .crest-grid: one
+   definition per selector, and the only differences are the spacing and
+   the line. */
+.crest-grid.inweek {
+  gap: var(--s2) var(--s4);
+  margin: 0;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--rule);
+}
+
 .crest > summary {
   list-style: none;
   cursor: pointer;

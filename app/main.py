@@ -978,6 +978,21 @@ def season(request: Request, year: int):
             where oc.season_year = %s and oc.week is null
             order by c.sort_order, o.username
         """, (year,))
+        # The other half of the same table: crests settled by one week's
+        # scores. They go under that week's results rather than into the
+        # honour roll, where sixty-odd of them would bury the twelve that
+        # settle a season and none would be next to the score that won it.
+        week_crests = {}
+        for r in query(conn, """
+            select c.name, c.description, oc.week, oc.detail,
+                   o.owner_id, o.username
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where oc.season_year = %s and oc.week is not null
+            order by oc.week, c.sort_order, o.username
+        """, (year,)):
+            week_crests.setdefault(r["week"], []).append(r)
         keepers = query(conn, KEEPER_HISTORY_SQL + """
             where ks.season_year = %s
             order by o.username, ks.cost_round
@@ -1030,7 +1045,7 @@ def season(request: Request, year: int):
                      "records": records, "open_week": open_week,
                      "seeds": seeds, "seed_key": seed_key(seeds, standings),
                      "brackets": brackets, "titles": titles,
-                     "crest_groups": crest_groups,
+                     "crest_groups": crest_groups, "week_crests": week_crests,
                      "keepers": group_runs(keepers, "username")})
     finally:
         if token is not None:

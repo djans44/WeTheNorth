@@ -269,6 +269,28 @@
           {% endfor %}
           </tbody>
         </table>
+
+        {# What the week settled. The same card the honour roll and the
+           manager page use, pulled tighter: a week's crests are a footnote
+           to its scores, and the score that won one is directly above. #}
+        {% if week_crests.get(w.week) %}
+          <div class="crest-grid inweek">
+            {% for c in week_crests[w.week] %}
+              <details class="crest">
+                <summary title="{{ c.description }}">
+                  <span class="crest-name">{{ c.name }}</span>
+                  <span class="crest-more" aria-hidden="true"></span>
+                  <span class="crest-what">{{ c.description }}</span>
+                  <span class="crest-who avatar-line">
+                    {{ avatar(c.owner_id, 20) }}
+                    <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+                  </span>
+                  <span class="tm">{{ c.detail if c.detail }}</span>
+                </summary>
+              </details>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
     {% endfor %}
   </section>
