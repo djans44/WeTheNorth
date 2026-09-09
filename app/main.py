@@ -267,6 +267,28 @@ def crest_case(catalogue, mine):
     return held, past, groups
 
 
+def title_lineage(rows):
+    """One entry per held crest: who holds it now, and who held it at the
+    close of each season.
+
+    Held rows arrive in two kinds -- no season for the current holder, a year
+    for each season's close -- so this is the same split crest_case() makes,
+    turned on its side. That page asks what one manager holds; this one asks
+    who has held each title, which is the question a history page is for.
+    """
+    out = {}
+    for r in rows:
+        t = out.setdefault(r["crest_id"], {
+            "code": r["code"], "name": r["name"],
+            "description": r["description"], "colour": r["colour"],
+            "sort_order": r["sort_order"], "now": None, "by_year": {}})
+        if r["season_year"] is None:
+            t["now"] = r
+        else:
+            t["by_year"][r["season_year"]] = r
+    return sorted(out.values(), key=lambda t: t["sort_order"])
+
+
 def season_roll(rows):
     """A season's honour roll: the titles it closed holding, then what it
     handed out.
@@ -513,6 +535,19 @@ def history(request: Request):
             select * from season_results where champion is not null
             order by season_year desc
         """)
+        # Every held crest, current holder and every season's close, in one
+        # read. Ordered so title_lineage() gets them crest by crest with the
+        # live row first.
+        title_rows = query(conn, """
+            select c.crest_id, c.code, c.name, c.description, c.colour,
+                   c.sort_order, oc.season_year, oc.detail,
+                   o.owner_id, o.username
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where c.standing = 'held'
+            order by c.sort_order, oc.season_year desc nulls first
+        """)
         standings = query(conn, """
             select * from owner_all_time_stats where seasons_played > 0
             order by win_pct desc, points_for desc
@@ -533,6 +568,8 @@ def history(request: Request):
         request=request, name="history.html",
         context={"seasons": seasons, "standings": standings, "order": order,
                  "grid": grid, "projections": projections,
+                 "titles": title_lineage(title_rows),
+                 "title_years": [s["season_year"] for s in seasons],
                  "regular": regular, "postseason": postseason,
                  "record_names": RECORD_NAMES, "record_keys": ALL_RECORDS})
 

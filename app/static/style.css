@@ -612,6 +612,36 @@ h3 {
 .tie .side.won .who { font-weight: 600; color: var(--win); }
 .tie .side.won .pts { color: var(--win); }
 
+/* The lineage of the titles that change hands. The first two columns carry
+   the title and its current holder and want the room; the season columns are
+   one name each and should not wrap. */
+.titles td.name { font-family: var(--body); }
+.titles th:not(:first-child), .titles td:not(:first-child) { white-space: nowrap; }
+.titles td a { color: var(--ink); text-decoration: none; }
+.titles td a:hover { color: var(--accent); }
+
+/* The sigil mark at reading size beside the title it stands for, so the
+   table and the rings on this page say the same thing without a legend.
+   Over an avatar it is an absolutely placed disc with its own background;
+   here it is a letter-sized glyph in the flow, so the placement and the disc
+   come off and only the shape and the colour remain. */
+.titlemark {
+  display: inline-flex;
+  margin-right: var(--s2);
+  vertical-align: -0.12em;
+}
+.titlemark .sigil-mark {
+  position: static;
+  width: 1em;
+  height: 1em;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+.titlemark.gold .sigil-mark   { fill: var(--gold); }
+.titlemark.silver .sigil-mark { fill: var(--silver); }
+.titlemark.bronze .sigil-mark { fill: var(--bronze); }
+
 /* Playoff position in the standings: a mark on the name line, so it costs
    the row no height. Outline while provisional, filled once settled, so a
    lead is not dressed up as a guarantee. */
@@ -1860,6 +1890,41 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   #champions .year { display: block; margin-bottom: 0.2rem; }
   #champions .year::before { content: none; }
   #champions .tm { grid-column: 2; }
+
+  /* Titles: six columns, and the first is a five-word name. Scrolling would
+     push that name off screen -- the one column the row is about -- so each
+     title stacks into a block, the same shape the champions table takes
+     here, with the season headings moved beside the names they label. */
+  #titles table,
+  #titles tbody { display: block; white-space: normal; }
+  #titles thead { display: none; }
+  #titles tr {
+    display: block;
+    padding: var(--s3) 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  #titles td {
+    display: grid;
+    grid-template-columns: 5rem 1fr;
+    gap: 0 var(--s3);
+    padding: 0.1rem 0;
+    border: 0;
+    text-align: left;
+    /* The desktop rule keeps the season columns on one line. Stacked, there
+       are no columns to hold together and the detail line is long enough to
+       run off a phone, so it wraps again. An id beats the class selector
+       that set it. */
+    white-space: normal;
+  }
+  #titles td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+  #titles td.name { display: block; margin-bottom: 0.2rem; }
+  #titles td.name::before { content: none; }
+  #titles .tm { grid-column: 2; }
 
   /* All-time standings: ten columns need 551px. Owner, the record, the win
      percentage the table is sorted on, and the titles come to 275 and fit.
