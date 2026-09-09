@@ -219,6 +219,9 @@
 
   strips("#weekstrip", ".week", "data-week", "weekpick");
   strips("#keeperstrip", ".keeper-season", "data-season", null);
+  // Table columns rather than panels, and the helper does not care
+  // which: it hides whatever the selector matches.
+  strips("#yearstrip", ".yr", "data-year", null);
 
   // ---- toast ----
   var params = new URLSearchParams(window.location.search);

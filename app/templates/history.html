@@ -8,16 +8,6 @@
    chart and the trophy are the season page's own -- standings and records
    mean the same thing on both pages and should not be drawn twice. #}
 <nav class="sectionnav" aria-label="Sections of this page">
-  {% if seasons %}
-  <a href="#champions">
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M2.8 15.6V5.2l4 3.4L10 3.4l3.2 5.2 4-3.4v10.4z"
-            fill="none" stroke="currentColor" stroke-width="1.3"
-            stroke-linejoin="round"/>
-    </svg>
-    <span>Champions</span>
-  </a>
-  {% endif %}
   {% if titles %}
   {# The same shield the season and manager rails use for their crests. #}
   <a href="#titles">
@@ -30,6 +20,16 @@
             stroke-linejoin="round"/>
     </svg>
     <span>Titles</span>
+  </a>
+  {% endif %}
+  {% if seasons %}
+  <a href="#champions">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M2.8 15.6V5.2l4 3.4L10 3.4l3.2 5.2 4-3.4v10.4z"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Champions</span>
   </a>
   {% endif %}
   <a href="#alltime">
@@ -71,6 +71,69 @@
     <h1>{{ leaf(20) }}League History</h1>
   </header>
 
+  {% if titles %}
+  <section id="titles">
+    <h2>Titles held</h2>
+    <p class="note">Seven crests only one manager holds at a time. Every one
+      of them can be taken; pick a season to see who held it then.</p>
+
+    {# One season at a time, not all of them at once: a column per year is a
+       table that gets worse every September. The same strip and the same
+       script the week and keeper pickers use -- it hides by attribute, and
+       a table cell hides as happily as a panel. With the script off every
+       column stays on screen, which is the old table and still correct. #}
+    {% if title_years %}
+      <nav class="pickstrip" id="yearstrip">
+        {% for y in title_years %}
+          <a href="#titles" data-year="{{ y }}"
+             class="{% if loop.first %}on{% endif %}">{{ y }}</a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
+    <table class="titles">
+      <thead>
+        <tr>
+          <th>Title</th><th>Held now</th>
+          {% for y in title_years %}
+            <th class="yr" data-year="{{ y }}">At the close of {{ y }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for c in titles %}
+        <tr>
+          {# The mark from the sigil ring, at reading size, so the table and
+             the rings on this page say the same thing without a legend. #}
+          <td class="name" data-label="Title" title="{{ c.description }}">
+            <span class="titlemark {{ c.colour }}">{{ sigilmark(c.code) }}</span>{{ c.name }}
+          </td>
+          <td data-label="Held now">
+            {% if c.now %}
+              <span class="avatar-line">
+                {{ avatar(c.now.owner_id, 24) }}
+                <a href="/team/{{ c.now.username|lower }}">{{ c.now.username }}</a>
+              </span>
+              <span class="tm">{{ c.now.detail if c.now.detail }}</span>
+            {% else %}&mdash;{% endif %}
+          </td>
+          {# Names without sigils down the season columns. A sigil here would
+             draw its manager's ring as it is today, which in a column headed
+             2022 is the one thing this table exists to correct. #}
+          {% for y in title_years %}
+            <td class="yr" data-year="{{ y }}" data-label="{{ y }}">
+              {%- if c.by_year.get(y) -%}
+                <a href="/team/{{ c.by_year[y].username|lower }}">{{ c.by_year[y].username }}</a>
+              {%- else -%}<span class="tm">&mdash;</span>{%- endif -%}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
   <section id="champions">
     <h2>Champions</h2>
     <table>
@@ -108,51 +171,6 @@
     </table>
   </section>
 
-  {% if titles %}
-  <section id="titles">
-    <h2>Titles held</h2>
-    <p class="note">Seven crests only one manager holds at a time. Every one
-      of them can be taken, and the columns say when they were.</p>
-    <table class="titles">
-      <thead>
-        <tr>
-          <th>Title</th><th>Held now</th>
-          {% for y in title_years %}<th>{{ y }}</th>{% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-      {% for c in titles %}
-        <tr>
-          {# The mark from the sigil ring, at reading size, so the table and
-             the rings on this page say the same thing without a legend. #}
-          <td class="name" data-label="Title" title="{{ c.description }}">
-            <span class="titlemark {{ c.colour }}">{{ sigilmark(c.code) }}</span>{{ c.name }}
-          </td>
-          <td data-label="Held now">
-            {% if c.now %}
-              <span class="avatar-line">
-                {{ avatar(c.now.owner_id, 24) }}
-                <a href="/team/{{ c.now.username|lower }}">{{ c.now.username }}</a>
-              </span>
-              <span class="tm">{{ c.now.detail if c.now.detail }}</span>
-            {% else %}&mdash;{% endif %}
-          </td>
-          {# Names without sigils down the season columns. A sigil here would
-             draw its manager's ring as it is today, which in a column headed
-             2022 is the one thing this table exists to correct. #}
-          {% for y in title_years %}
-            <td data-label="{{ y }}">
-              {%- if c.by_year.get(y) -%}
-                <a href="/team/{{ c.by_year[y].username|lower }}">{{ c.by_year[y].username }}</a>
-              {%- else -%}<span class="tm">&mdash;</span>{%- endif -%}
-            </td>
-          {% endfor %}
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </section>
-  {% endif %}
 
   <section id="alltime">
     <h2>All-time standings</h2>
