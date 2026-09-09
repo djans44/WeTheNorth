@@ -165,16 +165,17 @@ section:last-child { border-bottom: 0; }
   color: var(--ink);
 }
 
-/* The year, doubling as the season picker. The chevron is drawn on the
-   summary rather than left to the browser's own marker, which sits to one
-   side of the text and cannot be centred under a heading. */
-.yearpick { position: relative; }
-.yearpick > summary {
+/* The page's own title, doubling as the control that changes it -- the year
+   on a season, the manager on a manager. The chevron is drawn on the summary
+   rather than left to the browser's own marker, which sits to one side of the
+   text and cannot be centred under a heading. */
+.headpick { position: relative; }
+.headpick > summary {
   list-style: none;
   cursor: pointer;
 }
-.yearpick > summary::-webkit-details-marker { display: none; }
-.yearpick > summary h1::after {
+.headpick > summary::-webkit-details-marker { display: none; }
+.headpick > summary h1::after {
   content: "";
   display: inline-block;
   width: 0.42em;
@@ -188,11 +189,11 @@ section:last-child { border-bottom: 0; }
   transform: rotate(45deg);
   vertical-align: middle;
 }
-.yearpick > summary:hover h1 { color: var(--accent); }
-.yearpick > summary:hover h1::after { border-color: var(--accent); }
-.yearpick[open] > summary h1::after { transform: rotate(-135deg); margin-bottom: 0; }
+.headpick > summary:hover h1 { color: var(--accent); }
+.headpick > summary:hover h1::after { border-color: var(--accent); }
+.headpick[open] > summary h1::after { transform: rotate(-135deg); margin-bottom: 0; }
 
-.yearpick > ul {
+.headpick > ul {
   position: absolute;
   z-index: 5;
   left: 50%;
@@ -207,7 +208,7 @@ section:last-child { border-bottom: 0; }
   border-radius: 2px;
   box-shadow: 0 6px 18px rgba(29, 27, 22, 0.14);
 }
-.yearpick > ul a {
+.headpick > ul a {
   display: block;
   padding: 0.3rem var(--s5);
   font-family: var(--body);
@@ -215,16 +216,31 @@ section:last-child { border-bottom: 0; }
   text-decoration: none;
   color: var(--ink-muted);
 }
-.yearpick > ul a:hover { color: var(--accent); background: var(--gold-ghost); }
-.yearpick > ul a[aria-current] { color: var(--ink); font-weight: 600; }
+.headpick > ul a:hover { color: var(--accent); background: var(--gold-ghost); }
+.headpick > ul a[aria-current] { color: var(--ink); font-weight: 600; }
+/* Thirteen managers is taller than a phone; five seasons is not. */
+.headpick > ul { max-height: 60vh; overflow-y: auto; }
 
 /* h1 is centred site-wide, so the sigil and the name centre as one group. */
 .page-head h1.titled {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: var(--s5);
 }
+/* A whole row to itself, which is what puts it above the pair rather than
+   beside them -- the tight header gets this from display:block, but this one
+   is a flex row and needs the basis instead. */
+.page-head h1.titled .leaf {
+  flex: 0 0 100%;
+  margin: 0 auto 0.2rem;
+  color: var(--accent);
+}
+/* In a flex row the chevron also gains the row's gap, which the plain
+   negative margin does not cancel, so the sigil and name centred 13px left
+   of the leaf above them. Take the gap back as well. */
+.page-head h1.titled::after { margin-right: calc(-0.84em - var(--s5)); }
 
 .lede {
   margin: 0 var(--pad-gutter);

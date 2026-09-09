@@ -73,13 +73,13 @@
   // <details> stays open until it is clicked again, which is right for a
   // disclosure and wrong for a menu. Enhancement only: without this the
   // picker still opens, still navigates, and still closes on a second click.
-  var yearpick = document.querySelector(".yearpick");
-  if (yearpick) {
+  var headpick = document.querySelector(".headpick");
+  if (headpick) {
     document.addEventListener("click", function (e) {
-      if (yearpick.open && !yearpick.contains(e.target)) { yearpick.open = false; }
+      if (headpick.open && !headpick.contains(e.target)) { headpick.open = false; }
     });
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && yearpick.open) { yearpick.open = false; }
+      if (e.key === "Escape" && headpick.open) { headpick.open = false; }
     });
   }
 

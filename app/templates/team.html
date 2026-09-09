@@ -1,11 +1,29 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% block title %}{{ owner.username }} | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
+  {# The name is the control that changes the manager, the same <details> the
+     season page uses for its year. Ordinary links inside a disclosure, so it
+     still opens and still works with the script off. #}
   <header class="page-head">
-    <h1 class="titled">{{ avatar(owner.owner_id, 96) }}{{ owner.username }}</h1>
+    <details class="headpick">
+      <summary>
+        <h1 class="titled">
+          {{ leaf(20) }}{{ avatar(owner.owner_id, 96) }}{{ owner.username }}
+        </h1>
+      </summary>
+      <ul>
+        {% for o in nav_owners() %}
+          <li>
+            <a href="/team/{{ o.username|lower }}"
+               {% if o.username == owner.username %}aria-current="page"{% endif %}>
+              {{ o.username }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
     <p class="lede">
       {{ owner.wins }}&ndash;{{ owner.losses }} across {{ owner.seasons_played }} season{{ "s" if owner.seasons_played != 1 }},
       {{ owner.playoff_appearances }} playoff appearance{{ "s" if owner.playoff_appearances != 1 }},
