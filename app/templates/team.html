@@ -99,7 +99,7 @@
       <p class="rivalline">
         <span class="lbl">{{ "Current rival" if rival_current else "Last rival" }}</span>
         <span class="avatar-line">
-          {{ avatar(rival_spells[0].rival_id, 28) }}
+          {{ avatar(rival_spells[0].rival_id, 40) }}
           <a href="/team/{{ rival_spells[0].rival|lower }}">{{ rival_spells[0].rival }}</a>
           <span class="tm">{{ rival_spells[0].span }}</span>
         </span>
@@ -303,7 +303,7 @@
         <tr>
           <td class="name">
             <span class="avatar-line">
-              {{ avatar(r.opponent_username, 24) }}
+              {{ avatar(r.opponent_username, 30) }}
               <a href="/team/{{ r.opponent_username|lower }}">{{ r.opponent_username }}</a>
             </span>
           </td>

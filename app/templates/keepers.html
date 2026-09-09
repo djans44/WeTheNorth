@@ -23,7 +23,7 @@
     <form method="get" action="/keepers" class="picker">
       <input type="hidden" name="season" value="{{ season }}">
       {# Whose page this is, since an admin can be acting for anyone. #}
-      {{ avatar(owner, 28) }}
+      {{ avatar(owner, 40) }}
       <label for="owner">Acting for</label>
       <select id="owner" name="owner">
         {% for o in owners %}

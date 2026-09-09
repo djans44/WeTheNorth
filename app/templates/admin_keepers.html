@@ -26,7 +26,7 @@
     <div class="errors">
       <b>More than three contracts.</b>
       <ul>
-      {% for o in over %}<li class="avatar-line">{{ avatar(o.username, 22) }}{{ o.username }} holds {{ o.n }}</li>{% endfor %}
+      {% for o in over %}<li class="avatar-line">{{ avatar(o.username, 30) }}{{ o.username }} holds {{ o.n }}</li>{% endfor %}
       </ul>
       A trade should have been blocked. Someone needs to void.
     </div>
@@ -79,7 +79,7 @@
       {% for a in actions %}
         <tr>
           <td class="name">
-            <span class="avatar-line">{{ avatar(a.owner, 24) }}{{ a.owner }}</span></td>
+            <span class="avatar-line">{{ avatar(a.owner, 30) }}{{ a.owner }}</span></td>
           <td class="{% if a.kind == 'forfeit' or a.kind == 'error' %}loss{% endif %}">{{ a.kind }}</td>
           <td>{{ a.player }}</td>
           <td class="rd">{% if a.round %}R{{ a.round }}{% endif %}</td>
@@ -115,7 +115,7 @@
             <td><input type="checkbox" name="submission" value="{{ p.submission_id }}" checked></td>
             <td>K{{ p.phase }}</td>
             <td class="name">
-              <span class="avatar-line">{{ avatar(p.username, 24) }}{{ p.username }}</span></td>
+              <span class="avatar-line">{{ avatar(p.username, 30) }}{{ p.username }}</span></td>
             <td class="name">{{ p.full_name }}</td>
             <td class="rd">R{{ p.cost_round }}</td>
             <td>{% if p.term_years %}{{ p.term_years }} yr{% endif %}</td>
@@ -144,7 +144,7 @@
       {% for v in voids %}
         <tr>
           <td class="name">
-            <span class="avatar-line">{{ avatar(v.username, 24) }}{{ v.username }}</span></td>
+            <span class="avatar-line">{{ avatar(v.username, 30) }}{{ v.username }}</span></td>
           <td>{{ v.full_name }}</td>
           <td class="rd">R{{ v.penalty_round }}</td>
           <td class="tm">{% if v.confirmed_at %}binding{% else %}declared, not yet binding{% endif %}</td>
@@ -202,7 +202,7 @@
         <tr>
           <td>K{{ s.phase }}</td>
           <td class="name">
-            <span class="avatar-line">{{ avatar(s.username, 24) }}{{ s.username }}</span></td>
+            <span class="avatar-line">{{ avatar(s.username, 30) }}{{ s.username }}</span></td>
           <td>{{ s.full_name or "forfeited" }}</td>
           <td class="rd">{% if s.cost_round %}R{{ s.cost_round }}{% endif %}</td>
           <td class="tm">{{ s.origin }}</td>

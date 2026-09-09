@@ -26,16 +26,16 @@
              that dead-ends on a redirect is worse than no link at all. #}
           <td class="year">{{ s.season_year }}</td>
           <td class="win" data-label="Champion">
-            <span class="avatar-line">{{ avatar(s.champion, 24) }}{{ s.champion }}</span>
+            <span class="avatar-line">{{ avatar(s.champion, 30) }}{{ s.champion }}</span>
             <span class="tm">{{ s.champion_team }}</span></td>
           <td data-label="Runner-up">
-            <span class="avatar-line">{{ avatar(s.runner_up, 24) }}{{ s.runner_up }}</span>
+            <span class="avatar-line">{{ avatar(s.runner_up, 30) }}{{ s.runner_up }}</span>
             <span class="tm">{{ s.runner_up_team }}</span></td>
           <td data-label="Third">
-            <span class="avatar-line">{{ avatar(s.third_place, 24) }}{{ s.third_place }}</span>
+            <span class="avatar-line">{{ avatar(s.third_place, 30) }}{{ s.third_place }}</span>
             <span class="tm">{{ s.third_place_team }}</span></td>
           <td data-label="Best record">
-            <span class="avatar-line">{{ avatar(s.regular_season_leader, 24) }}{{ s.regular_season_leader }}</span>
+            <span class="avatar-line">{{ avatar(s.regular_season_leader, 30) }}{{ s.regular_season_leader }}</span>
             <span class="tm">{{ s.leader_wins }}-{{ s.leader_losses }}</span></td>
         </tr>
       {% endfor %}
@@ -56,7 +56,7 @@
       {% for o in standings %}
         <tr>
           <td class="name">
-            <span class="avatar-line">{{ avatar(o.username, 24) }}{{ o.username }}</span>
+            <span class="avatar-line">{{ avatar(o.username, 30) }}{{ o.username }}</span>
           </td>
           <td>{{ o.seasons_played }}</td>
           <td>{{ o.wins }}</td>

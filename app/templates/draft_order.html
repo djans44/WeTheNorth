@@ -46,7 +46,7 @@
   <section>
     <h2>Choosing order</h2>
     {% if on_clock %}
-      <p class="settled avatar-line">{{ avatar(on_clock.owner_id, 32) }}
+      <p class="settled avatar-line">{{ avatar(on_clock.owner_id, 40) }}
         <b>On the clock: {{ on_clock.username }}</b></p>
     {% else %}
       <p class="note ok">Everyone has chosen.</p>
@@ -59,7 +59,7 @@
         <tr class="{% if r.is_on_the_clock %}picked{% endif %}">
           <td class="rd">{{ r.lottery_position }}</td>
           <td class="name">
-            <span class="avatar-line">{{ avatar(r.owner_id, 24) }}{{ r.username }}</span>
+            <span class="avatar-line">{{ avatar(r.owner_id, 30) }}{{ r.username }}</span>
           </td>
           <td class="rd">{% if r.finish %}{{ ordinal(r.finish) }}{% endif %}</td>
           <td class="rd">
@@ -110,7 +110,7 @@
           <tr>
             <td class="rd">{{ r.lottery_position }}</td>
             <td class="name">
-              <span class="avatar-line">{{ avatar(r.owner_id, 24) }}{{ r.username }}</span>
+              <span class="avatar-line">{{ avatar(r.owner_id, 30) }}{{ r.username }}</span>
             </td>
             <td>
               <select name="slot_{{ r.owner_id }}">

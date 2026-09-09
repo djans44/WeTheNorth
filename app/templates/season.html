@@ -130,7 +130,7 @@
              under the table carries the words. #}
           <td class="name">
             <span class="avatar-line">
-              {{ avatar(t.username, 24) }}
+              {{ avatar(t.username, 30) }}
               <a href="/team/{{ t.username|lower }}">{{ t.username }}</a>
               {% set seed = seeds.get(t.team_id) %}
               {% if seed %}{{ seedmark(seed) }}{% endif %}
@@ -175,7 +175,7 @@
               <span class="crest-more" aria-hidden="true"></span>
               <span class="crest-what">{{ c.description }}</span>
               <span class="crest-who avatar-line">
-                {{ avatar(c.owner_id, 22) }}
+                {{ avatar(c.owner_id, 30) }}
                 <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
               </span>
               <span class="tm">{{ c.detail if c.detail }}</span>
@@ -198,7 +198,7 @@
               <span class="crest-more" aria-hidden="true"></span>
               <span class="crest-what">{{ c.description }}</span>
               <span class="crest-who avatar-line">
-                {{ avatar(c.owner_id, 22) }}
+                {{ avatar(c.owner_id, 30) }}
                 <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
               </span>
               <span class="tm">{{ c.detail if c.detail }}</span>
@@ -286,7 +286,7 @@
                   <span class="crest-more" aria-hidden="true"></span>
                   <span class="crest-what">{{ c.description }}</span>
                   <span class="crest-who avatar-line">
-                    {{ avatar(c.owner_id, 20) }}
+                    {{ avatar(c.owner_id, 30) }}
                     <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
                   </span>
                   <span class="tm">{{ c.detail if c.detail }}</span>
@@ -325,7 +325,7 @@
         <div class="owner-block">
           <h3>
             <span class="avatar-line">
-              {{ avatar(group.rows[0].owner_id, 24) }}
+              {{ avatar(group.rows[0].owner_id, 30) }}
               <a href="/team/{{ group.key|lower }}">{{ group.key }}</a>
             </span>
           </h3>

@@ -2,11 +2,21 @@
   Shared components.
 
       {% from "macros.html" import avatar %}
-      {{ avatar(o.username, 24) }}
+      {{ avatar(o.username, 30) }}
 
   avatar() accepts a username, an owner_id, or an owner row. A row that
   carries a second person in another column -- an opponent, a rival -- must
   pass that column explicitly rather than the whole row.
+
+  Three sizes, and no others. The initials are drawn at four tenths of the
+  size, so these are the sizes at which they are legible:
+
+      30   beside a name, in a table, in the nav. The common one.
+      40   where the sigil is the subject of its own line.
+      96   a portrait: a manager's page, the profile form.
+
+  It was six sizes -- 20, 22, 24, 28, 32, 96 -- which put the initials
+  anywhere from 8px to 13px and made 20 and 22 unreadable for no gain.
 
   av() is an environment global, so it resolves inside imported macros
   without the calling template passing any context. That is also why a
@@ -31,7 +41,7 @@
 {%- endmacro %}
 
 
-{% macro avatar(who, size=32, live=false) -%}
+{% macro avatar(who, size=30, live=false) -%}
   {%- set a = av(who, live) -%}
   {#- A held crest rings the sigil wherever it is drawn, so the champion is
       recognisable in a table without a legend, and the mark saying which
@@ -129,13 +139,13 @@
     {% if label %}<span class="tie-label">{{ label }}</span>{% endif %}
     {% if g %}
       <span class="side {% if a_won %}won{% endif %}">
-        {{ avatar(g.owner_a, 20) }}
+        {{ avatar(g.owner_a, 30) }}
         <span class="who">{{ g.owner_a }}</span>
         <span class="pts">{{ "%.2f"|format(g.points_a) if g.points_a is not none }}</span>
       </span>
       <span class="side {% if b_won %}won{% endif %}">
         {% if g.team_b %}
-          {{ avatar(g.owner_b, 20) }}
+          {{ avatar(g.owner_b, 30) }}
           <span class="who">{{ g.owner_b }}</span>
           <span class="pts">{{ "%.2f"|format(g.points_b) if g.points_b is not none }}</span>
         {% else %}

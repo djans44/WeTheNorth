@@ -38,7 +38,7 @@
           <tr>{% for t in by_owner %}
             <th>
               <span class="stack">
-                {{ avatar(t.owner_id, 24) }}
+                {{ avatar(t.owner_id, 30) }}
                 <span class="nm">{{ t.username }}</span>
               </span>
               <span class="tm">slot {{ t.slot }}</span>
@@ -130,7 +130,7 @@
             {% for o in order %}
               <th class="who">
                 <span class="stack">
-                  {{ avatar(o.username, 22) }}
+                  {{ avatar(o.username, 30) }}
                   <span class="nm">{{ o.username }}</span>
                 </span>
               </th>
