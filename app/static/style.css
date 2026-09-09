@@ -743,7 +743,14 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .sectionnav {
   position: fixed;
   top: 7.5rem;
-  left: max(0.75rem, calc(50% - 28rem - 3.75rem));
+  /* Anchored by its right edge, not its left, so the labels open into the
+     empty margin and the icons slide left with them. Anchored left it grew
+     rightwards and covered the page it is pointing at.
+     50% + 28rem clears the half-width of the panel; the quarter rem is the
+     gap. min() stops it walking off the left edge on a narrow desktop, where
+     it will sit over the panel as it did before -- below 48rem it becomes a
+     horizontal strip and none of this applies. */
+  right: min(calc(50% + 28rem + 0.25rem), calc(100% - 4.25rem));
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -777,6 +784,41 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 }
 .sectionnav:hover span,
 .sectionnav:focus-within span { max-width: 11rem; }
+
+/* The rail needs a gutter to open into. The panel is 56rem and the open rail
+   about 8rem, so below roughly 74rem there is nowhere for it to go: it would
+   either cover the panel or run off the left edge. It becomes a strip across
+   the top instead.
+
+   This is the one component with a second breakpoint. CLAUDE.md asks for a
+   single 48rem block and that still holds for page layout; this threshold is
+   not about phones, it is the width at which this component stops fitting,
+   and pinning it to 48rem would leave the rail broken in every window
+   between the two.
+
+   Labels always show here: a strip has room for them, and on touch there is
+   no hover, so an icon alone could never be identified. --nav-h is measured
+   in app.js, because the site nav changes height when the menu opens and a
+   fixed offset would leave a gap or an overlap. */
+@media (max-width: 74rem) {
+  .sectionnav {
+    position: sticky;
+    top: var(--nav-h, 2.75rem);
+    left: auto;
+    right: auto;
+    flex-direction: row;
+    justify-content: space-around;
+    margin: 0 0 var(--s4);
+    padding: 2px 0;
+  }
+  .sectionnav a {
+    flex-direction: column;
+    gap: 1px;
+    padding: 5px 4px;
+  }
+  .sectionnav svg { width: 20px; height: 20px; }
+  .sectionnav span { max-width: none; font-size: 10px; }
+}
 
 /* One week at a time, chosen from this strip. The narrow-screen dropdown
    below is the same choice in one line; the media query swaps them. */
@@ -1585,28 +1627,6 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
     padding-top: var(--s2);
     background: var(--page-bg);
   }
-
-  /* A rail in the gutter would sit on top of the panel at this width, so it
-     becomes a strip across the top instead. Labels are always shown here:
-     there is no hover on touch, so an icon alone could never be identified.
-     --nav-h is measured in app.js, because the site nav changes height when
-     the menu opens and a fixed offset would leave a gap or an overlap. */
-  .sectionnav {
-    position: sticky;
-    top: var(--nav-h, 2.75rem);
-    left: auto;
-    flex-direction: row;
-    justify-content: space-around;
-    margin: 0 0 var(--s4);
-    padding: 2px 0;
-  }
-  .sectionnav a {
-    flex-direction: column;
-    gap: 1px;
-    padding: 5px 4px;
-  }
-  .sectionnav svg { width: 20px; height: 20px; }
-  .sectionnav span { max-width: none; font-size: 10px; }
 
   .keeper-grid { gap: var(--s4); }
   .toast { left: var(--s2); right: var(--s2); bottom: var(--s2); transform: none; max-width: none; }

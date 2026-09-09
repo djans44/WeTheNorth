@@ -154,7 +154,12 @@ add a modifier class — never repeat the block lower down.
   inherited its fixed size. Only genuinely shared things stay bare: `.avatar`,
   `.avatar-line`, `.tm`, `.note`, `.name`.
 - **New pages must work on a phone.** There is one `@media (max-width: 48rem)`
-  block; put narrow-screen rules there rather than starting a second one. Wide
+  block; put narrow-screen rules there rather than starting a second one. The
+  single exception is `.sectionnav`, which has its own `74rem` block: that
+  breakpoint is not about phones, it is the width below which the side rail
+  has no gutter to open into, and pinning it to 48rem left the rail broken
+  in every window between the two. A second breakpoint needs that kind of
+  reason. Wide
   tables scroll inside themselves. Hover does not exist on touch, so nothing
   at that width may depend on it: the nav's submenus unfold in place inside
   the hamburger rather than opening on hover, and the open menu scrolls
