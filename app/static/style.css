@@ -652,13 +652,15 @@ h3 {
   gap: var(--s3) var(--s4);
   margin: 0 0 var(--s4);
 }
-.pickhead .note { flex: 1 1 22rem; margin: 0; }
+.pickhead .note,
+.pickhead .draftstate { flex: 1 1 18rem; margin: 0; }
 
 /* .field sets a 9rem label column for the admin forms, which left "Show"
    marooned from its own dropdown. margin-left:auto rather than
    justify-content on the row, so the control stays right when a narrow
    screen wraps it onto a line of its own. */
-.pickhead .field { flex: 0 0 auto; margin: 0 0 0 auto; }
+.pickhead .field,
+.pickhead .picker { flex: 0 0 auto; margin: 0 0 0 auto; }
 .pickhead .field > label { flex: 0 0 auto; }
 .pickhead .field select { flex: 0 0 auto; min-width: 9rem; }
 

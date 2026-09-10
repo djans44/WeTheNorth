@@ -16,24 +16,14 @@
     <a class="to-top" href="#top">Top</a>
   </header>
 
+  {# Where the season stands on the left, the season you are looking at on
+     the right, on one line. All three states share the left slot, so the
+     answer to "has this happened yet" is always in the same place. #}
   <section>
-    {# loadonpick: app.js hides the button and loads on change. The button
-       stays in the markup so the form still works with the script off. #}
-    <form method="get" action="/draft-order" class="picker loadonpick">
-      <label for="season">Season</label>
-      <select id="season" name="season">
-        {% for y in years %}
-          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit">Load</button>
-    </form>
-
-    {# Whether the season's order is settled, at the top, where the answer to
-       "has this happened yet" belongs. The name of whoever is choosing stays
-       with the table below rather than being said twice. #}
-    {% if rows %}
-      {% if on_clock %}
+    <div class="pickhead">
+      {% if not rows %}
+        <p class="note">The lottery has not been drawn for {{ season }}.</p>
+      {% elif on_clock %}
         <p class="draftstate live">
           <span>Under way</span>
           <span class="sub">{{ chosen }} of {{ entrants }} slots taken.</span>
@@ -44,14 +34,22 @@
           <span class="sub">All {{ entrants }} slots taken.</span>
         </p>
       {% endif %}
-    {% endif %}
+
+      {# loadonpick: app.js hides the button and loads on change. The button
+         stays in the markup so the form still works with the script off. #}
+      <form method="get" action="/draft-order" class="picker loadonpick">
+        <label for="season">Season</label>
+        <select id="season" name="season">
+          {% for y in years %}
+            <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Load</button>
+      </form>
+    </div>
   </section>
 
-  {% if not rows %}
-  <section>
-    <p class="note">The lottery has not been drawn for {{ season }}.</p>
-  </section>
-  {% else %}
+  {% if rows %}
 
   <section>
     <h2>The board</h2>
