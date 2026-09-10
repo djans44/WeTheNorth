@@ -373,19 +373,30 @@ def rivalry(conn, seasons):
     return out
 
 
-def held(conn, as_of=None):
+# Season-and-week, as one comparison. Held crests move at different speeds
+# and this is the cut that suits all of them.
+CUT = "(g.season_year < %s or (g.season_year = %s and g.week <= %s))"
+
+
+def held(conn, season=None, week=None):
     """The eight crests only one manager holds at a time.
 
     Recomputed on every run, including a single-season one: a week's play can
     take one of these off its holder, and a weekly recompute that skipped them
     would leave the rings wrong until someone remembered to run a full one.
 
-    `as_of` cuts every input at the end of that season and stamps the rows
-    with it. That is what a season page needs: 2023's sigils should wear the
-    rings as they stood when 2023 finished, not the ones being worn today,
-    and a manager who held a title once and lost it should be able to say so.
-    Called with no year the rows carry no season, which is what they have
-    always meant -- who holds each title now.
+    The cut is a season *and* a week, because these titles move at very
+    different speeds. The throne changes when a season ends. Captain of the
+    Kingsguard can change every week, and recording it once a year recorded
+    almost none of it -- in 2025 it passed through five managers and the
+    season close caught the fifth. So:
+
+        season None            who holds each now
+        season Y, week None    who held each when Y closed
+        season Y, week W       who held each after week W of Y
+
+    All three are stored. The season pages ring their sigils from the middle
+    one, and the week rows are the history of how a title actually moved.
 
     The tallies count from game_log rather than from owner_crests rows.
     Counting rows would make one crest depend on another having been computed
@@ -393,73 +404,77 @@ def held(conn, as_of=None):
     order it happened to run in.
     """
     out = collections.defaultdict(list)
-    # Every rule below is the same query cut at a season, so the cut is a
-    # bound parameter and a live run passes a year no season will reach.
-    # Cheaper than seven queries in two versions that then have to be kept
-    # saying the same thing as each other.
-    cut = 9999 if as_of is None else as_of
-    year = as_of
+    cut_y = 9999 if season is None else season
+    cut_w = 99 if week is None else week
+    cut = (cut_y, cut_y, cut_w)
+    mid = week is not None
 
+    # A season still being played has not produced a champion, so mid-season
+    # the reigning one is still the last finished season's.
     done = q(conn, "select max(season_year) as y from season_results "
-                   "where is_complete and season_year <= %s", (cut,))[0]["y"]
+                   "where is_complete and season_year <= %s",
+             (cut_y - 1 if mid else cut_y,))[0]["y"]
     if done:
         for r in q(conn, "select champion_owner_id as o from season_results "
                          "where season_year = %s", (done,)):
             out["reigning_champion"].append(
-                (r["o"], year, None, f"champion of {done}", 0))
+                (r["o"], season, week, f"champion of {done}", 0))
         for r in q(conn, "select owner_id as o from team_season_stats "
                          "where season_year = %s and final_rank = 12", (done,)):
             out["reigning_sacko"].append(
-                (r["o"], year, None, f"last in {done}", 0))
+                (r["o"], season, week, f"last in {done}", 0))
 
     # Best win rate in league history. Two seasons minimum: a newcomer at 10-4
-    # would otherwise hold it off fourteen games. Aggregated here rather than
-    # read from owner_all_time_stats, which is this same sum over every season
-    # there has ever been and so cannot be cut at one.
-    #
+    # would otherwise hold it off fourteen games. Counted from game_log rather
+    # than read from team_season_stats, which is a season at a time and cannot
+    # answer what a record was in week nine.
+    best = []
+    for r in q(conn, f"""
+        select owner_id,
+               count(*) filter (where result = 'W') as wins,
+               count(*) filter (where result = 'L') as losses,
+               count(*) filter (where result = 'T') as ties,
+               sum(points_for) as points_for,
+               count(distinct season_year) as seasons
+        from game_log g
+        where game_type = 'regular' and {CUT}
+        group by owner_id
+    """, cut):
+        played = r["wins"] + r["losses"] + r["ties"]
+        if r["seasons"] >= RECORD_SEASONS and played:
+            r["win_pct"] = (r["wins"] + r["ties"] * 0.5) / played
+            best.append(r)
     # A tie on rate goes to the most points scored. Records repeat -- 2023
     # closed with three managers on 18-10 apiece -- and a crest only one
     # manager holds cannot be settled by the thing they are tied on. Points
-    # for is the league's own tiebreak everywhere else it needs one, from the
-    # wildcard seeds up.
-    for r in leaders(leaders(q(conn, """
-        select owner_id, sum(wins) as wins, sum(losses) as losses,
-               sum(points_for) as points_for,
-               round((sum(wins) + sum(ties) * 0.5)
-                     / nullif(sum(wins) + sum(losses) + sum(ties), 0), 3)
-                   as win_pct
-        from team_season_stats
-        where season_year <= %s
-        group by owner_id
-        having count(*) filter (where games_played > 0) >= %s
-    """, (cut, RECORD_SEASONS)), "win_pct"), "points_for"):
+    # for is the league's own tiebreak everywhere else it needs one.
+    for r in leaders(leaders(best, "win_pct"), "points_for"):
         out["best_record"].append(
-            (r["owner_id"], year, None,
+            (r["owner_id"], season, week,
              f"{r['wins']}-{r['losses']}, {r['win_pct']:.3f}", 0))
 
     # Each manager's newest rival as at the cut, then their record against
-    # that person over every meeting up to it. Aggregated here for the same
-    # reason: owner_head_to_head counts every game ever played.
+    # that person over every meeting up to it.
     #
     # Rate first, then meetings, then points scored in those meetings. A
     # perfect record is easy to tie -- 2023 closed with Joey and Tom both 4-0
     # over four games -- and this is a crest about one rivalry, so the last
     # word goes to how they scored inside it rather than to a career total
     # made up mostly of games against everybody else.
-    h2h = {(r["owner_id"], r["opponent_owner_id"]): r for r in q(conn, """
+    h2h = {(r["owner_id"], r["opponent_owner_id"]): r for r in q(conn, f"""
         select owner_id, opponent_owner_id, count(*) as games,
                count(*) filter (where result = 'W') as wins,
                count(*) filter (where result = 'L') as losses,
                sum(points_for) as points_for
-        from game_log where season_year <= %s
+        from game_log g where {CUT}
         group by owner_id, opponent_owner_id
-    """, (cut,))}
+    """, cut)}
     rivals = []
     for r in q(conn, """
         select distinct on (r.owner_id) r.owner_id, r.rival_owner_id
         from rivalries r where r.season_year <= %s
         order by r.owner_id, r.season_year desc
-    """, (cut,)):
+    """, (cut_y,)):
         rec = h2h.get((r["owner_id"], r["rival_owner_id"]))
         if rec and rec["games"] >= RIVAL_MEETINGS:
             rivals.append({"owner_id": r["owner_id"], "games": rec["games"],
@@ -468,7 +483,7 @@ def held(conn, as_of=None):
                            "wins": rec["wins"], "losses": rec["losses"]})
     for r in leaders(leaders(leaders(rivals, "rate"), "games"), "points_for"):
         out["fiercest_rival"].append(
-            (r["owner_id"], year, None,
+            (r["owner_id"], season, week,
              f"{r['wins']}-{r['losses']} against their rival", 0))
 
     # Most weeks topping the league's scoring, a tie going to the most points
@@ -478,36 +493,35 @@ def held(conn, as_of=None):
     # The filter counts the top weeks while the sum runs over every regular
     # season game, which is why the rank is computed in the subquery and
     # tested in the outer one rather than filtered there.
-    for r in leaders(leaders(q(conn, """
+    for r in leaders(leaders(q(conn, f"""
         select owner_id,
                count(*) filter (where rk = 1) as n,
                sum(points_for) as points_for
         from (
             select owner_id, points_for, rank() over (
                        partition by season_year, week order by points_for desc) as rk
-            from game_log
-            where game_type = 'regular' and season_year <= %s) t
+            from game_log g
+            where game_type = 'regular' and {CUT}) t
         group by owner_id
-    """, (cut,)), "n"), "points_for"):
+    """, cut), "n"), "points_for"):
         out["most_weekly_highs"].append(
-            (r["owner_id"], year, None, f"{r['n']} weeks", 0))
+            (r["owner_id"], season, week, f"{r['n']} weeks", 0))
 
     # The longest winning streak still running. A streak does not cross a
-    # season, so "still running" is the trailing run of wins in the newest
-    # season that has been played -- between seasons, whoever finished the
-    # last one hottest. Regular season only, like every other streak rule
-    # here: a playoff run is a different thing and the bracket says it.
-    latest = q(conn, """
-        select max(season_year) as y from game_log
-        where game_type = 'regular' and season_year <= %s
-    """, (cut,))[0]["y"]
+    # season, so it is the trailing run of wins in the newest season played
+    # at the cut. Regular season only: a playoff run is a different thing and
+    # the bracket already says who went furthest.
+    latest = q(conn, f"""
+        select max(season_year) as y from game_log g
+        where game_type = 'regular' and {CUT}
+    """, cut)[0]["y"]
     if latest:
         run = {}
         for r in q(conn, """
             select owner_id, result, points_for from game_log
-            where game_type = 'regular' and season_year = %s
+            where game_type = 'regular' and season_year = %s and week <= %s
             order by owner_id, week
-        """, (latest,)):
+        """, (latest, cut_w if latest == cut_y else 99)):
             n, pts = run.get(r["owner_id"], (0, 0.0))
             run[r["owner_id"]] = ((n + 1, pts + float(r["points_for"]))
                                   if r["result"] == "W" else (0, 0.0))
@@ -518,7 +532,7 @@ def held(conn, as_of=None):
                    for o, (n, p) in run.items() if n]
         for r in leaders(leaders(streaks, "n"), "pts"):
             out["kingsguard"].append(
-                (r["owner_id"], year, None,
+                (r["owner_id"], season, week,
                  f"{r['n']} straight, {r['pts']:.1f} scored", 0))
 
     # Most games won, and lost, by under a point. Both come out as four-way
@@ -531,14 +545,14 @@ def held(conn, as_of=None):
             ("most_narrow_losses", "L", "points_against - points_for")):
         rows = q(conn, f"""
             select owner_id, count(*) as n, sum({margin}) as total
-            from game_log
-            where game_type = 'regular' and season_year <= %s
+            from game_log g
+            where game_type = 'regular' and {CUT}
               and result = %s and {margin} < %s
             group by owner_id
-        """, (cut, result, WHISKER))
+        """, cut + (result, WHISKER))
         for r in lowest(leaders(rows, "n"), "total"):
             out[code].append(
-                (r["owner_id"], year, None,
+                (r["owner_id"], season, week,
                  f"{r['n']}, {r['total']:.2f} between them", 0))
     return out
 
@@ -568,6 +582,16 @@ def main():
         for y in complete_seasons(conn, seasons):
             for code, rows in held(conn, y).items():
                 awards[code] += rows
+            # And after every week of it. A title that changes hands in week
+            # nine and back in week ten leaves no trace in a season-close
+            # snapshot, which is most of what these titles do.
+            last = q(conn, """
+                select max(week) as w from game_log
+                where season_year = %s and game_type = 'regular'
+            """, (y,))[0]["w"] or 0
+            for w in range(1, last + 1):
+                for code, rows in held(conn, y, w).items():
+                    awards[code] += rows
 
         dropped = 0
         for code in list(awards):

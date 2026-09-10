@@ -251,6 +251,13 @@ def crest_case(catalogue, mine):
                 continue
             got = won[c["crest_id"]]
             if c["standing"] == "held":
+                # The week rows are the history of how a title moved and are
+                # read on /crests. Here only the live row and the season
+                # closes count, or a manager who held one for five weeks in
+                # 2023 lands in "titles once held" with no season to name.
+                got = [r for r in got if r["week"] is None]
+                if not got:
+                    continue
                 live = [r for r in got if r["season_year"] is None]
                 years = sorted(r["season_year"] for r in got
                                if r["season_year"] is not None)
@@ -545,7 +552,7 @@ def history(request: Request):
             from owner_crests oc
             join crests c on c.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
-            where c.standing = 'held'
+            where c.standing = 'held' and oc.week is null
             order by c.sort_order, oc.season_year desc nulls first
         """)
         standings = query(conn, """
@@ -614,7 +621,7 @@ def crests(request: Request):
             from owner_crests oc
             join crests c on c.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
-            where c.standing = 'held'
+            where c.standing = 'held' and oc.week is null
             order by oc.season_year desc nulls first
         """):
             if r["season_year"] is None:
@@ -1108,6 +1115,7 @@ def season(request: Request, year: int):
             join crests c on c.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
             where oc.season_year = %s and oc.week is not null
+              and c.standing = 'earned'
             order by oc.week, c.sort_order, o.username
         """, (year,)):
             week_crests.setdefault(r["week"], []).append(r)
