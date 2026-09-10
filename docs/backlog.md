@@ -81,36 +81,102 @@ Order matters: seasons, then teams, then players, then everything keyed on
 them. An import that runs out of order should say what is missing rather
 than fail on a foreign key.
 
-## 5. UI audits, one page each
+---
 
-The same treatment `/history`, `/season` and `/team` were given. Each of
-these is **its own action** — audit, agree the changes, build, commit — not
-one sweep.
+**Items 5 to 16 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
+page, say what is wrong with it, agree the changes, build them. **Each is its
+own item** — twelve audits, twelve conversations, twelve commits.
 
-Read as a design and usability audit rather than form validation: `/rules`
-has no inputs, and it is on the list.
+A design and usability audit rather than form validation. `/rules` has no
+inputs and is on the list, which settles which is meant.
 
-**Draft**
-1. `/draft-order`
-2. `/draft-prep`
+None of them has ever been looked at this way. The three pages that have were
+each worth a handful of real changes, so expect the same here.
 
-**Keepers**
-3. `/keepers`
+## 5. Audit `/draft-order`
 
-**Rules**
-4. `/rules`
+The lottery, then each manager picking a slot in lottery order in one live
+session. The admin can pick for anyone and override any slot.
 
-**Admin**
-5. `/admin/scores`
-6. `/admin/keepers`
-7. `/admin/keepers/edit/{sid}`
-8. `/admin/owners`
-9. `/admin/owners/{oid}`
-10. `/admin/rivals`
-11. `/admin/schedule`
-12. `/admin/crests`
+The page has to work while twelve people watch it, which is a constraint none
+of the others have.
 
-## 6. Let the league vote on the four honours
+## 6. Audit `/draft-prep`
+
+The board: snake order, pick numbers that skip keeper cells, void penalty
+rounds counting as taken so keepers bump around them.
+
+The densest grid on the site and the one most likely to be read on a phone at
+the draft.
+
+## 7. Audit `/keepers`
+
+Keeper selection. Three sequential phases, one pick each, contracts filling
+the earliest phases automatically, plans, voids, and a submit per phase.
+
+The most intricate rules in the league meet the page most owners use least
+often, which is the hard combination.
+
+## 8. Audit `/rules`
+
+Eleven sections now, and it grew a crests section without anyone looking at
+the whole. Read-only, so this is purely about whether it can be read.
+
+## 9. Audit `/admin/scores`
+
+Entering a week. Saving replaces every matchup for that week, and it now
+recomputes the crests as well.
+
+The one admin page used every week during a season, so it earns the most
+polish.
+
+## 10. Audit `/admin/keepers`
+
+Windows, review and phase resolution in one page. Approving and rejecting
+submissions, and running a resolution that turns plans into submissions.
+
+Rejecting deletes and reopens rather than labelling, which is worth checking
+reads clearly, because it is destructive and does not look it.
+
+## 11. Audit `/admin/keepers/edit/{sid}`
+
+Overriding one submission. Notably, an admin override deliberately does not
+validate a round against the manager's other phases, so a duplicate round can
+be created — visible in the Settled table, blocked by nothing. PROJECT.md §9
+records this; the audit should decide whether the page says so.
+
+## 12. Audit `/admin/owners`
+
+Team name, colour and initials for everyone in one pass.
+
+## 13. Audit `/admin/owners/{oid}`
+
+One owner, in detail. The only page with **no lede and no h1** worth the
+name, which is where the audit starts.
+
+Emails are edited here and they are the sign-in credential, so whatever it
+does with them matters more than it looks.
+
+## 14. Audit `/admin/rivals`
+
+Generated pairings with a preview, and a manual override validated for mutual
+pairings.
+
+## 15. Audit `/admin/schedule`
+
+The generator: fourteen weeks, three opponents twice and the rest once,
+rivalry week pinned, no pair in consecutive weeks. Saves into `matchups` with
+null scores so score entry pre-fills.
+
+Destructive on save and the results are hard to eyeball, which is the thing
+to look at.
+
+## 16. Audit `/admin/crests`
+
+The grant flow, built last. Worth an audit precisely because it is new and
+was never looked at with fresh eyes.
+
+## 17. Let the league vote on the four honours
 
 Named in Song, Legend of the Choosing, The Bargain of the Age, The Red Week.
 The commissioner is the right mechanism but the wrong decider — they are
