@@ -202,7 +202,6 @@ section:last-child { border-bottom: 0; }
 }
 .page-head.stuck.condensed .leaf,
 .page-head.stuck.condensed .rivalline,
-.page-head.stuck.condensed .crumbs,
 .page-head.stuck.condensed .pastrivals { display: none; }
 /* h1 rather than h1.titled: a season and the league history have a plain
    heading here, and the three classes still beat both .page-head h1 and
