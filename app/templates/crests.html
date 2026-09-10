@@ -48,22 +48,22 @@
             {% else %}
               <p class="who"><span class="tm">Held by nobody yet.</span></p>
             {% endif %}
+            {# Open, and unlabelled. A title has four season closes at most, so
+               there is nothing to hide behind a disclosure, and a line saying
+               what the years are seven times over says nothing at all. #}
             {% if c.reigns %}
-              <details class="awards">
-                <summary>Who held it at each season's close</summary>
-                <ol>
-                  {% for r in c.reigns %}
-                    <li>
-                      {{ when(r) }}
-                      <span class="avatar-line">
-                        {{ avatar(r.owner_id, 30) }}
-                        <a href="/team/{{ r.username|lower }}">{{ r.username }}</a>
-                      </span>
-                      {% if r.detail %}<span class="tm">{{ r.detail }}</span>{% endif %}
-                    </li>
-                  {% endfor %}
-                </ol>
-              </details>
+              <ol class="crest-log">
+                {% for r in c.reigns %}
+                  <li>
+                    {{ when(r) }}
+                    <span class="avatar-line">
+                      {{ avatar(r.owner_id, 30) }}
+                      <a href="/team/{{ r.username|lower }}">{{ r.username }}</a>
+                    </span>
+                    {% if r.detail %}<span class="tm">{{ r.detail }}</span>{% endif %}
+                  </li>
+                {% endfor %}
+              </ol>
             {% endif %}
           </div>
         </div>
@@ -96,8 +96,11 @@
                   Awarded {{ c.awards|length }}
                   time{% if c.awards|length != 1 %}s{% endif %}
                   to {{ c.owners }} manager{% if c.owners != 1 %}s{% endif %}
+                  {#- the same chevron a crest card uses, so a summary that
+                      opens looks like one -#}
+                  <span class="crest-more" aria-hidden="true"></span>
                 </summary>
-                <ol>
+                <ol class="crest-log">
                   {% for a in c.awards %}
                     <li>
                       {{ when(a) }}

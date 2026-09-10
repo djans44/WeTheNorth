@@ -1671,14 +1671,20 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 }
 .catalogue .awards > summary::-webkit-details-marker { display: none; }
 .catalogue .awards > summary:hover { color: var(--accent); }
-.catalogue .awards ol {
+.catalogue .awards > summary:hover .crest-more { border-color: var(--accent); }
+.catalogue .awards[open] > summary .crest-more {
+  transform: rotate(-135deg);
+  margin-bottom: 0;
+}
+/* The same list either way: open under a title, behind a disclosure under
+   an earned crest. Only the earned ones are long enough to need capping. */
+.catalogue .crest-log {
   margin: var(--s2) 0 0;
   padding: 0;
-  max-height: 15rem;
-  overflow-y: auto;
   list-style: none;
 }
-.catalogue .awards li {
+.catalogue .awards .crest-log { max-height: 15rem; overflow-y: auto; }
+.catalogue .crest-log li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1686,13 +1692,13 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   padding: 0.15rem 0;
   font-size: var(--t-xs);
 }
-.catalogue .awards .when {
+.catalogue .crest-log .when {
   flex: 0 0 5.2rem;
   font-family: var(--body);
   color: var(--ink-soft);
 }
-.catalogue .awards a { color: var(--ink); text-decoration: none; }
-.catalogue .awards a:hover { color: var(--accent); }
+.catalogue .crest-log a { color: var(--ink); text-decoration: none; }
+.catalogue .crest-log a:hover { color: var(--accent); }
 
 .crest-shield.silverware   { --crest-cat: var(--crest-silverware); }
 .crest-shield.scoring      { --crest-cat: var(--crest-scoring); }
