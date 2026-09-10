@@ -49,7 +49,15 @@
     {% endif %}
 
     {% if saved %}
-      <p class="note ok">Saved {{ saved }} matchup{{ "s" if saved != 1 }}.</p>
+      {# The crests recompute on save, so the count says it happened. Named
+         plainly rather than left silent: if it ever says failed, the fix is
+         scripts/award_crests.py --season <year> --apply #}
+      <p class="note ok">Saved {{ saved }} matchup{{ "s" if saved != 1 }}.
+        {%- if crests == "failed" %}
+          <span class="tm">The crests could not be recomputed.</span>
+        {%- elif crests %}
+          <span class="tm">{{ crests }} crest row{{ "s" if crests != "1" }} rewritten.</span>
+        {%- endif %}</p>
     {% endif %}
   </section>
 

@@ -1,6 +1,7 @@
+import contextvars
+import logging
 import os
 import pathlib
-import contextvars
 import time
 
 import psycopg
@@ -12,7 +13,13 @@ from fastapi.templating import Jinja2Templates
 from psycopg.rows import dict_row
 from starlette.middleware.sessions import SessionMiddleware
 
+from app import crests as crestrules
+
 load_dotenv()
+
+# Uvicorn's logger, so anything reported here lands in the Render log beside
+# the request that caused it.
+log = logging.getLogger("uvicorn.error")
 
 STATIC_DIR = pathlib.Path("app/static")
 PUBLIC_PATHS = {"/", "/login", "/logout", "/health", "/preview"}
@@ -1990,7 +1997,7 @@ def build_rows(mode, existing):
 
 @app.get("/admin/scores", response_class=HTMLResponse)
 def admin_scores(request: Request, season: int = 0, week: int = 0,
-                 mode: str = "", saved: int = 0):
+                 mode: str = "", saved: int = 0, crests: str = ""):
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     with get_db() as conn:
@@ -2027,7 +2034,8 @@ def admin_scores(request: Request, season: int = 0, week: int = 0,
         context={"years": years, "season": season, "week": week, "mode": mode,
                  "requested": requested, "week_modes": WEEK_MODES,
                  "teams": teams_list, "rows": build_rows(mode, existing),
-                 "filled": filled, "saved": saved, "errors": [],
+                 "filled": filled, "saved": saved, "crests": crests,
+                 "errors": [],
                  "labels": MODE_LABELS})
 
 
@@ -2120,8 +2128,26 @@ async def admin_scores_save(request: Request):
             """, prepared)
         conn.commit()
 
+        # A week of scores changes who holds nine titles, how far every
+        # streak has run and half the weekly crests, so it is recomputed
+        # here rather than left for someone to remember a command. From this
+        # week on only: week nine cannot change who held a title in week
+        # eight, and the whole season takes fifteen seconds where this takes
+        # about two.
+        #
+        # A failure here must not lose the scores, which are already
+        # committed. It is reported instead, and the hand-run script fixes
+        # it: python scripts/award_crests.py --season <year> --apply
+        try:
+            _, wrote = crestrules.recompute(conn, season, week)
+            crested = str(wrote)
+        except Exception:
+            log.exception("crest recompute failed for %s week %s", season, week)
+            crested = "failed"
+
     return RedirectResponse(
-        url=f"/admin/scores?season={season}&week={week}&mode={mode}&saved={len(prepared)}",
+        url=f"/admin/scores?season={season}&week={week}&mode={mode}"
+            f"&saved={len(prepared)}&crests={crested}",
         status_code=303)
 
 
