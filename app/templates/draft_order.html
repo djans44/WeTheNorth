@@ -149,15 +149,27 @@
            a class with no rule behind it and looked like every other one. #}
         <tr class="{% if r.is_on_the_clock %}onclock{% endif %}">
           <td class="rd">{{ r.lottery_position }}</td>
+          {# Which of the twelve is you. A word rather than a tint: the tint
+             belongs to whoever is on the clock, and two shaded rows in a
+             twelve-row table means neither is the one that matters. When it
+             is your turn you get both, which is right -- the row says it is
+             happening, the word says it is happening to you. #}
           <td class="name">
-            <span class="avatar-line">{{ avatar(r.owner_id, 30) }}{{ r.username }}</span>
+            <span class="avatar-line">{{ avatar(r.owner_id, 30) }}{{ r.username }}
+              {%- if r.owner_id == me %} <span class="tm">you</span>{% endif -%}
+            </span>
           </td>
           <td class="rd">{% if r.finish %}{{ ordinal(r.finish) }}{% endif %}</td>
           <td class="rd">
             {% if r.is_new %}<span class="tm">new</span>
             {% elif r.ballots %}{{ r.ballots }}{% endif %}
           </td>
-          <td class="rd">{% if r.slot %}{{ r.slot }}{% else %}<span class="tm">waiting</span>{% endif %}</td>
+          {# One manager is choosing and the rest are waiting, which is the
+             whole shape of a live draft. Saying "waiting" for both made the
+             column useless at the one moment it is being read. #}
+          <td class="rd">{% if r.slot %}{{ r.slot }}
+            {%- elif r.is_on_the_clock %}<span class="tm now">choosing</span>
+            {%- else %}<span class="tm">waiting</span>{% endif %}</td>
           {# .tm on the cell itself set display:block, which takes a td out of
              the table and left this column adrift of the five beside it. It
              belongs on something inside the cell.

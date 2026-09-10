@@ -1485,6 +1485,11 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    heavier: .rd is already 700 and 600 is a step down from it. */
 .choosing tr.onclock td.name { font-weight: 600; }
 .choosing tr.onclock td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+/* Scoped, because "now" on its own is the kind of name a second page would
+   take for something else. Gold and not muted: every other word in this
+   column is a state you are stuck in, and this one is a state that is
+   happening. */
+.choosing .tm.now { color: var(--gold-deep); font-weight: 600; }
 
 /* Who is picking, while they are picking. Set at the size a manager's own
    page header uses rather than a table row's, because it is the one thing

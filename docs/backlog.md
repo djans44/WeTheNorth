@@ -115,13 +115,10 @@ is perhaps forty lines. Server-sent events are the right shape and the wrong
 host: Render's free tier idles and cold-starts, which a held-open connection
 fights.
 
-Two smaller things the same audit turned up and did not take. They are one
-change, because they are the same table telling you where you stand:
-
-- The Slot column says "waiting" for everyone without a slot, the manager
-  choosing right now included. Choosing and waiting are not the same state.
-- `me` is in the template context and nothing uses it, so there is no way to
-  find yourself among the twelve.
+Live updating is the whole of what is left. Two smaller things the audit
+found are done: the Slot column now says "choosing" on the row of whoever is
+picking and "waiting" only for the managers behind them, and your own row is
+marked so you can find yourself among the twelve.
 
 The audit also noted that nothing on the page says the draft is a snake.
 Decided against: the snake belongs to `/draft-prep`, which draws it.
