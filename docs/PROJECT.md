@@ -465,6 +465,10 @@ button.
 
 ## 9. Known gaps and next steps
 
+Agreed work that is not built lives in **`docs/backlog.md`**, one numbered
+item per change. This section is what is wrong or missing in what does
+exist.
+
 **Loose ends**
 - **Tulio has no email** and cannot sign in
 - Branch protection on `main` is not enabled
@@ -472,7 +476,6 @@ button.
 
 **Not built**
 - **Trades and waivers on the season page** — data is loaded, needs a view and a template
-- Crests of honour (spec in `docs/features/crests.md`)
 - **Create-season checklist** (`docs/features/season-setup.md`) — every step
   needed to stand up the next league year, in dependency order. **Adding an
   owner to a season gets built there**, not on `/admin/owners`: the rivalry
@@ -482,7 +485,8 @@ button.
 **Known rough edges**
 - **`seasons` and `teams` rows have no UI at all.** Both have only ever been
   written by migrations `005` and `009`. A new season currently needs hand-written
-  SQL before any admin page will work on it. See the create-season checklist above.
+  SQL before any admin page will work on it. See the create-season checklist
+  above, and the admin imports in the backlog.
 - Admin overrides deliberately do **not** validate a round against the
   manager's other phases, so an admin can create a duplicate round. It is
   visible in the Settled table but nothing blocks it.
