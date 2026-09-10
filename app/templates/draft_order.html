@@ -49,7 +49,7 @@
             <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
           {% endfor %}
         </select>
-        <button type="submit">Load</button>
+        <button type="submit" class="seal">Load</button>
       </form>
     </div>
   </section>
@@ -125,7 +125,7 @@
          slot 7" rather than naming you to yourself. #}
       {# The hint before the button in the markup as well as on screen, so
          the right-aligned pair reads in the order it is written. #}
-      <p class="boardconfirm">
+      <p class="actionrow pickconfirm">
         <span class="tm">Choose a number above first.</span>
         <button type="submit" class="seal"
                 data-for="{{ '' if my_turn else on_clock.username }}">
@@ -207,8 +207,10 @@
         {% endfor %}
         </tbody>
       </table>
-      <button type="submit">Save slots</button>
-      <span class="tm">Duplicate slots will be rejected by the database.</span>
+      <p class="actionrow">
+        <span class="tm">Duplicate slots will be rejected by the database.</span>
+        <button type="submit" class="seal">Save slots</button>
+      </p>
     </form>
   </section>
   {% endif %}
@@ -217,26 +219,30 @@
   {% if is_admin %}
   <section class="danger">
     <h2>The lottery</h2>
-    <p class="note">Drawing randomises the choosing order and clears every slot
-      already picked for {{ season }}.</p>
-    <form method="post" action="/admin/draft-order/lottery">
-      <input type="hidden" name="season" value="{{ season }}">
-      <label class="void"><input type="checkbox" name="confirm" value="1"> I mean it</label>
-      <button type="submit" class="ghost">Draw lottery</button>
-    </form>
-
-    {# Only when there is one to remove. Drawing again replaces the order and
-       keeps the entrants; this deletes them, which is what you want when the
-       lottery was run for the wrong season or run too early. #}
-    {% if rows %}
-      <p class="note">Removing it deletes the choosing order and every slot
-        picked, and {{ season }} goes back to having no lottery at all.</p>
-      <form method="post" action="/admin/draft-order/clear">
+    {# One or the other, never both. A season either has an order or it does
+       not, so the two buttons are the two halves of that single fact and
+       whichever does not apply is dead. Drawing over an existing order used
+       to be allowed and was a quiet way to lose one; removing and then
+       drawing is the same thing in two steps you can see. #}
+    <p class="note">{% if rows %}The order for {{ season }} is drawn. Remove it
+      before drawing again.{% else %}Drawing sets the choosing order at random,
+      weighted by each manager's finish in {{ prev_season }}.{% endif %}</p>
+    <div class="actionrow">
+      <form method="post" action="/admin/draft-order/lottery">
         <input type="hidden" name="season" value="{{ season }}">
-        <label class="void"><input type="checkbox" name="confirm" value="1"> I mean it</label>
-        <button type="submit" class="ghost">Remove the lottery</button>
+        <button type="submit" class="seal"
+                {% if rows %}disabled{% endif %}>Draw lottery</button>
       </form>
-    {% endif %}
+      {# The only one that destroys anything, so it is the only one that asks.
+         app.js reads data-confirm; without the script the button still works
+         and the wording on it is plain enough to stand alone. #}
+      <form method="post" action="/admin/draft-order/clear"
+            data-confirm="Remove the {{ season }} lottery? The choosing order and every slot picked go with it.">
+        <input type="hidden" name="season" value="{{ season }}">
+        <button type="submit" class="seal"
+                {% if not rows %}disabled{% endif %}>Remove the lottery</button>
+      </form>
+    </div>
   </section>
   {% endif %}
 </div>

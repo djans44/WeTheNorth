@@ -120,6 +120,18 @@
     });
   }
 
+  // ---- a form that asks before it acts ----
+  // data-confirm on the form, its text the question. For the few posts that
+  // destroy something and have no undo. Enhancement only: without the script
+  // the form still submits, so the button's own wording has to be plain.
+  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      if (!window.confirm(form.getAttribute("data-confirm"))) {
+        e.preventDefault();
+      }
+    });
+  });
+
   // ---- timestamps in the reader's own clock ----
   // The server writes UTC because it cannot know where anyone is. Any <time>
   // with a datetime attribute is rewritten here to the reader's zone and
@@ -141,7 +153,7 @@
   // live, and the radio's own required attribute stops an empty submission.
   // With it the button waits until a number is chosen and then says which,
   // so a live pick in front of eleven other people is confirmed by name.
-  var confirmRow = document.querySelector(".boardconfirm");
+  var confirmRow = document.querySelector(".pickconfirm");
   if (confirmRow) {
     var confirmBtn = confirmRow.querySelector("button");
     var forWhom = confirmBtn.getAttribute("data-for");

@@ -3115,12 +3115,18 @@ async def admin_draft_lottery(request: Request):
     form = await request.form()
     season = int(form["season"])
 
-    if not form.get("confirm"):
-        return RedirectResponse(
-            url=f"/draft-order?season={season}&error=" +
-                quote("Tick the confirm box first"), status_code=303)
-
     with get_db() as conn:
+        # Drawing over an existing order was its own quiet way to lose one.
+        # Removing and then drawing is the same thing in two visible steps,
+        # and the page only offers whichever of the two applies.
+        drawn = query(conn, "select count(*) as n from draft_order "
+                            "where season_year = %s", (season,))[0]["n"]
+        if drawn:
+            return RedirectResponse(
+                url=f"/draft-order?season={season}&error=" +
+                    quote(f"{season} already has a lottery. Remove it first."),
+                status_code=303)
+
         ids, names, _, weights, newcomers = lottery_entry(conn, season)
         if not ids:
             return RedirectResponse(
@@ -3164,11 +3170,6 @@ async def admin_draft_clear(request: Request):
     from urllib.parse import quote
     form = await request.form()
     season = int(form["season"])
-
-    if not form.get("confirm"):
-        return RedirectResponse(
-            url=f"/draft-order?season={season}&error=" +
-                quote("Tick the confirm box first"), status_code=303)
 
     with get_db() as conn:
         # Counted before the delete, so the message can say what was actually
