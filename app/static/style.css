@@ -1712,6 +1712,12 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    grid is already only 15rem wide and the shield is as tall as the two
    lines it sits next to. */
 .crest.blazoned > summary { display: flex; align-items: flex-start; gap: var(--s3); }
+/* Optical alignment. flex-start puts the shield's edge against the top of
+   the first line's box, but the ink in that box starts about 5px lower, so
+   the shield read as sitting high. Nudged rather than centred: the card
+   grows when it opens, and a centred shield would drift into the middle of
+   the description. */
+.crest.blazoned > summary > svg { margin-top: 0.3rem; }
 .crest.blazoned > summary > .lines { flex: 1 1 auto; min-width: 0; }
 .crest.blazoned > .crest-all { margin-left: calc(56px + var(--s3)); }
 /* A held crest's coloured left border said which of the three it was. The
