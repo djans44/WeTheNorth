@@ -221,6 +221,12 @@ Sizes: **84px** in the catalogue, **56px** on a manager's page and a season's
 honour roll — the height of the two lines of text beside it — and **44px** in
 a week panel, where the crests are a footnote to the scores.
 
+The 56px shields cost `.crest-grid` a column: it went from `minmax(15rem)` to
+`minmax(18rem)`, which is two columns in an 830px panel where it used to be
+three. That was looked at and kept — the shields are worth the height. Do not
+"fix" it by narrowing the columns without shrinking the shields to match, or
+the text will have 172px to live in.
+
 Two charges are numerals rather than devices: a Cinzel **3** for Three Oaths
 Sworn and **III** for Third of Their Name. Both say it more plainly than any
 picture, and both replaced drawings that failed — a laurel wreath was a tulip
@@ -253,6 +259,3 @@ database.
   whoever ran it — would fit the existing schema without a change to
   `owner_crests`. The grant flow stays either way as the fallback and as the
   thing a poll ultimately calls.
-- A season page's crest grid went from three columns to two when the shields
-  went in (15rem to 18rem). A 44px shield throughout would win the column
-  back.
