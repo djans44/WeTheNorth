@@ -170,8 +170,11 @@
               <span class="crest-more" aria-hidden="true"></span>
               <span class="crest-what">{{ c.description }}</span>
               <span class="tm">{{ c.latest.detail }}</span>
-              {% if c.seasons %}
-                <span class="tm">At the close of {{ c.seasons|join(", ") }}</span>
+              {# Spells rather than season closes: a title is recomputed every
+                 week, and a manager who held one for a single week in the
+                 middle of a season had nothing to show for it. #}
+              {% if c.spells %}
+                <span class="tm">{{ c.spells|map(attribute='span')|join(" · ") }}</span>
               {% endif %}
             </summary>
           </details>
@@ -191,7 +194,7 @@
               <span class="crest-name">{{ c.name }}</span>
               <span class="crest-more" aria-hidden="true"></span>
               <span class="crest-what">{{ c.description }}</span>
-              <span class="tm">At the close of {{ c.seasons|join(", ") }}</span>
+              <span class="tm">{{ c.spells|map(attribute='span')|join(" · ") }}</span>
               <span class="tm">{{ c.latest.detail if c.latest.detail }}</span>
             </summary>
           </details>

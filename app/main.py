@@ -222,7 +222,67 @@ CREST_GROUPS = (
 )
 
 
-def crest_case(catalogue, mine):
+def week_slots(conn):
+    """Every week the league has played, in order.
+
+    Spells are built against this rather than against week numbers, so a
+    title held in the last week of one season and the first of the next is
+    one spell, and a week where nobody qualified breaks one.
+    """
+    return [(r["season_year"], r["week"]) for r in query(conn, """
+        select distinct season_year, week from game_log
+        where game_type = 'regular' order by season_year, week
+    """)]
+
+
+def spell_span(s):
+    a, b = s["start"], s["end"]
+    if (a["season_year"], a["week"]) == (b["season_year"], b["week"]):
+        return "%d wk%d" % (a["season_year"], a["week"])
+    if a["season_year"] == b["season_year"]:
+        return "%d wk%d\u2013%d" % (a["season_year"], a["week"], b["week"])
+    return "%d wk%d \u2013 %d wk%d" % (a["season_year"], a["week"],
+                                       b["season_year"], b["week"])
+
+
+def title_spells(rows, slots):
+    """Weekly holder rows into unbroken spells, newest first.
+
+    A title is recomputed after every week, so holding one for five weeks is
+    five rows. Read as rows it says nothing; read as a spell it says Tom held
+    the Captaincy in week nine of 2025, which is the thing worth knowing.
+
+    Ties share a week, so two managers can be in a spell at once; each gets
+    their own, which is right -- they held it together.
+    """
+    index = {s: i for i, s in enumerate(slots)}
+    # A manager's own page passes rows that carry no owner_id, because every
+    # one of them is theirs. They group as one owner, which is the truth.
+    by_owner = {}
+    for r in rows:
+        if (r["season_year"], r["week"]) in index:
+            by_owner.setdefault(r.get("owner_id"), []).append(r)
+
+    spells = []
+    for oid, mine in by_owner.items():
+        mine.sort(key=lambda r: index[(r["season_year"], r["week"])])
+        run = None
+        for r in mine:
+            i = index[(r["season_year"], r["week"])]
+            if run is not None and i == run["at"] + 1:
+                run["at"], run["end"], run["weeks"] = i, r, run["weeks"] + 1
+            else:
+                run = {"owner_id": oid, "username": r.get("username"),
+                       "start": r, "end": r, "weeks": 1, "at": i}
+                spells.append(run)
+    for s in spells:
+        s["span"] = spell_span(s)
+        s["detail"] = s["end"]["detail"]
+    spells.sort(key=lambda s: s["at"], reverse=True)
+    return spells
+
+
+def crest_case(catalogue, mine, slots=()):
     """A manager's case: what they hold, what they used to, what they won.
 
     Only what they have won. An unwon crest is a fact about the catalogue
@@ -251,19 +311,19 @@ def crest_case(catalogue, mine):
                 continue
             got = won[c["crest_id"]]
             if c["standing"] == "held":
-                # The week rows are the history of how a title moved and are
-                # read on /crests. Here only the live row and the season
-                # closes count, or a manager who held one for five weeks in
-                # 2023 lands in "titles once held" with no season to name.
-                got = [r for r in got if r["week"] is None]
-                if not got:
-                    continue
+                # A title is three kinds of row. The one with no season says
+                # who holds it now; the week rows are every week anyone held
+                # it, which become spells; the season closes are what the
+                # season pages ring their sigils from and are not shown here,
+                # because a spell says everything they do and more.
                 live = [r for r in got if r["season_year"] is None]
-                years = sorted(r["season_year"] for r in got
-                               if r["season_year"] is not None)
-                shown = live or got
+                spells = title_spells(
+                    [r for r in got if r["week"] is not None], slots)
+                if not live and not spells:
+                    continue
+                shown = live or [spells[0]["end"]]
                 entry = dict(c, count=1, instances=shown, latest=shown[0],
-                             seasons=years)
+                             spells=spells)
                 (held if live else past).append(entry)
                 continue
             row.append(dict(c, count=len(got), instances=got, latest=got[0]))
@@ -614,6 +674,23 @@ def crests(request: Request):
 
         # A title has a holder now and a list of who held it when each season
         # closed -- the same rows the season pages ring their sigils from.
+        # A title has a holder now, and a history of every week anyone held
+        # it. The season closes are skipped here: a spell says what they say
+        # and says the weeks in between as well.
+        slots = week_slots(conn)
+        spells = {}
+        for r in query(conn, """
+            select oc.crest_id, oc.season_year, oc.week, oc.detail,
+                   o.owner_id, o.username
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where c.standing = 'held' and oc.week is not null
+            order by oc.season_year, oc.week
+        """):
+            spells.setdefault(r["crest_id"], []).append(r)
+        spells = {k: title_spells(v, slots) for k, v in spells.items()}
+
         holders, reigns = {}, {}
         for r in query(conn, """
             select oc.crest_id, oc.season_year, oc.detail,
@@ -634,6 +711,7 @@ def crests(request: Request):
         if c["standing"] != "held":
             continue
         holder = holders.get(c["crest_id"])
+        mine = spells.get(c["crest_id"], [])
         seasons = reigns.get(c["crest_id"], [])
         # Newest first, so the leading run belongs to whoever holds it now.
         # Those are not previous holders, they are the current one's own
@@ -644,7 +722,8 @@ def crests(request: Request):
         while (holder and i < len(seasons)
                and seasons[i]["owner_id"] == holder["owner_id"]):
             i += 1
-        titles.append(dict(c, holder=holder, previous=seasons[i:]))
+        titles.append(dict(c, holder=holder, previous=seasons[i:],
+                           spells=mine))
     groups = []
     for category, label in CREST_GROUPS:
         rows = [dict(c, awards=awards.get(c["crest_id"], []),
@@ -767,7 +846,8 @@ def team(request: Request, name: str):
         latest_keeper = query(conn, """
             select max(season_year) as y from keeper_selections
         """)[0]["y"]
-    held_crests, past_crests, crest_groups = crest_case(crest_list, my_crests)
+        slots = week_slots(conn)
+    held_crests, past_crests, crest_groups = crest_case(crest_list, my_crests, slots)
 
     keeper_groups = group_runs(keepers, "season_year")
     keeper_years = [g["key"] for g in keeper_groups]

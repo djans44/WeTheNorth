@@ -50,27 +50,31 @@
             {% else %}
               <p class="who"><span class="tm">Held by nobody yet.</span></p>
             {% endif %}
-            {# Only managers who have actually lost it. A title still held by
-               the manager who has always held it has no list, which is worth
-               noticing on its own. #}
-            {% if c.previous %}
+            {# Every spell, not just the season closes. A title is recomputed
+               after every week, so the closes were four moments out of
+               fifty-six -- Tom held the Captaincy in week nine of 2025 and
+               there was nowhere on the site that said so. #}
+            {% if c.spells %}
               <details class="awards">
                 <summary>
-                  Previous holders
+                  Held by {{ c.spells|map(attribute='username')|unique|list|length }}
+                  manager{% if c.spells|map(attribute='username')|unique|list|length != 1 %}s{% endif %}
+                  over {{ c.spells|length }}
+                  spell{% if c.spells|length != 1 %}s{% endif %}
                   <span class="crest-more" aria-hidden="true"></span>
                 </summary>
-              <ol class="crest-log">
-                {% for r in c.previous %}
-                  <li>
-                    {{ when(r) }}
-                    <span class="avatar-line">
-                      {{ avatar(r.owner_id, 30) }}
-                      <a href="/team/{{ r.username|lower }}">{{ r.username }}</a>
-                    </span>
-                    {% if r.detail %}<span class="tm">{{ r.detail }}</span>{% endif %}
-                  </li>
-                {% endfor %}
-              </ol>
+                <ol class="crest-log">
+                  {% for s in c.spells %}
+                    <li>
+                      <span class="when">{{ s.span }}</span>
+                      <span class="avatar-line">
+                        {{ avatar(s.owner_id, 30) }}
+                        <a href="/team/{{ s.username|lower }}">{{ s.username }}</a>
+                      </span>
+                      {% if s.detail %}<span class="tm">{{ s.detail }}</span>{% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
               </details>
             {% endif %}
           </div>
