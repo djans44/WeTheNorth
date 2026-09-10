@@ -1,348 +1,253 @@
 # Feature: Crests of honour
 
-Honours owners earn across seasons, displayed on manager pages and in a
-league-wide case.
+What managers have won, and what they hold. Shown on a manager's page, on
+each season, on `/history`, in the catalogue at `/crests`, and as a ring
+around a sigil.
 
 **They are called crests of honour everywhere the league sees them**, and the
-code says `crests` too. A page that says one thing while the table says another
-is how a codebase starts needing a glossary. The tables are `crests` and
-`owner_crests`.
+code says `crests` too. A page that says one thing while the table says
+another is how a codebase starts needing a glossary. The tables are `crests`
+and `owner_crests`; the rules are `app/crests.py`.
 
-## Two kinds, and the difference matters
+## Two kinds, and the shape says which
 
-| | **Earned** | **Held** |
+| | **Crests** — earned | **Titles** — held |
 |---|---|---|
-| Who has it | Anyone who has ever done the thing | Exactly one manager at a time |
-| Example | Five straight, Champion 2025 | Reigning champion, Fiercest rival |
-| Lifetime | Kept forever | Passes to whoever takes it next |
-| Rows | One per owner per season, accumulating | One row, replaced on recompute |
-| Shown on | Manager page | Manager page, `/history`, and the avatar ring |
+| Who has it | Anyone who has ever done it | One manager at a time |
+| Lifetime | Kept for good, and winnable again | Passes to whoever takes it |
+| Drawn as | A shield, coloured by category | A roundel, coloured gold/silver/bronze |
+| Also drawn as | — | A ring around the holder's sigil |
+| Rows | One per owner per season, or per week | Three kinds — see below |
 
-An earned crest is a fact about the past and never moves. "Champion, 2025" is
-David's whether or not he wins again. A held crest is a fact about the present:
-the reigning champion is David only until someone else lifts it.
+An earned crest is a fact about the past and never moves: "Crowned, 2025" is
+David's whether or not he wins again. A title is a fact about the present.
 
-The same underlying fact often produces both. Winning 2025 earns David the
-`champion` crest for that season, permanently, and puts the `reigning_champion`
-crest in his hands until 2026 is decided. That is deliberate, not duplication:
-one is a record, the other is a title.
+The same event often produces both, which is deliberate. Winning 2025 earns
+David `champion` for that season permanently and puts `reigning_champion` in
+his hands until 2026 is decided. One is a record, the other is a title.
 
-### Held crests
+There are **28 earned crests and 9 titles**. What each is for is written on
+`/crests`, one line each, straight from `crests.description` — that column is
+the single source of the wording, and the site reads it rather than repeating
+it.
+
+## Titles
 
 | Code | Name | Ring | Held by |
 |---|---|---|---|
-| `reigning_champion` | Sitter of the Iron Throne | gold | Winner of the most recent completed championship |
-| `best_record` | The Ever-Victorious | silver | The best win rate in league history, minimum two seasons |
-| `fiercest_rival` | Bane of Their Rival | silver | The best win rate against their own rival, minimum four meetings |
+| `reigning_champion` | Protector of the Realm | gold | Won the most recent completed championship |
+| `best_record` | The Ever-Victorious | silver | Best win rate in league history, minimum two seasons |
+| `kingsguard` | Captain of the Kingsguard | silver | Longest winning streak still running, minimum two |
+| `fiercest_rival` | Bane of Their Rival | silver | Best win rate against their own rival, minimum four meetings |
 | `most_weekly_highs` | Master of Storms | silver | Has topped the league's scoring in more weeks than anyone |
 | `most_narrow_wins` | The Fortunate | silver | Has won more games by under a point than anyone |
 | `most_narrow_losses` | Hounded by Fate | bronze | Has lost more games by under a point than anyone |
-| `reigning_sacko` | Lord of the Wastes | bronze | Whoever finished twelfth most recently |
+| `court_fool` | The Court Fool | bronze | Longest losing streak still running, minimum three |
+| `reigning_sacko` | Lord of the Wastes | bronze | Finished twelfth most recently |
 
-**Three ring colours, not seven.** Gold is the champion and nothing else,
-silver is a crest it is good to hold, bronze is one it is not. Seven colours
-around a 24px circle would have asked it to carry seven meanings; three it can
-manage, and the mark overlaid on the sigil says which crest. A manager wearing
-bronze is wearing it for one of two reasons, and the mark is what separates the
-wooden spoon from a habit of losing by inches.
+**Three ring colours, not nine.** Gold is the champion and nothing else,
+silver is a title worth holding, bronze is one it is not. Nine colours around
+a 30px circle would ask it to carry nine meanings; three it can manage, and
+the mark overlaid on the sigil says which title. A manager wearing bronze is
+wearing it for one of three reasons and the mark separates them.
 
-More can be added; these seven are enough to prove the mechanism.
+`sort_order` decides the ring when a manager holds more than one: the throne,
+then the best record over all of it, then the best run going on right now.
 
-**Each crest carries its own tiebreak**, written into its rule rather than left
-to a policy at the top of the file -- what separates two champions is not what
-separates two rivals. Where a rule runs out of tiebreaks the crest is shared, so
-the display must not assume exactly one holder, and the avatar mark goes to
-every holder rather than to one of them picked arbitrarily.
+### Tiebreaks
 
-| Code | Tiebreak |
+Every title names its own, because what separates two champions is not what
+separates two rivals. **No title is shared** — every rule runs until one
+manager is left.
+
+| Title | Tiebreak |
 |---|---|
-| `reigning_champion` | None needed; one championship game, one winner |
-| `best_record` | Shared. Two managers on the same rate over different game counts are equally right |
-| `fiercest_rival` | Meetings played, then shared |
-| `most_weekly_highs` | Shared |
-| `most_narrow_wins` | The margins added together, smallest winning |
-| `most_narrow_losses` | The margins added together, smallest winning |
-| `reigning_sacko` | None needed; one twelfth place |
+| Protector of the Realm | None needed; one championship game, one winner |
+| The Ever-Victorious | Most points scored. 2023 closed with three managers on 18-10 |
+| Captain of the Kingsguard | Most points scored **during the streak** |
+| Bane of Their Rival | Most meetings, then most points scored **in those meetings** — not a career total, which is mostly games against everybody else |
+| Master of Storms | Most points scored |
+| The Fortunate / Hounded by Fate | The margins added together, smallest winning: two wins by 0.34 and 0.38 is a closer run than two by 0.23 and 0.75 |
+| The Court Fool | **Fewest** points scored during the streak. The one place on the site where less is worse |
+| Lord of the Wastes | None needed; one twelfth place |
 
-The two margin tallies need their tiebreak more than the others: both come out
-as four-way ties on two apiece. Summing rather than taking the tightest single
-game is the right question -- two wins by 0.34 and 0.38 is a closer run than
-two by 0.23 and 0.75, though the second holds the tighter one. It is also the
-difference between David and Curtis holding The Fortunate.
+### The two streak titles are different
 
-Both rate crests carry a floor, for the same reason. `best_record` needs two
-seasons: a newcomer at 10-4 would otherwise hold the best record in league
-history off fourteen games. As it stands Josh holds it at 35-21, with Niall
-second on .607 from half the games.
+They can **sit vacant**, which none of the others can: two straight wins to be
+Captain, three straight losses to be Fool. Below that nobody holds it, because
+a title that always belongs to somebody says nothing when the best run going
+is one game. Across 2022–25 the Captaincy is vacant for one week and the Fool
+for six.
 
-### The avatar ring and mark
+**Streaks cross seasons.** Win your last three of one year and your first two
+of the next and that is five. Laura's 2024 run is eight straight for this
+reason; Carter lost eleven from week 11 of 2024 into week 4 of 2025.
 
-A held crest marks its holder's sigil wherever that sigil appears, so the
-reigning champion is recognisable in the standings without a legend. Two parts:
+**A retired manager cannot hold either.** Nothing ever ends a departed
+manager's run, so without the exemption Theo — two wins to finish 2023, never
+played again — would have been Captain through parts of 2025. The exemption is
+on the title, not the streak: his games still count for everyone else's.
 
-- **A ring** in the crest's colour -- gold for the champion, oxblood for the
-  Sacko, bronze for the fiercest rival.
-- **A small mark overlaid** on the sigil, bottom-right, in the same colour on
-  the page ground so it reads as a seal rather than a smudge on the sigil.
+Regular season only, like every streak rule here. A playoff run is a different
+thing and the bracket already says who went furthest.
 
-Rules, because the sigil is the site's most-repeated element and cannot be
-allowed to get noisy:
+## Three kinds of title row
 
-- **One ring, one mark.** A manager holding two crests wears the one with the
-  lowest `sort_order`; their page lists both.
-- **The ring replaces the sigil's existing hairline**, not added on top of it,
-  so an unringed sigil is unchanged and the two sit at the same size.
-- **The mark needs room.** Sigils are drawn from 20px in bracket ties to 96px on
-  a manager page. Overlaid on a 20px sigil the mark is about 8px, which the
-  seed-mark work already proved is a smudge rather than a shape. Below 28px the
-  ring shows alone -- the ring is what carries "this manager holds something",
-  and the mark is what says which. Anything smaller keeps the first meaning and
-  drops the second.
-- **Nothing else changes.** No crest count, no second glyph, no tooltip in a
-  table. The manager page is where crests are explained.
+`owner_crests.season_year` and `week` mean different things for a title than
+for an earned crest. This is the part to understand before touching a query.
 
-## Decisions, confirmed
-
-- **Both tiers exist**, but only the auto tier is built now. The schema carries
-  `award_mode` and `awarded_by` from the start so the commissioner grant flow
-  needs no migration when it comes.
-- **Backfill where the data is real, award nothing where it is blind.** The
-  history is not evenly loaded, and the gaps are not "no activity" — they are
-  "no records". See the table below.
-- **Rivalry crests are rebuilt**, because the ones originally specced cannot be
-  awarded honestly. See Rivalry.
-
-## What the data can actually support
-
-Checked against the database rather than assumed:
-
-The names are titles rather than descriptions -- Crowned, The Besieged,
-Oathbreaker, Master of Coin -- and the catalogue in `sql/migrations/` is the
-list of record. Two came straight from the site's existing language: a highest
-week is a Storm-Bringer where the records call it a mightiest week, and the
-biggest margin is The Field of Fire where they call it a greatest rout.
-
-| Source | Rows | Seasons | Consequence |
+| `season_year` | `week` | Meaning | Read by |
 |---|---|---|---|
-| `matchups` | 492 | 2022–2026 | Silverware and scoring backfill in full |
-| projections on `matchups` | 408 | 2022–2025 | Projection crests backfill in full |
-| `teams` | 60 | 2022–2026 | Tenure backfills in full |
-| `keeper_selections` | 104 | **2023–2025** | Keeper crests backfill three seasons, not four |
-| `transactions` | 301 | **2025 only** | Transaction crests are 2025 and later |
-| `keeper_voids` | 2 | **2026 only** | `cut_bait` backfills empty |
-| `rivalries` | 60 | 2022–2026, but retroactive | See Rivalry |
+| null | null | Who holds it **now** | The sigil ring, a manager's "titles held" |
+| Y | null | Who held it **when Y closed** | The season pages, so 2023's sigils wear 2023's titles |
+| Y | W | Who held it **after week W of Y** | Spells, on `/crests` and a manager's page |
 
-**The trap in that table is `set_and_forget`** — "zero waiver adds all season".
-For 2022 through 2024 the transactions table is empty because nothing was ever
-imported, not because twelve managers all sat on their hands. Computing it over
-those seasons would award it to everyone. A season with no transaction rows at
-all must be skipped, not read as zero.
+The week rows are the history. Titles were once snapshotted only at each
+season close, and it recorded almost nothing: Captain of the Kingsguard
+changed hands **33 times** across four seasons and the closes caught four of
+them. Tom held it in week 9 of 2025 on a five-game run with no record of it
+anywhere.
 
-Three crests were seeded and then dropped in 033, having turned out to be
-unawardable rather than merely unawarded:
+Weeks 15–17 are snapshotted too. Bane of Their Rival counts every meeting and
+Tom's fourth against David was the 2023 semifinal; stopping at week 14 lost
+the only spell he ever had of it.
 
-- `four_year_man`, holding a player four straight seasons. Three keeper seasons
-  exist and the longest hold is three.
-- `set_and_forget`, a season with no waiver adds. Over 2022-2024 it would have
-  gone to all twelve, the table being empty rather than the managers idle.
-- `forfeit`, missing a keeper window. `keeper_submissions` holds no rows, so
-  nothing can tell a forfeit from a manager who had fewer than three to keep.
-  Left in, it would have read as "nobody has ever missed one" when in truth
-  nothing was looking.
-
-Three more are in the catalogue, computed, and currently held by nobody. That is
-the honest state rather than a gap: `dynasty` waits on a repeat champion,
-`gauntlet` on someone beating every opponent they face, and `rivalry_week_high`
-on 2026 week 10 being played.
+`title_spells()` in `app/main.py` folds week rows into unbroken runs, indexed
+against the weeks the league actually played rather than week numbers — so the
+last week of one season and the first of the next are one spell, and a week
+nobody qualified breaks one.
 
 ## Schema
 
-The primary keys here are `owners.owner_id` and `seasons.season_year`, not `id`
-and `year` — an earlier draft of this file had those wrong and the migration
-would not have run.
-
 ```sql
-create table crests (
-  id          serial primary key,
-  code        text not null unique,
-  name        text not null,
-  description text not null,
-  category    text not null,   -- silverware | scoring | keepers | transactions | rivalry | tenure | honours
-  scope       text not null,   -- season | career
-  standing    text not null,   -- earned | held
-  award_mode  text not null,   -- auto | manual
-  icon        text,
-  sort_order  int not null default 0,
-  active      boolean not null default true
-);
-
-create table owner_crests (
-  id          serial primary key,
-  owner_id    int not null references owners(owner_id) on delete cascade,
-  crest_id    int not null references crests(id) on delete cascade,
-  season_year smallint references seasons(season_year),
-  detail      text,            -- "182.4 pts, week 6"
-  awarded_at  timestamptz not null default now(),
-  awarded_by  int references owners(owner_id)  -- null for auto-computed
-);
+crests        -- the catalogue: code, name, description, category, scope,
+              -- standing ('earned' | 'held'), award_mode ('auto' | 'manual'),
+              -- colour, sort_order, active
+owner_crests  -- who has what: owner_id, crest_id, season_year, week, detail,
+              -- awarded_at, awarded_by
 ```
 
-`detail` is what makes a crest worth hovering over. Populate it on every auto
-crest with the number that earned it.
+`detail` is the number that earned it — "182.40, week 6", "5 straight, 680.7
+scored" — and is written by the rule, so a rule owns its own wording.
 
-### Uniqueness gotcha
+### The unique indexes
 
-Postgres treats NULLs as distinct, so a plain `unique (owner_id, crest_id,
-season_year)` will happily allow duplicate career crests. Use two partial indexes:
+Postgres treats nulls as distinct, so one constraint over
+`(owner, crest, season, week)` would happily allow the same career crest
+twice. Three partial indexes instead:
 
-```sql
-create unique index owner_crests_season_uniq
-  on owner_crests (owner_id, crest_id, season_year)
-  where season_year is not null;
-
-create unique index owner_crests_career_uniq
-  on owner_crests (owner_id, crest_id)
-  where season_year is null;
-```
-
-## Catalogue
-
-### Silverware — from `final_standings`
-
-| Code | Name | Earned by |
+| Index | Covers | Where |
 |---|---|---|
-| `champion` | Champion | Winning the championship game |
-| `runner_up` | Runner-up | Losing the championship game |
-| `bronze` | Third place | Winning the third-place game |
-| `regular_season_crown` | Best in the North | Best regular season record |
-| `sacko` | The Sacko | Finishing 12th |
-| `dynasty` | Dynasty | Back-to-back championships (career) |
+| `owner_crests_career_uniq` | owner, crest | season and week both null |
+| `owner_crests_season_uniq` | owner, crest, season | week null |
+| `owner_crests_week_uniq` | owner, crest, season, week | week not null |
 
-The held counterparts of the first and fifth rows -- `reigning_champion` and
-`reigning_sacko` -- are listed under Held crests, not here. A season crest
-records who won; a held crest records who currently is.
-
-### Scoring — from `matchups`
-
-| Code | Name | Earned by |
-|---|---|---|
-| `weekly_high` | Highest score | Top single-week score in a season |
-| `season_high_points` | Points leader | Most total regular season points |
-| `points_against_king` | Cursed | Most points against in a season |
-| `blowout` | Massacre | Largest margin of victory in a season |
-| `nailbiter` | By a whisker | Winning by under a point |
-| `streak_five` | Five straight | Five consecutive regular season wins |
-| `gauntlet` | Gauntlet | Beating every opponent faced in a season |
-
-### Projections — from the projection columns
-
-| Code | Name | Earned by |
-|---|---|---|
-| `overachiever` | Defied the odds | Beating projection by the widest margin that season |
-| `robbed` | Robbed | Losing while projected to win by 20+ |
-
-### Keepers and contracts
-
-| Code | Name | Earned by |
-|---|---|---|
-| `four_year_man` | Four-year man | Holding one player all four keeper seasons |
-| `cut_bait` | Cut bait | Voiding a contract |
-| `triple_threat` | Fully committed | Holding three contracts at once |
-| `forfeit` | Asleep at the wheel | Missing a keeper window and forfeiting a slot |
-
-### Transactions — from `transactions`
-
-| Code | Name | Earned by |
-|---|---|---|
-| `waiver_warrior` | Waiver warrior | Most adds in a season |
-| `set_and_forget` | Set and forget | Zero waiver adds all season |
-| `wheeler_dealer` | Wheeler-dealer | Most trades in a season |
-
-### Rivalry
-
-The two crests originally specced here — beating your rival on rivalry week, and
-sweeping them — cannot be awarded honestly. The `rivalries` table does hold
-pairings for 2022–2025, but they were generated retroactively from past meetings
-and nobody played a grudge match at the time. Rivalry week itself only exists
-from 2026: across all five seasons exactly one week has every game a rival
-meeting, and it is 2026's tenth.
-
-| Code | Name | Scope | Earned by |
-|---|---|---|---|
-| `fiercest_rival` | Bane of Their Rival | career | The best win rate against your own rival, across every meeting ever |
-| `rivalry_week_high` | Lord of the grudge | season | Highest score of anyone in rivalry week |
-
-`fiercest_rival` is honest backfill: it counts real head-to-head results, and
-makes no claim that the fixture meant anything at the time.
-
-**Minimum four meetings**, confirmed. On win rate alone it would go to Niall at
-2-0 against Curtis, from two meetings, over Joey at 5-2 against Tulio from
-seven. Four is roughly one a season for a pairing that has existed throughout,
-and it gives the crest to Joey. Ties on rate are broken by meetings played, then
-shared.
-
-`rivalry_week_high` will sit unawarded until 2026 week 10 is played. That is
-expected, not a bug — an unearned crest still shows dimmed in the case, which is
-the point of showing what is available to chase.
-
-### Tenure — dropped
-
-There are none. A crest for having been in the league rewards turning up, not
-doing anything, and the seasons table already says how long someone has played.
-`founding_member` and `veteran` were seeded in 031 and removed in 032.
-
-### Honours — manual only, deferred
-
-Not built in this pass. The catalogue rows and the `award_mode` column exist so
-that adding the grant flow later is a route and a template, not a migration.
-
-
-Commissioner-granted, no computation. Seed a handful and let admins add more:
-best team name, draft-day antics, trade of the year, worst beat. These are the
-ones people actually talk about, so make the admin grant flow quick — pick owner,
-pick crest, optional season, optional detail line, save.
+The third is what lets a partial recompute insert with `on conflict do
+nothing` instead of having to delete rows it is about to rewrite identically.
 
 ## Recompute
 
-Auto crests are derived, so treat them as a rebuild rather than an append:
+The rules live in **`app/crests.py`**, not in the script, because the app runs
+them.
 
-1. Delete all `owner_crests` rows where the crest's `award_mode = 'auto'`, scoped
-   to the season being recomputed.
-2. Recompute and insert.
-3. Never touch rows where `award_mode = 'manual'` or `awarded_by is not null`.
+```
+compute(conn, seasons, weeks_from=1)  -> {code: [rows]}, dropped
+write(conn, awards, season, weeks_from) -> (removed, written)
+recompute(conn, season, weeks_from)   -> both, for one season
+```
 
-Held crests are rebuilt whole rather than per season: there is one holder, and
-the question "who holds it now" has no season to scope to. Delete every row for
-a held crest and insert the current holder or holders.
+Auto crests are derived, so writing is a **rebuild, not an append**: the rows
+in scope are deleted and recomputed. Rows with `award_mode = 'manual'` or
+`awarded_by` set are never touched.
 
-Expose it at `/admin/crests` with a per-season and an all-seasons button, and call
-it automatically after weekly score entry so standings-derived crests stay current
-mid-season. Show a preview of what would change before committing, matching the
-preview-then-confirm pattern already used for keeper phase resolution.
+**`weeks_from` is the whole trick.** Entering week nine cannot change who held
+a title in week eight, so a save recomputes from that week on. `write()`
+deletes exactly what `compute()` was asked for — a narrower run must not wipe
+rows it is not going to put back.
 
-Ties: award to everyone tied rather than picking arbitrarily. Only award
-season-scoped scoring crests for seasons that have completed results, so an
-in-progress 2026 doesn't hand out a points leader in week 3.
+### When it runs
 
-## Display
+**Saving scores runs it**, after the commit, so a failure cannot cost the
+scores. The page reports either "72 crest rows rewritten" or that it could
+not, in which case the hand-run script fixes it.
 
-- **Manager page**: the case, carrying both kinds. Held crests first and set
-  apart -- they are titles, and a manager who holds one should see it before a
-  list of things they once did. Then the earned crests grouped by category, in
-  full colour where won and dimmed where not, so people can see what is
-  available to chase. Hover or tap shows the description and the `detail` line.
-- **`/history`**: the held crests and who currently holds each. This is the only
-  place the whole league's standing is visible at once, and it is a short
-  section -- three crests, three sigils, three names.
-- **The avatar ring**: everywhere a sigil appears, as above.
-- **Inline**: the two or three rarest earned crests beside the sigil in the
-  manager page header only. Not in standings tables -- that is what the ring is
-  for, and the two together would be clutter.
+| Scope | Time |
+|---|---|
+| A week of the season being played — the weekly case | ~3s |
+| Re-entering a week of a finished season | ~13s |
+| Everything | ~43s, which is why a save never does one |
 
-Rarity is a count of holders, computed on the fly. No stored tier column.
+It is latency, not work: each `held()` call is eight queries to Neon and a
+full run makes several hundred.
 
-## Naming
+### By hand
 
-`crests` and `owner_crests` in the schema, "crests of honour" in the copy, and
-"crest" in the code. The word "badge" should not appear in anything the league
-reads. The URL is `/crests`.
+```
+python scripts/award_crests.py                      # everything, dry run
+python scripts/award_crests.py --season 2026        # one season, dry run
+python scripts/award_crests.py --season 2026 --apply
+```
+
+Dry run by default, in the spirit of `resolve_phase.py`. The script is a front
+end over `app/crests.py` and shares its rules exactly.
+
+## Artwork
+
+Every earned crest is a **shield**: a field in its category's colour, a dark
+edge, a charge in parchment. Every title is a **roundel** in the colour it
+rings a sigil with, carrying the same mark. Circles are people and what they
+hold; shields are what they won.
+
+Both come from `app/templates/crestart.html` — `crestshield(code, category,
+size)` and `crestroundel(code, colour, size)`. There are no image files
+anywhere on this site and these are no exception: 28 charges plus the frame,
+hand-drawn as SVG paths.
+
+| Category | Field |
+|---|---|
+| Silverware | gold |
+| Over a season | deep blue |
+| Week by week | slate |
+| Keepers | green |
+| The market | bronze |
+| Rivalry | oxblood |
+| Honours | iron |
+
+Colour, the parchment stroke and the display face are **classes, not
+attributes**: an SVG presentation attribute cannot carry a `var()`, and these
+have to come from the tokens like everything else.
+
+Sizes: **84px** in the catalogue, **56px** on a manager's page and a season's
+honour roll — the height of the two lines of text beside it — and **44px** in
+a week panel, where the crests are a footnote to the scores.
+
+Two charges are numerals rather than devices: a Cinzel **3** for Three Oaths
+Sworn and **III** for Third of Their Name. Both say it more plainly than any
+picture, and both replaced drawings that failed — a laurel wreath was a tulip
+filled and a horseshoe stroked.
+
+## Where it all appears
+
+| Page | Shows |
+|---|---|
+| `/team/<name>` | Titles held, titles once held with their spells, earned crests by category |
+| `/season/<year>` | Titles at the close, crests earned that season, and each week's crests under that week's scores |
+| `/history` | The titles table: who holds each now, or who held it at any season's close |
+| `/crests` | The whole catalogue, won or not, with every award and every spell |
+| Everywhere | The ring and mark on a sigil, from the live title row |
+
+`/rules` explains the system — the two kinds, how a title moves, when things
+are worked out. What each crest is *for* is only on `/crests`, from the
+database.
+
+## Still to do
+
+- Three earned crests have never been awarded and are earnable: Twice
+  Crowned, None Were Spared, The Vengeful. The last needs a rivalry week,
+  which only exists from 2026.
+- The four `honours` are commissioner grants and there is no flow to grant
+  them. `award_mode` and `awarded_by` have been in the schema from the start
+  so that flow needs no migration.
+- A season page's crest grid went from three columns to two when the shields
+  went in (15rem to 18rem). A 44px shield throughout would win the column
+  back.
