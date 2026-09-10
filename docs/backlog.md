@@ -7,7 +7,9 @@ Each numbered item is one change: build it, show it, approve it, commit it,
 then start the next. Nothing here is in flight.
 
 Done and removed: the player-scoring note, now
-`docs/features/player-scoring.md`.
+`docs/features/player-scoring.md`; the `/draft-order` audit, which shipped as
+ten commits ending `9151699`. What that audit found and did not fix is item 5
+below, in the slot the audit itself used to occupy.
 
 ---
 
@@ -83,9 +85,10 @@ than fail on a foreign key.
 
 ---
 
-**Items 5 to 16 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
+**Items 6 to 16 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
 page, say what is wrong with it, agree the changes, build them. **Each is its
-own item** — twelve audits, twelve conversations, twelve commits.
+own item** — one audit, one conversation, one commit. Eleven left of the
+twelve; `/draft-order` is done.
 
 A design and usability audit rather than form validation. `/rules` has no
 inputs and is on the list, which settles which is meant.
@@ -93,13 +96,34 @@ inputs and is on the list, which settles which is meant.
 None of them has ever been looked at this way. The three pages that have were
 each worth a handful of real changes, so expect the same here.
 
-## 5. Audit `/draft-order`
+## 5. `/draft-order` does not live-update
 
-The lottery, then each manager picking a slot in lottery order in one live
-session. The admin can pick for anyone and override any slot.
+Twelve people watch this page during the one session where the order is
+chosen. Nothing on it refreshes. Whoever is on the clock picks and the other
+eleven keep looking at a frozen page until they reload — including the person
+who is next, who has no way to know their turn has come.
 
-The page has to work while twelve people watch it, which is a constraint none
-of the others have.
+Found by the audit and left alone on purpose: everything else that audit
+changed was layout, wording and one route guard, and this is the only thing
+in it that needs a mechanism.
+
+Cheapest first. A `<meta refresh>` while a draft is under way is two lines
+and reloads the whole page every few seconds, losing the reader's scroll
+position and any half-made choice. Polling a small JSON endpoint and
+re-rendering the board and the on-the-clock card from `app.js` keeps both and
+is perhaps forty lines. Server-sent events are the right shape and the wrong
+host: Render's free tier idles and cold-starts, which a held-open connection
+fights.
+
+Three smaller things the same audit turned up and did not take:
+
+- The Slot column says "waiting" for everyone without a slot, whether their
+  turn has passed or has not yet come. Those are different states.
+- `me` is in the template context and nothing uses it, so there is no way to
+  find yourself among the twelve.
+- Nothing on the page says the draft is a snake. `/draft-prep` draws it; a
+  manager choosing slot 1 or slot 12 is choosing on that basis and this page
+  never mentions it.
 
 ## 6. Audit `/draft-prep`
 
@@ -116,6 +140,11 @@ the earliest phases automatically, plans, voids, and a submit per phase.
 
 The most intricate rules in the league meet the page most owners use least
 often, which is the hard combination.
+
+`.picker-table tr.picked` is dead: nothing in the templates, `app.js` or
+`main.py` ever sets `picked`, so the highlight on the row you chose has never
+appeared. Found while auditing `/draft-order`, which was carrying the same
+class for the same reason.
 
 ## 8. Audit `/rules`
 

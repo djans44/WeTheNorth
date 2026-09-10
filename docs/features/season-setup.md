@@ -103,10 +103,14 @@ building it.
    the schedule bakes the pairings into `matchups` at generation time and
    never looks at `rivalries` again. Warn, block, or offer to regenerate the
    schedule too?
-10. Same shape of question for re-running the lottery after slots are chosen,
-    and for re-importing ADP after a 3-year contract has been signed. ADP is
+10. Re-importing ADP after a 3-year contract has been signed. ADP is
     **locked at signing** by design, so a late import must not retro-price
     existing contracts.
+
+    Re-running the lottery was the other half of this question and is now
+    settled: `/admin/draft-order/lottery` refuses to draw over an order that
+    already exists. Removing it is its own button and asks first, so drawing
+    silently over twelve lottery positions is not reachable.
 
 **Scripts that are not UI**
 

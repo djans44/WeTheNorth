@@ -146,19 +146,25 @@ keeps it inside the site's existing visual language.
 
 Because the macro takes a size, each of these is a one-line change.
 
-- Nav, beside the signed-in owner's name, linking to `/profile` (24px)
-- Manager pages: the heading (96px), the rival, and the per-opponent
-  head-to-head table
-- The manager index and the admin Owners list (32px)
-- Season standings, all-time standings and the projection table (24px)
-- Both axes of the head-to-head grid and of the rivalry score grid
-- The draft board, both the keeper columns and the pick grid, stacked above
-  the name in the header
-- The draft order lottery board, the on-the-clock line and the admin override
-- Rivalry pairings, sigils either side of the "vs"
-- The keeper admin queues: review, voids, settled and the over-contract warning
-- The "Acting for" picker on `/keepers`, so an admin can see whose page they
-  are on
+**There are three sizes, and no more should be added.** There were six once
+— 20, 22, 24, 28, 32 and 96 — differences nobody could see and every one of
+them a decision to make again. They collapsed to:
+
+| Size | For |
+|---|---|
+| 30px | Everything in a table, a list or a line of text. Forty-odd uses |
+| 40px | A sigil standing for a person the block is about, beside a heading |
+| 96px | A page or panel whose whole subject is one manager |
+
+- 30px: nav beside the signed-in owner's name; the manager index; season and
+  all-time standings; the projection table; both axes of the head-to-head and
+  rivalry grids; the draft board's keeper columns and pick grid; the draft
+  order's choosing table and admin override; rivalry pairings either side of
+  the "vs"; the keeper admin queues
+- 40px: the admin Owners list, the rival on a manager page, the "Acting for"
+  picker on `/keepers`
+- 96px: a manager's own page heading, `/profile`, the admin owner editor, and
+  whoever is on the clock on `/draft-order`
 
 Two places deliberately left alone:
 

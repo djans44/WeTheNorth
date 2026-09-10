@@ -331,7 +331,11 @@ survives, so they can adjust and resubmit.
    manager's finish and ballot count so the result is checkable.
 2. That sets the **order of choosing**, not the draft order
 3. In one live session, each manager picks whichever **draft slot** they want
+   — by clicking a free cell on the board itself and confirming. There is no
+   separate picker
 4. Admin can pick for anyone or override any slot at any time
+5. A season has a lottery or it has not. Drawing over an existing one is
+   refused; removing it is a separate button that asks first
 
 Slot choice happens **before** keeper selection.
 
@@ -395,7 +399,8 @@ Everything else requires a session (middleware redirects to `/`).
 | `GET /preview` | Public. Champions and the all-time table, no nav and no links, to send to someone who has not signed in |
 | `GET /current` | Redirects to the newest season |
 | `GET /rules` | The full league rules. Rivalry weights and league size come from the code and the `seasons` row, not prose |
-| `GET /draft-order`, `POST /draft-order/pick` | Lottery board and slot selection |
+| `GET /draft-order`, `POST /draft-order/pick` | Who is on the clock, the board that is also the chooser, and the choosing order |
+| `POST /admin/draft-order/lottery`, `POST /admin/draft-order/clear` | Draw the lottery, or remove it. One or the other, never both |
 | `GET /draft-prep`, `POST /draft-prep/placeholder` | Draft board, keeper columns, placeholders |
 | `GET /keepers` | Keeper selection page |
 | `POST /keepers/plan` | Save plan (validates round conflicts, refuses to save a conflict) |
