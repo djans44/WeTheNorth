@@ -1486,6 +1486,53 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .choosing tr.onclock td.name { font-weight: 600; }
 .choosing tr.onclock td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
 
+/* Who is picking, while they are picking. Set at the size a manager's own
+   page header uses rather than a table row's, because it is the one thing
+   here that moves while twelve people watch. Oxblood to carry the Under way
+   rule above it down the page, gold when the person reading is the one on
+   the clock -- gold is this site's mark of consequence and nothing on this
+   page has more of it than your own turn. */
+.clockcard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s4);
+  border: 2px solid var(--accent);
+  background: var(--panel-lift);
+}
+.clockcard.mine { border-color: var(--gold); background: var(--gold-ghost); }
+/* min-width: 0 or a long name pushes the call off the card, since a flex
+   item will not shrink below its content without it. */
+.clockwho { flex: 1 1 12rem; min-width: 0; }
+.clockwho .name {
+  margin: 0;
+  font-family: var(--display);
+  /* Above the scale's top on purpose. The h2 labelling this section is the
+     scale's top, so at --t-lg the label and the name came out the same size
+     and the label won on position -- but the label is "On the clock" and the
+     payload is whose name it is. Clamped like .decree rather than fixed, so
+     a long name on a phone does not push the card wider. */
+  font-size: clamp(var(--t-lg), 5vw, 1.8rem);
+  letter-spacing: 0.04em;
+}
+.clockwho .sub {
+  margin: var(--s1) 0 0;
+  font-family: var(--prose);
+  font-style: italic;
+  font-size: var(--t-sm);
+  color: var(--ink-muted);
+}
+.clockcall {
+  flex: 0 0 auto;
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-sm);
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+.clockcall.mine { color: var(--gold-deep); }
+
 .slot-grid { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .slot {
   display: flex;
@@ -1500,8 +1547,40 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .slot.filled { border-color: var(--ink); background: var(--gold-ghost); }
 .slot-n { font-family: var(--display); font-size: 1.4rem; font-weight: 600; line-height: 1; }
 .slot-who { font-size: 0.8rem; color: var(--ink-soft); margin-top: 0.2rem; }
-.pick-slot { cursor: pointer; font: inherit; color: var(--ink); }
-.pick-slot:hover { background: var(--gold-ghost); border-color: var(--ink); }
+/* A free cell on the board, when the board is yours to pick from. The radio
+   is the control and is taken out of sight rather than hidden outright, so
+   the keyboard still reaches it and :focus-within can show where it is. */
+/* margin-bottom and font-weight undo the global label rule, which a board
+   cell inherits only because it is a label: the 0.5rem margin left the free
+   cells 8px shorter than the filled ones beside them, and the 600 came
+   through to the dash under the number. */
+.slot.open {
+  position: relative;
+  cursor: pointer;
+  margin-bottom: 0;
+  font-weight: 400;
+}
+.slot.open input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.slot.open:hover { background: var(--gold-ghost); border-color: var(--ink); }
+.slot.open:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The chosen one. Gold and an inner edge as well as the tint, because the
+   filled cells are already tinted gold and the two must not read alike. */
+.slot.open:has(input:checked) {
+  border-color: var(--gold);
+  background: var(--gold-ghost);
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+/* Right, under the far end of the board. The cells fill from the left and
+   the action is the last thing you do, so it sits at the other end rather
+   than under the first cell. */
+.boardconfirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s3);
+  margin: var(--s4) 0 0;
+}
 
 
 /* ---- draft board ---- */
@@ -2004,10 +2083,13 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   border-bottom-color: var(--accent-deep);
 }
 
-/* The attribute is repeated so these outscore form > button[type="submit"],
-   which would otherwise win and add a 24px top margin. */
-.gate > button[type="submit"] {
-  margin-top: 18px;
+/* The seal: outlined oxblood, Cinzel, letterspaced, filling on hover. The
+   sign-in gate's button is where it started and .seal is the same thing
+   named, so anywhere else that wants it shares this definition instead of
+   copying it. The attribute is repeated so the gate half outscores
+   form > button[type="submit"], which would otherwise add a 24px margin. */
+.gate > button[type="submit"],
+button.seal {
   padding: 11px 30px;
   font-family: var(--display);
   font-size: 14px;
@@ -2018,21 +2100,28 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
   border: 1px solid var(--accent);
   border-radius: 2px;
 }
+/* The gate's own spacing; a seal elsewhere is placed by its container. */
+.gate > button[type="submit"] { margin-top: 18px; }
+
 .gate > button[type="submit"]:hover,
-.gate > button[type="submit"]:focus-visible {
+.gate > button[type="submit"]:focus-visible,
+button.seal:hover,
+button.seal:focus-visible {
   background: var(--accent);
   color: var(--panel-bg);
 }
 
-/* Until the field has something in it. The global button[disabled] rule is
+/* Until there is something to submit. The global button[disabled] rule is
    for the dark theme and would fill this one solid grey. */
-.gate > button[type="submit"][disabled] {
+.gate > button[type="submit"][disabled],
+button.seal[disabled] {
   color: var(--ink-muted);
   background: transparent;
   border-color: var(--rule);
   cursor: not-allowed;
 }
-.gate > button[type="submit"][disabled]:hover {
+.gate > button[type="submit"][disabled]:hover,
+button.seal[disabled]:hover {
   background: transparent;
   color: var(--ink-muted);
 }
@@ -2295,6 +2384,12 @@ body:has(> .gatepost) { display: flex; min-height: 100dvh; }
     --av-size: 26px;
     --av-font: 11px;
   }
+
+  /* The sigil and the name stay on one line, and only the call drops below
+     it. A 12rem basis beside a 96px sigil is wider than a phone, so the
+     basis gives way and the name takes whatever is left. */
+  .clockwho { flex: 1 1 8rem; }
+  .clockcall { flex: 1 0 100%; }
 
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }

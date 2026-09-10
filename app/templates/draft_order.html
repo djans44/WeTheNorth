@@ -56,26 +56,89 @@
 
   {% if rows %}
 
+  {# Who is picking, given a section of its own above the board because it is
+     the one thing on this page that changes while twelve people watch it.
+     Only while the draft is running: before it there is nobody on the clock,
+     after it the banner above already says the order is set. #}
+  {% if on_clock %}
+  <section>
+    <h2>On the clock</h2>
+    <div class="clockcard{% if my_turn %} mine{% endif %}">
+      {{ avatar(on_clock.owner_id, 96) }}
+      <div class="clockwho">
+        <p class="name">{{ on_clock.username }}</p>
+        <p class="sub">Pick {{ chosen + 1 }} of {{ entrants }}{% if on_deck %} &#183;
+          {{ on_deck.username }} chooses next{% endif %}</p>
+      </div>
+      {# Says why the board below is live for you. Not a link: the board is
+         directly beneath this card, so there is nothing to jump to. Nobody
+         else gets a line at all -- there is nothing for them to do but
+         watch. #}
+      {% if my_turn %}
+        <p class="clockcall mine">Your turn</p>
+      {% elif is_admin %}
+        <p class="clockcall">Yours to pick for them</p>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# The board is the chooser. A second grid of the same twelve numbers
+     underneath it was the board drawn twice, so the free cells on this one
+     are the control: click a number, then confirm. The form tags open and
+     close either side of the grid rather than around it, because a watcher
+     gets the same board with no form at all. #}
+  {% set choosing = on_clock and (my_turn or is_admin) %}
   <section>
     <h2>The board</h2>
+    {% if choosing %}
+    <form method="post" action="/draft-order/pick">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="owner_id" value="{{ on_clock.owner_id }}">
+    {% endif %}
     <div class="slot-grid">
     {% for s in slots %}
-      <div class="slot {% if taken.get(s) %}filled{% endif %}">
-        <span class="slot-n">{{ s }}</span>
-        <span class="slot-who">{{ taken.get(s) or "&mdash;"|safe }}</span>
-      </div>
+      {% if taken.get(s) %}
+        <div class="slot filled">
+          <span class="slot-n">{{ s }}</span>
+          <span class="slot-who">{{ taken.get(s) }}</span>
+        </div>
+      {% elif choosing %}
+        {# required, so with the script off the browser refuses an empty
+           confirm rather than the server having to. #}
+        <label class="slot open">
+          <input type="radio" name="slot" value="{{ s }}" required>
+          <span class="slot-n">{{ s }}</span>
+          <span class="slot-who">&mdash;</span>
+        </label>
+      {% else %}
+        <div class="slot">
+          <span class="slot-n">{{ s }}</span>
+          <span class="slot-who">&mdash;</span>
+        </div>
+      {% endif %}
     {% endfor %}
     </div>
+    {% if choosing %}
+      {# data-for is what app.js needs to name the slot in the button once one
+         is chosen. Empty when it is your own pick, so the button reads "Take
+         slot 7" rather than naming you to yourself. #}
+      {# The hint before the button in the markup as well as on screen, so
+         the right-aligned pair reads in the order it is written. #}
+      <p class="boardconfirm">
+        <span class="tm">Choose a number above first.</span>
+        <button type="submit" class="seal"
+                data-for="{{ '' if my_turn else on_clock.username }}">
+          {%- if my_turn %}Take this slot
+          {%- else %}Take this slot for {{ on_clock.username }}{% endif -%}
+        </button>
+      </p>
+    </form>
+    {% endif %}
   </section>
 
   <section>
     <h2>Choosing order</h2>
-    {% if on_clock %}
-      <p class="settled avatar-line">{{ avatar(on_clock.owner_id, 40) }}
-        <b>On the clock: {{ on_clock.username }}</b></p>
-    {% else %}
-      <p class="note ok">Everyone has chosen.</p>
-    {% endif %}
     <table class="keepers choosing">
       <thead><tr><th>#</th><th class="name">Manager</th><th>{{ prev_season }}</th>
         <th>Ballots</th><th>Slot</th><th>Chosen</th></tr></thead>
@@ -106,25 +169,6 @@
         A new manager skips the draw and chooses first.</p>
     {% endif %}
   </section>
-
-  {% if on_clock and (my_turn or is_admin) %}
-  <section>
-    <h2>{% if my_turn %}Your pick{% else %}Pick for {{ on_clock.username }}{% endif %}</h2>
-    <form method="post" action="/draft-order/pick">
-      <input type="hidden" name="season" value="{{ season }}">
-      <input type="hidden" name="owner_id" value="{{ on_clock.owner_id }}">
-      <div class="slot-grid choose-grid">
-      {% for s in slots %}
-        {% if not taken.get(s) %}
-          <button type="submit" name="slot" value="{{ s }}" class="slot pick-slot">
-            <span class="slot-n">{{ s }}</span>
-          </button>
-        {% endif %}
-      {% endfor %}
-      </div>
-    </form>
-  </section>
-  {% endif %}
 
   {% if is_admin %}
   <section class="danger">

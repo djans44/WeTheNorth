@@ -120,6 +120,51 @@
     });
   }
 
+  // ---- the draft board is the chooser ----
+  // Enhancement only. Without the script the confirm button is simply always
+  // live, and the radio's own required attribute stops an empty submission.
+  // With it the button waits until a number is chosen and then says which,
+  // so a live pick in front of eleven other people is confirmed by name.
+  var confirmRow = document.querySelector(".boardconfirm");
+  if (confirmRow) {
+    var confirmBtn = confirmRow.querySelector("button");
+    var forWhom = confirmBtn.getAttribute("data-for");
+    var hint = confirmRow.querySelector(".tm");
+
+    var syncConfirm = function () {
+      var picked = document.querySelector(".slot.open input:checked");
+      confirmBtn.disabled = !picked;
+      confirmBtn.textContent = picked
+          ? "Take slot " + picked.value + (forWhom ? " for " + forWhom : "")
+          : "Take this slot" + (forWhom ? " for " + forWhom : "");
+      // The hint changes rather than going away, because the second thing it
+      // says -- that the gesture undoes itself -- is the part nobody would
+      // guess. A radio group has no way back to nothing on its own.
+      if (hint) {
+        hint.textContent = picked
+            ? "Click slot " + picked.value + " again to clear it."
+            : "Choose a number above first.";
+      }
+    };
+
+    // A radio cannot be unchecked by clicking it, so the second click is
+    // handled here. click fires after the browser has already checked it,
+    // which is why the previous choice is remembered rather than read.
+    var lastPicked = null;
+    document.querySelectorAll(".slot.open input").forEach(function (input) {
+      input.addEventListener("click", function () {
+        if (lastPicked === input) {
+          input.checked = false;
+          lastPicked = null;
+        } else {
+          lastPicked = input;
+        }
+        syncConfirm();
+      });
+    });
+    syncConfirm();
+  }
+
   // ---- head-to-head: click a row to leave it lit ----
   // Enhancement only: hovering already highlights a row in CSS. This is for
   // a touch screen, which has no hover, and for reading down a column

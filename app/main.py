@@ -2969,11 +2969,19 @@ def draft_order(request: Request, season: int = 0, msg: str = "", error: str = "
     on_clock = next((r for r in rows if r["is_on_the_clock"]), None)
     my_turn = bool(on_clock and on_clock["owner_id"] == me)
 
+    # Who follows, so the room knows who to look at next. The next unfilled
+    # row rather than simply the next row, because an admin can set a slot
+    # out of order and that row is already done.
+    on_deck = None
+    if on_clock:
+        at = next(i for i, r in enumerate(rows) if r["is_on_the_clock"])
+        on_deck = next((r for r in rows[at + 1:] if not r["slot"]), None)
+
     return templates.TemplateResponse(
         request=request, name="draft_order.html",
         context={"years": years, "season": season, "rows": rows,
                  "slots": list(range(1, team_count + 1)), "taken": taken,
-                 "on_clock": on_clock, "my_turn": my_turn,
+                 "on_clock": on_clock, "on_deck": on_deck, "my_turn": my_turn,
                  "chosen": len(taken), "entrants": len(rows),
                  "ballot_total": ballot_total, "prev_season": season - 1,
                  "is_admin": is_admin, "me": me, "msg": msg, "error": error})
@@ -2986,8 +2994,15 @@ async def draft_order_pick(request: Request):
     is_admin = bool(request.session.get("is_admin"))
     form = await request.form()
     season = int(form["season"])
-    slot = int(form["slot"])
     target = int(form.get("owner_id") or me)
+
+    # The radio carries required, so an empty confirm is refused by the
+    # browser. A post that arrives without one came from somewhere else.
+    slot = int(form["slot"]) if form.get("slot") else 0
+    if not slot:
+        return RedirectResponse(
+            url=f"/draft-order?season={season}&error=" + quote("Choose a slot first"),
+            status_code=303)
 
     err = None
     with get_db() as conn:
