@@ -1443,6 +1443,16 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 
 /* ---- draft order ---- */
 
+/* The row for whoever is choosing. Twelve people watch this page while one
+   of them picks, so it is the only row that matters and it gets more than a
+   tint: a gold edge as well, drawn as an inset shadow because the table
+   collapses its borders and a border on one cell would not survive that. */
+.choosing tr.onclock { background: var(--gold-ghost); }
+/* The name only. Weighting the whole row made the numbers thinner, not
+   heavier: .rd is already 700 and 600 is a step down from it. */
+.choosing tr.onclock td.name { font-weight: 600; }
+.choosing tr.onclock td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+
 .slot-grid { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .slot {
   display: flex;

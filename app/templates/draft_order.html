@@ -51,12 +51,15 @@
     {% else %}
       <p class="note ok">Everyone has chosen.</p>
     {% endif %}
-    <table class="keepers">
+    <table class="keepers choosing">
       <thead><tr><th>#</th><th class="name">Manager</th><th>{{ prev_season }}</th>
         <th>Ballots</th><th>Slot</th><th>Chosen</th></tr></thead>
       <tbody>
       {% for r in rows %}
-        <tr class="{% if r.is_on_the_clock %}picked{% endif %}">
+        {# onclock, not picked: .picked is the keeper picker's class for the
+           row you chose, and it is scoped to that page, so this row carried
+           a class with no rule behind it and looked like every other one. #}
+        <tr class="{% if r.is_on_the_clock %}onclock{% endif %}">
           <td class="rd">{{ r.lottery_position }}</td>
           <td class="name">
             <span class="avatar-line">{{ avatar(r.owner_id, 30) }}{{ r.username }}</span>
