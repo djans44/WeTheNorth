@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar, leaf, recordlist %}
-{% from "crestart.html" import crestshield %}
+{% from "crestart.html" import crestshield, crestroundel %}
 {% block title %}{{ owner.username }} | We the North{% endblock %}
 
 {% block content %}
@@ -161,21 +161,28 @@
       <h3 class="record-group">Titles held</h3>
       <div class="crest-grid">
         {% for c in held_crests %}
-          <details class="crest held {{ c.colour }}">
-            {# The description lives inside the summary, hidden until opened,
-               so it appears directly under the title rather than below the
-               line saying when it was won. #}
+          {# The roundel a title rings a sigil with, the same as the season
+             page and the catalogue draw. It carries the colour the coloured
+             left border used to, so that comes off rather than saying the
+             same thing an inch away. #}
+          <details class="crest held blazoned {{ c.colour }}">
             <summary title="{{ c.description }}">
-              <span class="crest-name">{{ c.name }}</span>
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="tm">{{ c.latest.detail }}</span>
-              {# Spells rather than season closes: a title is recomputed every
-                 week, and a manager who held one for a single week in the
-                 middle of a season had nothing to show for it. #}
-              {% if c.spells %}
-                <span class="tm">{{ c.spells|map(attribute='span')|join(" · ") }}</span>
-              {% endif %}
+              {{ crestroundel(c.code, c.colour) }}
+              <span class="lines">
+                <span class="crest-name">{{ c.name }}</span>
+                <span class="crest-more" aria-hidden="true"></span>
+                {# The description lives inside the summary, hidden until
+                   opened, so it appears directly under the title rather than
+                   below the line saying when it was won. #}
+                <span class="crest-what">{{ c.description }}</span>
+                <span class="tm">{{ c.latest.detail }}</span>
+                {# Spells rather than season closes: a title is recomputed
+                   every week, and a manager who held one for a single week
+                   in the middle of a season had nothing to show for it. #}
+                {% if c.spells %}
+                  <span class="tm">{{ c.spells|map(attribute='span')|join(" · ") }}</span>
+                {% endif %}
+              </span>
             </summary>
           </details>
         {% endfor %}
@@ -189,13 +196,16 @@
       <h3 class="record-group">Titles once held</h3>
       <div class="crest-grid">
         {% for c in past_crests %}
-          <details class="crest held past {{ c.colour }}">
+          <details class="crest held past blazoned {{ c.colour }}">
             <summary title="{{ c.description }}">
-              <span class="crest-name">{{ c.name }}</span>
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="tm">{{ c.spells|map(attribute='span')|join(" · ") }}</span>
-              <span class="tm">{{ c.latest.detail if c.latest.detail }}</span>
+              {{ crestroundel(c.code, c.colour) }}
+              <span class="lines">
+                <span class="crest-name">{{ c.name }}</span>
+                <span class="crest-more" aria-hidden="true"></span>
+                <span class="crest-what">{{ c.description }}</span>
+                <span class="tm">{{ c.spells|map(attribute='span')|join(" · ") }}</span>
+                <span class="tm">{{ c.latest.detail if c.latest.detail }}</span>
+              </span>
             </summary>
           </details>
         {% endfor %}

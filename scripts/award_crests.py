@@ -507,7 +507,8 @@ def held(conn, season=None, week=None):
         group by owner_id
     """, cut), "n"), "points_for"):
         out["most_weekly_highs"].append(
-            (r["owner_id"], season, week, f"{r['n']} weeks", 0))
+            (r["owner_id"], season, week,
+             "%d week%s" % (r["n"], "" if r["n"] == 1 else "s"), 0))
 
     # The two streak titles. A streak runs across a season boundary: win
     # your last three of one year and your first two of the next and that is
