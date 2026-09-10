@@ -156,14 +156,27 @@
 
   {% if is_admin %}
   <section class="danger">
-    <h2>Run the lottery</h2>
-    <p class="note">Randomises the choosing order and clears every slot already
-      picked for {{ season }}.</p>
+    <h2>The lottery</h2>
+    <p class="note">Drawing randomises the choosing order and clears every slot
+      already picked for {{ season }}.</p>
     <form method="post" action="/admin/draft-order/lottery">
       <input type="hidden" name="season" value="{{ season }}">
       <label class="void"><input type="checkbox" name="confirm" value="1"> I mean it</label>
       <button type="submit" class="ghost">Draw lottery</button>
     </form>
+
+    {# Only when there is one to remove. Drawing again replaces the order and
+       keeps the entrants; this deletes them, which is what you want when the
+       lottery was run for the wrong season or run too early. #}
+    {% if rows %}
+      <p class="note">Removing it deletes the choosing order and every slot
+        picked, and {{ season }} goes back to having no lottery at all.</p>
+      <form method="post" action="/admin/draft-order/clear">
+        <input type="hidden" name="season" value="{{ season }}">
+        <label class="void"><input type="checkbox" name="confirm" value="1"> I mean it</label>
+        <button type="submit" class="ghost">Remove the lottery</button>
+      </form>
+    {% endif %}
   </section>
   {% endif %}
 </div>

@@ -3136,6 +3136,50 @@ async def admin_draft_lottery(request: Request):
         url=f"/draft-order?season={season}&msg=" + quote(msg), status_code=303)
 
 
+@app.post("/admin/draft-order/clear")
+async def admin_draft_clear(request: Request):
+    """Remove the lottery entirely, back to a season that has not drawn one.
+
+    Distinct from drawing again, which replaces the order and keeps twelve
+    rows. This deletes them, which is what you want when the lottery was run
+    for the wrong season or run too early.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+
+    if not form.get("confirm"):
+        return RedirectResponse(
+            url=f"/draft-order?season={season}&error=" +
+                quote("Tick the confirm box first"), status_code=303)
+
+    with get_db() as conn:
+        # Counted before the delete, so the message can say what was actually
+        # lost rather than implying slots went with it when none had been
+        # chosen.
+        had = query(conn, """
+            select count(*) as entrants, count(slot) as picked
+            from draft_order where season_year = %s
+        """, (season,))[0]
+        with conn.cursor() as cur:
+            cur.execute("delete from draft_order where season_year = %s",
+                        (season,))
+        conn.commit()
+
+    if not had["entrants"]:
+        msg = f"No lottery to remove for {season}."
+    elif had["picked"]:
+        msg = (f"Lottery removed for {season}. {had['entrants']} entrants, "
+               f"{had['picked']} of whom had chosen a slot.")
+    else:
+        msg = (f"Lottery removed for {season}. {had['entrants']} entrants, "
+               f"none of whom had chosen yet.")
+    return RedirectResponse(
+        url=f"/draft-order?season={season}&msg=" + quote(msg), status_code=303)
+
+
 @app.post("/admin/draft-order/set")
 async def admin_draft_set(request: Request):
     if not request.session.get("is_admin"):
