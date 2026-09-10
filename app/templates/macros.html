@@ -58,7 +58,7 @@
 {%- endmacro %}
 
 
-{# The mark on a ringed sigil. Eight held crests, but the ring's colour has
+{# The mark on a ringed sigil. Nine held crests, but the ring's colour has
    already narrowed it: gold is the champion alone, bronze is one of two, and
    only silver has four to tell apart. So these need to be distinct from each
    other, not from all twenty-eight. Blunt shapes, nothing finer than a
@@ -96,6 +96,13 @@
       <path d="M10 1.8l6.6 3.8-1.7 1.6L10 4.2 5.1 7.2 3.4 5.6z
                M10 7.8l6.6 3.8-1.7 1.6L10 10.2l-4.9 3-1.7-1.6z
                M10 13.8l6.6 3.8-1.7 1.6L10 16.2l-4.9 3-1.7-1.6z"/>
+    {%- elif code == "court_fool" %}
+      {#- The Captain's chevrons, turned over: the same run, going the other
+          way. Not a jester's hat -- there is no version of one that survives
+          at the size a sigil mark is drawn. -#}
+      <path d="M10 18.2l6.6-3.8-1.7-1.6L10 15.8l-4.9-3-1.7 1.6z
+               M10 12.2l6.6-3.8-1.7-1.6L10 9.8l-4.9-3-1.7 1.6z
+               M10 6.2l6.6-3.8-1.7-1.6L10 3.8l-4.9-3-1.7 1.6z"/>
     {%- elif code == "most_weekly_highs" %}
       <path d="M11.8 2.2L4.2 11h4.3l-1 6.8L16 8.6h-4.6z"/>
     {%- elif code == "most_narrow_wins" %}

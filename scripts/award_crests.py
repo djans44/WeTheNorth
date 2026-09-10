@@ -43,6 +43,8 @@ WHISKER = 1.00          # margin under which a game is won or lost by inches
 ROBBED_BY = 20.0        # projected to win by this much, and lost
 RIVAL_MEETINGS = 4      # minimum meetings before Bane of Their Rival counts
 RECORD_SEASONS = 2      # minimum seasons before The Ever-Victorious counts
+CAPTAIN_RUN = 2         # wins in a row to be Captain of the Kingsguard
+FOOL_RUN = 3            # losses in a row to be The Court Fool
 CONTRACTS_AT_ONCE = 3   # contracts held for Three Oaths Sworn
 
 
@@ -507,33 +509,55 @@ def held(conn, season=None, week=None):
         out["most_weekly_highs"].append(
             (r["owner_id"], season, week, f"{r['n']} weeks", 0))
 
-    # The longest winning streak still running. A streak does not cross a
-    # season, so it is the trailing run of wins in the newest season played
-    # at the cut. Regular season only: a playoff run is a different thing and
-    # the bracket already says who went furthest.
-    latest = q(conn, f"""
-        select max(season_year) as y from game_log g
+    # The two streak titles. A streak runs across a season boundary: win
+    # your last three of one year and your first two of the next and that is
+    # five, not two.
+    #
+    # Which is why a retired manager is exempt. Nothing ever ends their run,
+    # so Theo -- who finished 2023 on two wins and has not played since --
+    # would have held the Captaincy through parts of 2025 without kicking a
+    # ball. The exemption is on the title, not on the streak: his games still
+    # count for everyone else's.
+    #
+    # Regular season only, like every other streak rule here: a playoff run
+    # is a different thing and the bracket already says who went furthest.
+    #
+    # Both can sit vacant, which none of the other titles can. Below the
+    # minimum nobody holds it, because a title that always belongs to
+    # somebody says nothing when the best run going is one game.
+    retired = {r["owner_id"] for r in
+               q(conn, "select owner_id from owners where is_retired")}
+    won = collections.defaultdict(lambda: (0, 0.0))
+    lost = collections.defaultdict(lambda: (0, 0.0))
+    for r in q(conn, f"""
+        select owner_id, result, points_for from game_log g
         where game_type = 'regular' and {CUT}
-    """, cut)[0]["y"]
-    if latest:
-        run = {}
-        for r in q(conn, """
-            select owner_id, result, points_for from game_log
-            where game_type = 'regular' and season_year = %s and week <= %s
-            order by owner_id, week
-        """, (latest, cut_w if latest == cut_y else 99)):
-            n, pts = run.get(r["owner_id"], (0, 0.0))
-            run[r["owner_id"]] = ((n + 1, pts + float(r["points_for"]))
-                                  if r["result"] == "W" else (0, 0.0))
-        # The tiebreak is the points scored inside the streak, not a career
-        # total: two managers on four straight is likely, and the crest is
-        # about the run, so the run decides it.
-        streaks = [{"owner_id": o, "n": n, "pts": p}
-                   for o, (n, p) in run.items() if n]
-        for r in leaders(leaders(streaks, "n"), "pts"):
-            out["kingsguard"].append(
-                (r["owner_id"], season, week,
-                 f"{r['n']} straight, {r['pts']:.1f} scored", 0))
+        order by owner_id, season_year, week
+    """, cut):
+        pts = float(r["points_for"])
+        w, wp = won[r["owner_id"]]
+        l, lp = lost[r["owner_id"]]
+        won[r["owner_id"]] = (w + 1, wp + pts) if r["result"] == "W" else (0, 0.0)
+        lost[r["owner_id"]] = (l + 1, lp + pts) if r["result"] == "L" else (0, 0.0)
+
+    runs = [{"owner_id": o, "n": n, "pts": p}
+            for o, (n, p) in won.items() if n >= CAPTAIN_RUN and o not in retired]
+    # The tiebreak is the points scored inside the streak, not a career
+    # total: two managers on four straight is likely, and the crest is about
+    # the run, so the run decides it.
+    for r in leaders(leaders(runs, "n"), "pts"):
+        out["kingsguard"].append(
+            (r["owner_id"], season, week,
+             f"{r['n']} straight, {r['pts']:.1f} scored", 0))
+
+    # The Fool is the mirror, and so is its tiebreak: fewest points scored,
+    # not most. It is the one crest here where less is worse.
+    runs = [{"owner_id": o, "n": n, "pts": p}
+            for o, (n, p) in lost.items() if n >= FOOL_RUN and o not in retired]
+    for r in lowest(leaders(runs, "n"), "pts"):
+        out["court_fool"].append(
+            (r["owner_id"], season, week,
+             f"{r['n']} straight, {r['pts']:.1f} scored", 0))
 
     # Most games won, and lost, by under a point. Both come out as four-way
     # ties on two apiece, so a count alone cannot decide a crest only one
