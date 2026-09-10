@@ -22,7 +22,12 @@
   <section>
     <div class="pickhead">
       {% if not rows %}
-        <p class="note">The lottery has not been drawn for {{ season }}.</p>
+        <p class="draftstate none">
+          <span>Not yet drawn</span>
+          <span class="sub">{% if is_admin %}Draw the lottery below to set the
+            choosing order.{% else %}The commissioner draws it before the
+            choosing begins.{% endif %}</span>
+        </p>
       {% elif on_clock %}
         <p class="draftstate live">
           <span>Under way</span>

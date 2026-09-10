@@ -1448,7 +1448,8 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 /* Whether the order is settled. Built like the rivalry-week bar: a display
    word, a plain sub, and a coloured rule under both. Gold once it is done,
    because gold is this site's mark of consequence; oxblood while it is
-   happening, because that is the colour of a thing you can act on. */
+   happening, because that is the colour of a thing you can act on; the plain
+   rule before it has been drawn, because nothing has happened yet. */
 .draftstate {
   display: flex;
   flex-wrap: wrap;
@@ -1468,6 +1469,8 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   font-size: var(--t-sm);
   color: var(--ink-muted);
 }
+.draftstate.none { border-bottom: 2px solid var(--rule); }
+.draftstate.none > span:first-child { color: var(--ink-muted); }
 .draftstate.set { border-bottom: 2px solid var(--gold); }
 .draftstate.set > span:first-child { color: var(--gold-deep); }
 .draftstate.live { border-bottom: 2px solid var(--accent); }
