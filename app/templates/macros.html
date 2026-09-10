@@ -58,7 +58,7 @@
 {%- endmacro %}
 
 
-{# The mark on a ringed sigil. Seven held crests, but the ring's colour has
+{# The mark on a ringed sigil. Eight held crests, but the ring's colour has
    already narrowed it: gold is the champion alone, bronze is one of two, and
    only silver has four to tell apart. So these need to be distinct from each
    other, not from all twenty-eight. Blunt shapes, nothing finer than a
@@ -89,6 +89,13 @@
       <path d="M19 1L17.96 4.16 3.66 18.46 1.54 16.34 15.84 2.04z
                M1 1L2.04 4.16 16.34 18.46 18.46 16.34 4.16 2.04z
                M2.9 13.4h5.6v1.8H2.9z M11.5 13.4h5.6v1.8h-5.6z"/>
+    {%- elif code == "kingsguard" %}
+      {#- Three chevrons, rank insignia: an unbroken run, rising. Not a helm
+          or a cloak -- both need detail this size cannot hold, and a helm is
+          already The Sellsword's charge on a shield. -#}
+      <path d="M10 1.8l6.6 3.8-1.7 1.6L10 4.2 5.1 7.2 3.4 5.6z
+               M10 7.8l6.6 3.8-1.7 1.6L10 10.2l-4.9 3-1.7-1.6z
+               M10 13.8l6.6 3.8-1.7 1.6L10 16.2l-4.9 3-1.7-1.6z"/>
     {%- elif code == "most_weekly_highs" %}
       <path d="M11.8 2.2L4.2 11h4.3l-1 6.8L16 8.6h-4.6z"/>
     {%- elif code == "most_narrow_wins" %}

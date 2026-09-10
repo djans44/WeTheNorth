@@ -26,9 +26,11 @@
   {% if titles %}
   <section>
     <h2>Titles</h2>
-    <p class="note">Seven, and only one manager holds each. These change
-      hands: win the championship and the throne is yours until someone
-      takes it. A title rings its holder's sigil wherever it is drawn.</p>
+    {# Counted rather than written out: it was seven until it was eight. #}
+    <p class="note">{{ titles|length }}, and only one manager holds each.
+      These change hands: win the championship and the throne is yours until
+      someone takes it. A title rings its holder's sigil wherever it is
+      drawn.</p>
     <div class="catalogue">
       {% for c in titles %}
         <div class="entry">

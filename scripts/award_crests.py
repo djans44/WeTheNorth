@@ -374,7 +374,7 @@ def rivalry(conn, seasons):
 
 
 def held(conn, as_of=None):
-    """The seven crests only one manager holds at a time.
+    """The eight crests only one manager holds at a time.
 
     Recomputed on every run, including a single-season one: a week's play can
     take one of these off its holder, and a weekly recompute that skipped them
@@ -491,6 +491,35 @@ def held(conn, as_of=None):
     """, (cut,)), "n"), "points_for"):
         out["most_weekly_highs"].append(
             (r["owner_id"], year, None, f"{r['n']} weeks", 0))
+
+    # The longest winning streak still running. A streak does not cross a
+    # season, so "still running" is the trailing run of wins in the newest
+    # season that has been played -- between seasons, whoever finished the
+    # last one hottest. Regular season only, like every other streak rule
+    # here: a playoff run is a different thing and the bracket says it.
+    latest = q(conn, """
+        select max(season_year) as y from game_log
+        where game_type = 'regular' and season_year <= %s
+    """, (cut,))[0]["y"]
+    if latest:
+        run = {}
+        for r in q(conn, """
+            select owner_id, result, points_for from game_log
+            where game_type = 'regular' and season_year = %s
+            order by owner_id, week
+        """, (latest,)):
+            n, pts = run.get(r["owner_id"], (0, 0.0))
+            run[r["owner_id"]] = ((n + 1, pts + float(r["points_for"]))
+                                  if r["result"] == "W" else (0, 0.0))
+        # The tiebreak is the points scored inside the streak, not a career
+        # total: two managers on four straight is likely, and the crest is
+        # about the run, so the run decides it.
+        streaks = [{"owner_id": o, "n": n, "pts": p}
+                   for o, (n, p) in run.items() if n]
+        for r in leaders(leaders(streaks, "n"), "pts"):
+            out["kingsguard"].append(
+                (r["owner_id"], year, None,
+                 f"{r['n']} straight, {r['pts']:.1f} scored", 0))
 
     # Most games won, and lost, by under a point. Both come out as four-way
     # ties on two apiece, so a count alone cannot decide a crest only one
