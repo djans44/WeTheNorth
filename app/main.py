@@ -589,37 +589,57 @@ def crests(request: Request):
                    colour, award_mode, sort_order
             from crests where active order by sort_order
         """)
-        # Earned: how often, and to how many managers. Held rows are counted
-        # separately because a season snapshot is not another award.
-        tally = {r["crest_id"]: r for r in query(conn, """
-            select oc.crest_id, count(*) as awards,
-                   count(distinct oc.owner_id) as owners
-            from owner_crests oc
-            join crests c on c.crest_id = oc.crest_id
-            where c.standing = 'earned'
-            group by oc.crest_id
-        """)}
-        holders = {r["crest_id"]: r for r in query(conn, """
-            select oc.crest_id, o.owner_id, o.username, oc.detail
+        # Every award of every earned crest, newest first. Roughly three
+        # hundred rows across the whole catalogue, which is one query and a
+        # list per crest rather than a count and a shrug.
+        awards = {}
+        for r in query(conn, """
+            select oc.crest_id, oc.season_year, oc.week, oc.detail,
+                   o.owner_id, o.username
             from owner_crests oc
             join crests c on c.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
-            where c.standing = 'held' and oc.season_year is null
-        """)}
+            where c.standing = 'earned'
+            order by oc.season_year desc nulls last,
+                     oc.week desc nulls last, o.username
+        """):
+            awards.setdefault(r["crest_id"], []).append(r)
 
+        # A title has a holder now and a list of who held it when each season
+        # closed -- the same rows the season pages ring their sigils from.
+        holders, reigns = {}, {}
+        for r in query(conn, """
+            select oc.crest_id, oc.season_year, oc.detail,
+                   o.owner_id, o.username
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where c.standing = 'held'
+            order by oc.season_year desc nulls first
+        """):
+            if r["season_year"] is None:
+                holders[r["crest_id"]] = r
+            else:
+                reigns.setdefault(r["crest_id"], []).append(r)
+
+    titles = [dict(c, holder=holders.get(c["crest_id"]),
+                   reigns=reigns.get(c["crest_id"], []))
+              for c in catalogue if c["standing"] == "held"]
     groups = []
     for category, label in CREST_GROUPS:
-        rows = [dict(c, tally=tally.get(c["crest_id"]),
-                     holder=holders.get(c["crest_id"]))
-                for c in catalogue if c["category"] == category]
+        rows = [dict(c, awards=awards.get(c["crest_id"], []),
+                     owners=len({a["owner_id"]
+                                 for a in awards.get(c["crest_id"], [])}))
+                for c in catalogue
+                if c["category"] == category and c["standing"] == "earned"]
         if rows:
             groups.append({"label": label, "crests": rows})
     return templates.TemplateResponse(
         request=request, name="crests.html",
-        context={"groups": groups,
+        context={"titles": titles, "groups": groups,
                  "unwon": sum(1 for c in catalogue
                               if c["standing"] == "earned"
-                              and c["crest_id"] not in tally)})
+                              and c["crest_id"] not in awards)})
 
 
 @app.get("/preview", response_class=HTMLResponse)

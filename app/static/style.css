@@ -1658,9 +1658,41 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .catalogue .who a { color: var(--ink); text-decoration: none; font-weight: 600; }
 .catalogue .who a:hover { color: var(--accent); }
 .catalogue .who .tm { display: inline; }
-/* Nobody has managed it yet. Dimmed, not hidden: an unwon crest is the most
-   interesting row on the page. */
-.catalogue .entry.unwon { opacity: 0.62; }
+/* Every time a crest has been given, behind a disclosure: The Week's Banner
+   alone has been awarded fifty-odd times and the list is worth having, but
+   not worth having open. */
+.catalogue .awards { margin-top: var(--s2); }
+.catalogue .awards > summary {
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  color: var(--ink-soft);
+}
+.catalogue .awards > summary::-webkit-details-marker { display: none; }
+.catalogue .awards > summary:hover { color: var(--accent); }
+.catalogue .awards ol {
+  margin: var(--s2) 0 0;
+  padding: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+  list-style: none;
+}
+.catalogue .awards li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem var(--s2);
+  padding: 0.15rem 0;
+  font-size: var(--t-xs);
+}
+.catalogue .awards .when {
+  flex: 0 0 5.2rem;
+  font-family: var(--body);
+  color: var(--ink-soft);
+}
+.catalogue .awards a { color: var(--ink); text-decoration: none; }
+.catalogue .awards a:hover { color: var(--accent); }
 
 .crest-shield.silverware   { --crest-cat: var(--crest-silverware); }
 .crest-shield.scoring      { --crest-cat: var(--crest-scoring); }

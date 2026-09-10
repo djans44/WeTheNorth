@@ -3,6 +3,12 @@
 {% from "crestart.html" import crestshield, crestroundel %}
 {% block title %}Crests of honour | We the North{% endblock %}
 
+{# Season and week beside a name, without the detail crest_when() adds --
+   here the detail is its own column. #}
+{% macro when(r) -%}
+  <span class="when">{{ r.season_year }}{% if r.week %} wk{{ r.week }}{% endif %}</span>
+{%- endmacro %}
+
 {% block content %}
 <div class="page">
   <header class="page-head tight stuck">
@@ -13,11 +19,63 @@
     <a class="to-top" href="#top">Top</a>
   </header>
 
+  {# Titles stand apart from the rest. They are the only crests that can be
+     taken off you, they are the only ones that ring a sigil, and they are
+     drawn as roundels rather than shields to say so. Mixed in among the
+     categories they read as six more trophies. #}
+  {% if titles %}
   <section>
-    <p class="note">Every crest there is, won or not. The seven titles at the
-      top change hands and only one manager holds each; the rest are kept for
-      good by whoever earns them.{% if unwon %} {{ unwon }} have never been
-      awarded to anyone.{% endif %}</p>
+    <h2>Titles</h2>
+    <p class="note">Seven, and only one manager holds each. These change
+      hands: win the championship and the throne is yours until someone
+      takes it. A title rings its holder's sigil wherever it is drawn.</p>
+    <div class="catalogue">
+      {% for c in titles %}
+        <div class="entry">
+          {{ crestroundel(c.code, c.colour, 84) }}
+          <div class="lines">
+            <h3>{{ c.name }}</h3>
+            <p class="what">{{ c.description }}</p>
+            {% if c.holder %}
+              <p class="who">
+                <span class="lbl">Held by</span>
+                <span class="avatar-line">
+                  {{ avatar(c.holder.owner_id, 30) }}
+                  <a href="/team/{{ c.holder.username|lower }}">{{ c.holder.username }}</a>
+                </span>
+                {% if c.holder.detail %}<span class="tm">{{ c.holder.detail }}</span>{% endif %}
+              </p>
+            {% else %}
+              <p class="who"><span class="tm">Held by nobody yet.</span></p>
+            {% endif %}
+            {% if c.reigns %}
+              <details class="awards">
+                <summary>Who held it at each season's close</summary>
+                <ol>
+                  {% for r in c.reigns %}
+                    <li>
+                      {{ when(r) }}
+                      <span class="avatar-line">
+                        {{ avatar(r.owner_id, 30) }}
+                        <a href="/team/{{ r.username|lower }}">{{ r.username }}</a>
+                      </span>
+                      {% if r.detail %}<span class="tm">{{ r.detail }}</span>{% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
+              </details>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section>
+    <p class="note">The rest are kept for good by whoever earns them, and a
+      crest can be won any number of times.{% if unwon %} {{ unwon }} of them
+      have never been awarded to anyone.{% endif %}</p>
   </section>
 
   {% for group in groups %}
@@ -25,40 +83,33 @@
     <h2>{{ group.label }}</h2>
     <div class="catalogue">
       {% for c in group.crests %}
-        {# A held crest gets the roundel it rings a sigil with, an earned one
-           its shield. The shape is the difference between a title someone
-           holds today and a thing that was won and stays won. #}
-        <div class="entry{% if c.standing == 'held' %} title{% endif %}
-                    {%- if not c.tally and not c.holder %} unwon{% endif %}">
-          {% if c.standing == "held" %}
-            {{ crestroundel(c.code, c.colour, 84) }}
-          {% else %}
-            {{ crestshield(c.code, c.category, 84) }}
-          {% endif %}
+        <div class="entry">
+          {{ crestshield(c.code, c.category, 84) }}
           <div class="lines">
             <h3>{{ c.name }}</h3>
             <p class="what">{{ c.description }}</p>
-
-            {% if c.standing == "held" %}
-              {% if c.holder %}
-                <p class="who">
-                  <span class="lbl">Held by</span>
-                  <span class="avatar-line">
-                    {{ avatar(c.holder.owner_id, 30) }}
-                    <a href="/team/{{ c.holder.username|lower }}">{{ c.holder.username }}</a>
-                  </span>
-                  {% if c.holder.detail %}<span class="tm">{{ c.holder.detail }}</span>{% endif %}
-                </p>
-              {% else %}
-                <p class="who"><span class="tm">Held by nobody yet.</span></p>
-              {% endif %}
-            {% elif c.tally %}
-              <p class="who"><span class="tm">
-                Awarded {{ c.tally.awards }}
-                time{% if c.tally.awards != 1 %}s{% endif %}
-                to {{ c.tally.owners }}
-                manager{% if c.tally.owners != 1 %}s{% endif %}.
-              </span></p>
+            {% if c.awards %}
+              {# Every time it has been given. Behind a disclosure because
+                 The Week's Banner alone runs to fifty-odd. #}
+              <details class="awards">
+                <summary>
+                  Awarded {{ c.awards|length }}
+                  time{% if c.awards|length != 1 %}s{% endif %}
+                  to {{ c.owners }} manager{% if c.owners != 1 %}s{% endif %}
+                </summary>
+                <ol>
+                  {% for a in c.awards %}
+                    <li>
+                      {{ when(a) }}
+                      <span class="avatar-line">
+                        {{ avatar(a.owner_id, 30) }}
+                        <a href="/team/{{ a.username|lower }}">{{ a.username }}</a>
+                      </span>
+                      {% if a.detail %}<span class="tm">{{ a.detail }}</span>{% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
+              </details>
             {% else %}
               <p class="who"><span class="tm">
                 {% if c.award_mode == "manual" %}
