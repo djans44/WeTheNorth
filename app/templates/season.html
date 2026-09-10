@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar, leaf, seedmark, bracketdraw, recordlist %}
+{% from "crestart.html" import crestshield, crestroundel %}
 {% block title %}{{ s.season_year }} | We the North{% endblock %}
 
 {% set labels = {"regular": "Regular season", "quarterfinal": "Quarterfinal",
@@ -169,16 +170,22 @@
       <h3 class="record-group">Titles at the close</h3>
       <div class="crest-grid">
         {% for c in titles %}
-          <details class="crest held {{ c.colour }}">
+          {# A title gets the roundel it rings a sigil with, an earned crest
+             its shield. Same rule as the catalogue: circles are what a
+             manager holds, shields are what they have won. #}
+          <details class="crest held blazoned {{ c.colour }}">
             <summary title="{{ c.description }}">
-              <span class="crest-name">{{ c.name }}</span>
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="crest-who avatar-line">
-                {{ avatar(c.owner_id, 30) }}
-                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+              {{ crestroundel(c.code, c.colour) }}
+              <span class="lines">
+                <span class="crest-name">{{ c.name }}</span>
+                <span class="crest-more" aria-hidden="true"></span>
+                <span class="crest-what">{{ c.description }}</span>
+                <span class="crest-who avatar-line">
+                  {{ avatar(c.owner_id, 30) }}
+                  <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+                </span>
+                <span class="tm">{{ c.detail if c.detail }}</span>
               </span>
-              <span class="tm">{{ c.detail if c.detail }}</span>
             </summary>
           </details>
         {% endfor %}
@@ -192,16 +199,19 @@
       <h3 class="record-group">{{ group.label }}</h3>
       <div class="crest-grid">
         {% for c in group.crests %}
-          <details class="crest">
+          <details class="crest blazoned">
             <summary title="{{ c.description }}">
-              <span class="crest-name">{{ c.name }}</span>
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="crest-who avatar-line">
-                {{ avatar(c.owner_id, 30) }}
-                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+              {{ crestshield(c.code, c.category) }}
+              <span class="lines">
+                <span class="crest-name">{{ c.name }}</span>
+                <span class="crest-more" aria-hidden="true"></span>
+                <span class="crest-what">{{ c.description }}</span>
+                <span class="crest-who avatar-line">
+                  {{ avatar(c.owner_id, 30) }}
+                  <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+                </span>
+                <span class="tm">{{ c.detail if c.detail }}</span>
               </span>
-              <span class="tm">{{ c.detail if c.detail }}</span>
             </summary>
           </details>
         {% endfor %}
@@ -280,16 +290,19 @@
         {% if week_crests.get(w.week) %}
           <div class="crest-grid inweek">
             {% for c in week_crests[w.week] %}
-              <details class="crest">
+              <details class="crest blazoned">
                 <summary title="{{ c.description }}">
-                  <span class="crest-name">{{ c.name }}</span>
-                  <span class="crest-more" aria-hidden="true"></span>
-                  <span class="crest-what">{{ c.description }}</span>
-                  <span class="crest-who avatar-line">
-                    {{ avatar(c.owner_id, 30) }}
-                    <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+                  {{ crestshield(c.code, c.category, 44) }}
+                  <span class="lines">
+                    <span class="crest-name">{{ c.name }}</span>
+                    <span class="crest-more" aria-hidden="true"></span>
+                    <span class="crest-what">{{ c.description }}</span>
+                    <span class="crest-who avatar-line">
+                      {{ avatar(c.owner_id, 30) }}
+                      <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+                    </span>
+                    <span class="tm">{{ c.detail if c.detail }}</span>
                   </span>
-                  <span class="tm">{{ c.detail if c.detail }}</span>
                 </summary>
               </details>
             {% endfor %}

@@ -1102,8 +1102,8 @@ def season(request: Request, year: int):
         # settle a season and none would be next to the score that won it.
         week_crests = {}
         for r in query(conn, """
-            select c.name, c.description, oc.week, oc.detail,
-                   o.owner_id, o.username
+            select c.code, c.category, c.name, c.description, oc.week,
+                   oc.detail, o.owner_id, o.username
             from owner_crests oc
             join crests c on c.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id

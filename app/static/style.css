@@ -1714,10 +1714,17 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .crest.blazoned > summary { display: flex; align-items: flex-start; gap: var(--s3); }
 .crest.blazoned > summary > .lines { flex: 1 1 auto; min-width: 0; }
 .crest.blazoned > .crest-all { margin-left: calc(56px + var(--s3)); }
+/* A held crest's coloured left border said which of the three it was. The
+   roundel says it in the same three colours and says which crest as well,
+   so the border comes off rather than repeating itself an inch away. */
+.crest.held.blazoned { padding-left: 0; border-left: 0; }
+/* A shield and three lines of text need more than the 15rem these
+   columns used to be; the week panels use a smaller shield on top of that,
+   because they carry the most cards. */
 
 .crest-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
   gap: var(--s2) var(--s4);
   margin: var(--s3) 0 var(--s4);
 }
