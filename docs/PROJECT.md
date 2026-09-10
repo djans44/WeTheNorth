@@ -470,7 +470,6 @@ item per change. This section is what is wrong or missing in what does
 exist.
 
 **Loose ends**
-- **Tulio has no email** and cannot sign in
 - Branch protection on `main` is not enabled
 - The second contributor has not been invited yet
 

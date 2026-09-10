@@ -6,6 +6,9 @@ what exists; this is the queue of work.
 Each numbered item is one change: build it, show it, approve it, commit it,
 then start the next. Nothing here is in flight.
 
+Done and removed: the player-scoring note, now
+`docs/features/player-scoring.md`.
+
 ---
 
 ## 1. Weekly summaries
@@ -66,7 +69,7 @@ Paste or upload, preview what it will do, then apply. Never a silent write.
 | Seasons | `seasons` | The row every other import needs first |
 | Teams | `teams` | One per owner per season; team names change yearly |
 | Owners | `owners` | Emails are the credential and are deliberately not in git |
-| Players | `players` | ~359 rows, Yahoo ids |
+| Players | `players` | ~359 rows. **No Yahoo id** — `player_id` is a local identity column and every importer matches on `lower(full_name)`. See `docs/features/player-scoring.md` |
 | Draft picks | `draft_picks` | ~624 rows; the source of every keeper cost basis |
 | Rosters | `rosters` | End-of-season snapshot; what keepers are drawn from |
 | Transactions | `transactions` | ~301 rows; adds, drops, trades. Cost basis depends on these |
@@ -118,13 +121,3 @@ round of nominations, one of votes, a closing date, and the winner written
 as an ordinary manual grant with `awarded_by` set to whoever ran it.
 `/admin/crests` stays as the fallback and as the thing a poll ultimately
 calls.
-
-## 7. `docs/features/player-scoring.md`
-
-A short note recording that **there is no per-player scoring in the
-database**. Every points column — `matchups`, `game_log`, every view — is a
-team total, and `rosters` is an end-of-season snapshot with no scores.
-
-Naming who won someone their week needs a new Yahoo import and a new table.
-This was found while planning the season page and is worth writing down so
-nobody re-derives the dead end.
