@@ -120,6 +120,22 @@
     });
   }
 
+  // ---- timestamps in the reader's own clock ----
+  // The server writes UTC because it cannot know where anyone is. Any <time>
+  // with a datetime attribute is rewritten here to the reader's zone and
+  // their locale's own way of writing it, so a 9:33pm pick in Toronto does
+  // not read as 02:33 the next morning. Enhancement only: the words already
+  // in the element say UTC, so the script being off is honest rather than
+  // wrong.
+  document.querySelectorAll("time[datetime]").forEach(function (el) {
+    var when = new Date(el.getAttribute("datetime"));
+    if (isNaN(when.getTime())) { return; }
+    el.textContent = when.toLocaleString([], {
+      month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit"
+    });
+    el.title = when.toLocaleString();
+  });
+
   // ---- the draft board is the chooser ----
   // Enhancement only. Without the script the confirm button is simply always
   // live, and the radio's own required attribute stops an empty submission.

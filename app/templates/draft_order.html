@@ -158,7 +158,18 @@
             {% elif r.ballots %}{{ r.ballots }}{% endif %}
           </td>
           <td class="rd">{% if r.slot %}{{ r.slot }}{% else %}<span class="tm">waiting</span>{% endif %}</td>
-          <td class="tm">{% if r.chosen_at %}{{ r.chosen_at.strftime("%b %d, %H:%M") }}{% endif %}</td>
+          {# .tm on the cell itself set display:block, which takes a td out of
+             the table and left this column adrift of the five beside it. It
+             belongs on something inside the cell.
+
+             The database keeps this as timestamptz and the server has no idea
+             where the reader is, so the machine-readable stamp goes in the
+             attribute and app.js rewrites the text to the reader's own clock.
+             Without the script the words say UTC rather than quietly showing
+             a time nobody is on. #}
+          <td>{% if r.chosen_at %}<time class="tm"
+              datetime="{{ r.chosen_at.isoformat() }}"
+              >{{ r.chosen_at.strftime("%b %d, %H:%M") }} UTC</time>{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>
