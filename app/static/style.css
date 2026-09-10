@@ -1443,6 +1443,34 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 
 /* ---- draft order ---- */
 
+/* Whether the order is settled. Built like the rivalry-week bar: a display
+   word, a plain sub, and a coloured rule under both. Gold once it is done,
+   because gold is this site's mark of consequence; oxblood while it is
+   happening, because that is the colour of a thing you can act on. */
+.draftstate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s3);
+  margin: var(--s4) 0 0;
+  padding-bottom: var(--s2);
+}
+.draftstate > span:first-child {
+  font-family: var(--display);
+  font-size: var(--t-md);
+  letter-spacing: 0.06em;
+}
+.draftstate .sub {
+  font-family: var(--prose);
+  font-style: italic;
+  font-size: var(--t-sm);
+  color: var(--ink-muted);
+}
+.draftstate.set { border-bottom: 2px solid var(--gold); }
+.draftstate.set > span:first-child { color: var(--gold-deep); }
+.draftstate.live { border-bottom: 2px solid var(--accent); }
+.draftstate.live > span:first-child { color: var(--accent); }
+
 /* The row for whoever is choosing. Twelve people watch this page while one
    of them picks, so it is the only row that matters and it gets more than a
    tint: a gold edge as well, drawn as an inset shadow because the table

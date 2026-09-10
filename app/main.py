@@ -2974,6 +2974,7 @@ def draft_order(request: Request, season: int = 0, msg: str = "", error: str = "
         context={"years": years, "season": season, "rows": rows,
                  "slots": list(range(1, team_count + 1)), "taken": taken,
                  "on_clock": on_clock, "my_turn": my_turn,
+                 "chosen": len(taken), "entrants": len(rows),
                  "ballot_total": ballot_total, "prev_season": season - 1,
                  "is_admin": is_admin, "me": me, "msg": msg, "error": error})
 

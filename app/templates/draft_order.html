@@ -17,7 +17,9 @@
   </header>
 
   <section>
-    <form method="get" action="/draft-order" class="picker">
+    {# loadonpick: app.js hides the button and loads on change. The button
+       stays in the markup so the form still works with the script off. #}
+    <form method="get" action="/draft-order" class="picker loadonpick">
       <label for="season">Season</label>
       <select id="season" name="season">
         {% for y in years %}
@@ -26,6 +28,23 @@
       </select>
       <button type="submit">Load</button>
     </form>
+
+    {# Whether the season's order is settled, at the top, where the answer to
+       "has this happened yet" belongs. The name of whoever is choosing stays
+       with the table below rather than being said twice. #}
+    {% if rows %}
+      {% if on_clock %}
+        <p class="draftstate live">
+          <span>Under way</span>
+          <span class="sub">{{ chosen }} of {{ entrants }} slots taken.</span>
+        </p>
+      {% else %}
+        <p class="draftstate set">
+          <span>The order is set</span>
+          <span class="sub">All {{ entrants }} slots taken.</span>
+        </p>
+      {% endif %}
+    {% endif %}
   </section>
 
   {% if not rows %}

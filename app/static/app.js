@@ -236,6 +236,25 @@
 
   strips("#weekstrip", ".week", "data-week", "weekpick");
   strips(null, ".keeper-season", "data-season", "keeperpick");
+
+  // ---- a picker that loads when you choose ----
+  // Opt in with class="loadonpick". The Load button stays in the markup and
+  // is hidden here, so the form still works with the script off -- the same
+  // bargain the sign-in button makes.
+  var pickers = document.querySelectorAll("form.loadonpick");
+  for (var p = 0; p < pickers.length; p++) {
+    (function (form) {
+      var sel = form.querySelector("select");
+      var btn = form.querySelector("button[type=submit]");
+      if (!sel) { return; }
+      if (btn) { btn.hidden = true; }
+      // requestSubmit, not submit: the plain method skips validation and
+      // fires no submit event, so nothing else on the page can see it go.
+      sel.addEventListener("change", function () {
+        if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+      });
+    }(pickers[p]));
+  }
   // Table columns rather than panels, and a dropdown with no strip beside
   // it. The helper cares about neither: it hides whatever the selector
   // matches, and it drives from the select when there is no strip.
