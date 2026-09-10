@@ -245,9 +245,14 @@ database.
 - Three earned crests have never been awarded and are earnable: Twice
   Crowned, None Were Spared, The Vengeful. The last needs a rivalry week,
   which only exists from 2026.
-- The four `honours` are commissioner grants and there is no flow to grant
-  them. `award_mode` and `awarded_by` have been in the schema from the start
-  so that flow needs no migration.
+- **Let the league vote on the four honours.** They are commissioner grants
+  today, which is the right mechanism but the wrong decider: the best team
+  name and the trade of the year are opinions, and twelve people have them.
+  A poll — one round of nominations, one of votes, closing on a date, the
+  winner written as an ordinary manual grant with `awarded_by` set to
+  whoever ran it — would fit the existing schema without a change to
+  `owner_crests`. The grant flow stays either way as the fallback and as the
+  thing a poll ultimately calls.
 - A season page's crest grid went from three columns to two when the shields
   went in (15rem to 18rem). A 44px shield throughout would win the column
   back.

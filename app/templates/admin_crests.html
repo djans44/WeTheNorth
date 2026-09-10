@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% from "crestart.html" import crestshield %}
+{% block title %}Crests | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <h1>Crests</h1>
+    <p class="lede">The four nobody can earn. No rule can settle the best team
+      name or the trade of the year, so the commissioner writes them down.
+      Everything else on the crests page works itself out from the scores.</p>
+  </header>
+
+  <section>
+    <h2>Give one</h2>
+    <p class="note">One holder per crest per season. Giving it again to
+      somebody else takes it off the first &mdash; there is nothing to undo
+      first.</p>
+
+    <form method="post" action="/admin/crests">
+      <p class="field">
+        <label for="crest_id">Crest</label>
+        <select id="crest_id" name="crest_id" required>
+          {% for c in manual %}
+            <option value="{{ c.crest_id }}">{{ c.name }} &mdash; {{ c.description }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <p class="field">
+        <label for="season">Season</label>
+        <select id="season" name="season">
+          {% for y in years %}
+            <option value="{{ y.season_year }}"
+                    {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <p class="field">
+        <label for="owner_id">Manager</label>
+        <select id="owner_id" name="owner_id" required>
+          {% for o in owners %}
+            <option value="{{ o.owner_id }}">{{ o.username }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <p class="field">
+        <label for="detail">Why</label>
+        <input id="detail" name="detail" maxlength="80"
+               placeholder="Handcuff my Cousins">
+      </p>
+      <p class="note">Optional, and it shows under the crest wherever it
+        appears. The team name, the player, the line that made it.</p>
+      <p class="checkline"><button type="submit">Award it</button></p>
+    </form>
+  </section>
+
+  <section>
+    <h2>Given</h2>
+    {% if not given %}
+      <p class="note">None yet. Four crests a year are waiting.</p>
+    {% else %}
+      <div class="catalogue">
+        {% for g in given %}
+          <div class="entry">
+            {{ crestshield(g.code, g.category, 56) }}
+            <div class="lines">
+              <h3>{{ g.crest }}</h3>
+              <p class="who">
+                <span class="lbl">{{ g.season_year }}</span>
+                <span class="avatar-line">
+                  {{ avatar(g.owner_id, 30) }}
+                  <a href="/team/{{ g.username|lower }}">{{ g.username }}</a>
+                </span>
+              </p>
+              {% if g.detail %}<p class="what">{{ g.detail }}</p>{% endif %}
+              <form method="post" action="/admin/crests/revoke" class="checkline">
+                <input type="hidden" name="owner_crest_id" value="{{ g.owner_crest_id }}">
+                <input type="hidden" name="season" value="{{ season }}">
+                <button type="submit">Take it back</button>
+                {% if g.by_whom %}<span class="tm">Given by {{ g.by_whom }}</span>{% endif %}
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -2151,6 +2151,114 @@ async def admin_scores_save(request: Request):
         status_code=303)
 
 
+@app.get("/admin/crests", response_class=HTMLResponse)
+def admin_crests(request: Request, season: int = 0):
+    """The four crests nobody can earn.
+
+    Best team name, conduct at the draft, the trade of the year, the defeat
+    nobody deserved. They are opinions, so no rule computes them and the
+    commissioner writes them down. They have existed since the catalogue was
+    seeded and there has never been a way to give one.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        season = season or (years[0]["season_year"] if years else 0)
+        manual = query(conn, """
+            select crest_id, code, name, description, category
+            from crests where active and award_mode = 'manual'
+            order by sort_order
+        """)
+        owners = query(conn, """
+            select owner_id, username from owners
+            where not is_retired order by username
+        """)
+        # Every grant ever made, not just this season's: four a year is a
+        # short enough list to show whole, and seeing last year's is how you
+        # remember what you called it.
+        given = query(conn, """
+            select oc.owner_crest_id, oc.season_year, oc.detail,
+                   c.name as crest, c.crest_id, c.code, c.category,
+                   o.owner_id, o.username,
+                   b.username as by_whom
+            from owner_crests oc
+            join crests c on c.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            left join owners b on b.owner_id = oc.awarded_by
+            where c.award_mode = 'manual'
+            order by oc.season_year desc, c.sort_order
+        """)
+    return templates.TemplateResponse(
+        request=request, name="admin_crests.html",
+        context={"years": years, "season": season, "manual": manual,
+                 "owners": owners, "given": given})
+
+
+@app.post("/admin/crests")
+async def admin_crests_grant(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    crest_id = int(form["crest_id"])
+    owner_id = int(form["owner_id"])
+    detail = (form.get("detail") or "").strip() or None
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            # One holder per crest per season: the finest name of 2025 is one
+            # name. Granting again replaces rather than adding, so a change of
+            # mind does not need a delete first.
+            cur.execute("""
+                delete from owner_crests oc using crests c
+                 where c.crest_id = oc.crest_id and c.award_mode = 'manual'
+                   and oc.crest_id = %s and oc.season_year = %s
+            """, (crest_id, season))
+            cur.execute("""
+                insert into owner_crests
+                    (owner_id, crest_id, season_year, detail, awarded_by)
+                values (%s, %s, %s, %s, %s)
+            """, (owner_id, crest_id, season, detail,
+                  request.session.get("owner_id")))
+            name = query(conn, "select name from crests where crest_id = %s",
+                         (crest_id,))[0]["name"]
+            who = query(conn, "select username from owners where owner_id = %s",
+                        (owner_id,))[0]["username"]
+        conn.commit()
+    return RedirectResponse(
+        url=f"/admin/crests?season={season}&msg=" +
+            quote(f"{name} awarded to {who} for {season}."),
+        status_code=303)
+
+
+@app.post("/admin/crests/revoke")
+async def admin_crests_revoke(request: Request):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    row = int(form["owner_crest_id"])
+    season = int(form["season"])
+    with get_db() as conn:
+        # award_mode in the delete as well as the id: a stray id from
+        # somewhere else must not be able to remove a computed crest through
+        # this route.
+        with conn.cursor() as cur:
+            cur.execute("""
+                delete from owner_crests oc using crests c
+                 where c.crest_id = oc.crest_id and c.award_mode = 'manual'
+                   and oc.owner_crest_id = %s
+            """, (row,))
+            gone = cur.rowcount
+        conn.commit()
+    return RedirectResponse(
+        url=f"/admin/crests?season={season}&msg=" +
+            quote("Taken back." if gone else "Nothing to take back."),
+        status_code=303)
+
+
 @app.get("/health")
 def health():
     with get_db() as conn:
