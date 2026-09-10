@@ -228,10 +228,13 @@ def week_slots(conn):
     Spells are built against this rather than against week numbers, so a
     title held in the last week of one season and the first of the next is
     one spell, and a week where nobody qualified breaks one.
+
+    Playoff weeks count. Bane of Their Rival counts every meeting there has
+    been, and some of those are playoff games.
     """
     return [(r["season_year"], r["week"]) for r in query(conn, """
         select distinct season_year, week from game_log
-        where game_type = 'regular' order by season_year, week
+        order by season_year, week
     """)]
 
 

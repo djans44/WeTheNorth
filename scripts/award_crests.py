@@ -609,9 +609,13 @@ def main():
             # And after every week of it. A title that changes hands in week
             # nine and back in week ten leaves no trace in a season-close
             # snapshot, which is most of what these titles do.
+            # Every week that was played, playoffs included. Bane of Their
+            # Rival counts every meeting, and Tom's fourth against David was
+            # the 2023 semifinal -- stopping at week 14 lost the only spell
+            # he ever had of it. The streak rules read regular games only and
+            # are unmoved by the extra weeks.
             last = q(conn, """
-                select max(week) as w from game_log
-                where season_year = %s and game_type = 'regular'
+                select max(week) as w from game_log where season_year = %s
             """, (y,))[0]["w"] or 0
             for w in range(1, last + 1):
                 for code, rows in held(conn, y, w).items():
