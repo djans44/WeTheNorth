@@ -622,9 +622,22 @@ def crests(request: Request):
             else:
                 reigns.setdefault(r["crest_id"], []).append(r)
 
-    titles = [dict(c, holder=holders.get(c["crest_id"]),
-                   reigns=reigns.get(c["crest_id"], []))
-              for c in catalogue if c["standing"] == "held"]
+    titles = []
+    for c in catalogue:
+        if c["standing"] != "held":
+            continue
+        holder = holders.get(c["crest_id"])
+        seasons = reigns.get(c["crest_id"], [])
+        # Newest first, so the leading run belongs to whoever holds it now.
+        # Those are not previous holders, they are the current one's own
+        # earlier seasons -- and listing them put "2025 David" directly under
+        # "Held by David". Skip them, and a title nobody has ever taken from
+        # its holder correctly has no list at all.
+        i = 0
+        while (holder and i < len(seasons)
+               and seasons[i]["owner_id"] == holder["owner_id"]):
+            i += 1
+        titles.append(dict(c, holder=holder, previous=seasons[i:]))
     groups = []
     for category, label in CREST_GROUPS:
         rows = [dict(c, awards=awards.get(c["crest_id"], []),

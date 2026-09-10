@@ -48,12 +48,17 @@
             {% else %}
               <p class="who"><span class="tm">Held by nobody yet.</span></p>
             {% endif %}
-            {# Open, and unlabelled. A title has four season closes at most, so
-               there is nothing to hide behind a disclosure, and a line saying
-               what the years are seven times over says nothing at all. #}
-            {% if c.reigns %}
+            {# Only managers who have actually lost it. A title still held by
+               the manager who has always held it has no list, which is worth
+               noticing on its own. #}
+            {% if c.previous %}
+              <details class="awards">
+                <summary>
+                  Previous holders
+                  <span class="crest-more" aria-hidden="true"></span>
+                </summary>
               <ol class="crest-log">
-                {% for r in c.reigns %}
+                {% for r in c.previous %}
                   <li>
                     {{ when(r) }}
                     <span class="avatar-line">
@@ -64,6 +69,7 @@
                   </li>
                 {% endfor %}
               </ol>
+              </details>
             {% endif %}
           </div>
         </div>
