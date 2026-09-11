@@ -1668,6 +1668,24 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .opt-line.held      { background: var(--mark-hold); font-style: italic; }
 .opt-line.must_sign { background: var(--mark-sign); }
 
+/* Trying a manager in a slot, in the keeper grid's header. It sits on the
+   board's ink ground, so the control has to carry its own light field
+   rather than inherit the header's colours. */
+.seatpick { display: flex; justify-content: center; gap: 0.2rem; margin: 0; }
+.seatpick select {
+  font-size: var(--t-xs);
+  font-weight: 400;
+  padding: 0.1rem 0.15rem;
+  max-width: 7rem;
+  color: var(--ink);
+  background: var(--field-bg);
+}
+.seatpick button { padding: 0.1rem 0.4rem; font-size: var(--t-xs); }
+
+/* A name on the board that the reader put there rather than the league.
+   The placeholder mark, because it means the same thing: a what-if. */
+.board thead .nm.guess { font-style: italic; color: var(--mark-hold); }
+
 .add-form { display: flex; gap: 0.2rem; margin-top: 0.4rem; }
 .add-form select { font-size: 0.72rem; max-width: 8.5rem; padding: 0.15rem; }
 .add-form button { padding: 0.15rem 0.45rem; font-size: 0.8rem; }

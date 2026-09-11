@@ -3278,12 +3278,21 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
               and s.player_id is not null
         """, (season,))
 
+        # Placeholders live in the reader's own session, not the database.
+        # They are a what-if -- "say Chris keeps Mahomes at R1, where does
+        # that leave my third round" -- and a what-if one person is trying
+        # should not appear on eleven other screens, let alone be deletable
+        # from them. Nothing shared means nothing to authorise.
+        #
+        # The round trip stays, so the board's numbering is still worked out
+        # once, in Python, rather than a second copy of it in the browser.
+        held_ids = [int(x) for x in
+                    (request.session.get("prep") or {}).get(str(season), [])]
         holds = query(conn, """
-            select h.owner_id, h.cost_round, h.player_id, p.full_name, p.position
-            from keeper_placeholders h
-            join players p on p.player_id = h.player_id
-            where h.season_year = %s
-        """, (season,))
+            select k.owner_id, k.player_id, k.full_name, k.position, k.cost_round
+            from keeper_eligibility k
+            where k.for_season = %s and k.player_id = any(%s)
+        """, (season, held_ids)) if held_ids else []
 
         voids = query(conn, """
             select v.owner_id, v.penalty_round, p.full_name, v.confirmed_at
@@ -3315,17 +3324,44 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
     # does not know yet whose keepers will sit in it.
     slots = list(range(1, team_count + 1))
     holder = {e["slot"]: e for e in entrants if e["slot"]}
+    taken_by = {e["owner_id"] for e in entrants if e["slot"]}
+
+    # Slots the reader has put someone in to see how it would look. Session
+    # only, like the placeholders, and only ever over an empty slot: a slot
+    # a manager has actually chosen is settled and is not the reader's to
+    # move. Anything that has since been really taken -- the slot or the
+    # manager -- drops out here rather than quietly overriding the truth.
+    mock = {}
+    for s, oid in ((request.session.get("prepslots") or {}).get(str(season), {})).items():
+        s, oid = int(s), int(oid)
+        if s in holder or oid in taken_by or s not in slots:
+            continue
+        who = next((e for e in entrants if e["owner_id"] == oid), None)
+        if who and oid not in mock.values():
+            mock[s] = oid
+
+    seated = dict(holder)
+    for s, oid in mock.items():
+        seated[s] = next(e for e in entrants if e["owner_id"] == oid)
+
     columns = [{"slot": s,
-                "owner_id": holder[s]["owner_id"] if s in holder else None,
-                "username": holder[s]["username"] if s in holder else None}
+                "owner_id": seated[s]["owner_id"] if s in seated else None,
+                "username": seated[s]["username"] if s in seated else None,
+                "modelled": s in mock}
                for s in slots]
+
+    # Who is still free to be put somewhere, and where there is room. A slot
+    # someone has really chosen never appears: that one is settled.
+    spare = [e for e in entrants
+             if not e["slot"] and e["owner_id"] not in mock.values()]
+    free_slots = [s for s in slots if s not in holder]
 
     board, n = [], 0
     for rnd in range(1, 14):
         seq = slots if rnd % 2 == 1 else list(reversed(slots))
         row = {}
         for s in seq:
-            who = holder.get(s)
+            who = seated.get(s)
             c = cells.get((who["owner_id"], rnd)) if who else None
             if c:
                 row[s] = dict(c, pick=None)
@@ -3333,6 +3369,7 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                 n += 1
                 row[s] = {"name": None, "pick": n,
                           "kind": "open" if who else "unclaimed"}
+            row[s]["modelled"] = s in mock
         board.append({"round": rnd, "cells": [row[s] for s in slots]})
 
     used = {r["player_id"] for r in real} | {h["player_id"] for h in holds}
@@ -3346,6 +3383,7 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         oid = o["owner_id"]
         by_owner.append({
             "username": o["username"], "slot": o["slot"], "owner_id": oid,
+            "mock_slot": next((s for s, m in mock.items() if m == oid), None),
             "contracts": [c for c in contracts if c["owner_id"] == oid],
             "voids": [v for v in voids if v["owner_id"] == oid],
             "keepers": sorted([r for r in real if r["owner_id"] == oid],
@@ -3364,59 +3402,75 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         context={"years": years, "season": season, "entrants": entrants,
                  "columns": columns, "board": board, "by_owner": by_owner,
                  "chosen": len(holder), "team_count": team_count,
+                 "held_count": len(holds), "spare": spare,
+                 "free_slots": free_slots, "mock": mock,
+                 "mock_count": len(mock),
                  "is_admin": is_admin, "msg": msg, "error": error})
 
 
 @app.post("/draft-prep/placeholder")
 async def draft_prep_placeholder(request: Request):
+    """Add, drop or clear the reader's own what-ifs.
+
+    Nothing here is shared and nothing is written to the database, so there
+    is nobody to authorise against: every path touches one session and that
+    session is the caller's. What it used to do -- write a row any of the
+    twelve could then delete, with a Clear all that took every manager's
+    work in one unconfirmed click -- had no gate of any kind.
+
+    It still posts and redirects rather than doing the work in the browser,
+    because the board's pick numbering belongs in one place and that place
+    is Python.
+    """
     from urllib.parse import quote
-    me = request.session.get("owner_id")
     form = await request.form()
     season = int(form["season"])
     action = form.get("action")
+    key = str(season)
 
+    prep = dict(request.session.get("prep") or {})
+    held = [int(x) for x in prep.get(key, [])]
     err = None
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            if action == "clear":
-                cur.execute("delete from keeper_placeholders where season_year = %s",
-                            (season,))
-            elif action == "remove":
-                cur.execute("""
-                    delete from keeper_placeholders
-                    where season_year = %s and owner_id = %s and player_id = %s
-                """, (season, int(form["owner_id"]), int(form["player_id"])))
+
+    if action == "clear":
+        held = []
+    elif action == "remove":
+        pid = int(form["player_id"])
+        held = [x for x in held if x != pid]
+    else:
+        raw = (form.get("player_id") or "").strip()
+        if not raw:
+            err = "Pick a player first."
+        else:
+            pid = int(raw)
+            with get_db() as conn:
+                rows = query(conn, """
+                    select owner_id, cost_round, full_name
+                    from keeper_eligibility
+                    where for_season = %s and player_id = %s
+                """, (season, pid))
+                mine = rows[0] if rows else None
+                # Two at the same cost would land on one board cell and the
+                # second would be invisible, so it is refused rather than
+                # silently swallowed.
+                clash = query(conn, """
+                    select full_name from keeper_eligibility
+                    where for_season = %s and owner_id = %s and cost_round = %s
+                      and player_id = any(%s)
+                """, (season, mine["owner_id"], mine["cost_round"], held))                     if mine and held else []
+            if not mine:
+                err = "That player is not eligible."
+            elif pid in held:
+                err = f"{mine['full_name']} is already on the board."
+            elif clash:
+                err = (f"R{mine['cost_round']} is taken by "
+                       f"{clash[0]['full_name']} for that manager.")
             else:
-                oid = int(form["owner_id"])
-                raw = (form.get("player_id") or "").strip()
-                if not raw:
-                    err = "Pick a player first."
-                else:
-                    pid = int(raw)
-                    cur.execute("""
-                        select cost_round, full_name from keeper_eligibility
-                        where for_season = %s and owner_id = %s and player_id = %s
-                    """, (season, oid, pid))
-                    e = cur.fetchone()
-                    if not e:
-                        err = "That player is not eligible."
-                    else:
-                        cur.execute("""
-                            select 1 from keeper_placeholders
-                            where season_year = %s and owner_id = %s and cost_round = %s
-                        """, (season, oid, e["cost_round"]))
-                        if cur.fetchone():
-                            err = (f"Already a placeholder at R{e['cost_round']} "
-                                   "for that manager.")
-                        else:
-                            cur.execute("""
-                                insert into keeper_placeholders
-                                    (season_year, owner_id, player_id, cost_round,
-                                     created_by)
-                                values (%s, %s, %s, %s, %s)
-                                on conflict do nothing
-                            """, (season, oid, pid, e["cost_round"], me))
-        conn.commit()
+                held.append(pid)
+
+    if not err:
+        prep[key] = held
+        request.session["prep"] = prep
 
     url = f"/draft-prep?season={season}"
     if err:
@@ -3424,6 +3478,69 @@ async def draft_prep_placeholder(request: Request):
     return RedirectResponse(url=url, status_code=303)
 
 
+@app.post("/draft-prep/slot")
+async def draft_prep_slot(request: Request):
+    """Seat a manager in an empty slot, or clear one, in the reader's session.
+
+    A slot a manager has actually chosen is settled: it belongs to the draft
+    order page, where taking it is a real act in front of eleven other people.
+    This only ever fills a slot nobody has taken, and only for a manager who
+    has not taken one, so nothing here can contradict the record.
+    """
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    key = str(season)
+    # Either side may be blank, and either blank means the same thing: take
+    # whoever is in this seat out of it. The keeper grid posts a manager and
+    # asks for a slot; a board column would post a slot and ask for a
+    # manager. One route answers both.
+    slot_raw = (form.get("slot") or "").strip()
+    raw = (form.get("owner_id") or "").strip()
+
+    book = dict(request.session.get("prepslots") or {})
+    here = {int(s): int(o) for s, o in (book.get(key) or {}).items()}
+    err = None
+
+    with get_db() as conn:
+        real = query(conn, """
+            select owner_id, slot from draft_order where season_year = %s
+        """, (season,))
+    fixed_slots = {r["slot"] for r in real if r["slot"]}
+    fixed_owners = {r["owner_id"] for r in real if r["slot"]}
+    entered = {r["owner_id"] for r in real}
+
+    slot = int(slot_raw) if slot_raw else None
+    oid = int(raw) if raw else None
+
+    if slot is not None and slot in fixed_slots:
+        err = f"Slot {slot} has been chosen. That one is settled."
+    elif oid is not None and oid in fixed_owners:
+        err = "They have already chosen a slot."
+    elif slot is None and oid is not None:
+        here = {s: o for s, o in here.items() if o != oid}
+    elif slot is not None and oid is None:
+        here.pop(slot, None)
+    elif slot is None and oid is None:
+        err = "Nothing to seat."
+    else:
+        if oid not in entered:
+            err = "That manager is not in the draft order."
+        else:
+            # One seat each, and one manager per seat: putting someone
+            # somewhere takes them out of wherever the reader had them, and
+            # turfs out whoever the reader had here.
+            here = {s: o for s, o in here.items() if o != oid and s != slot}
+            here[slot] = oid
+
+    if not err:
+        book[key] = {str(s): o for s, o in here.items()}
+        request.session["prepslots"] = book
+
+    url = f"/draft-prep?season={season}"
+    if err:
+        url += "&error=" + quote(err)
+    return RedirectResponse(url=url, status_code=303)
 
 
 @app.post("/keepers/void-submit")

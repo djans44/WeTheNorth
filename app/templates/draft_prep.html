@@ -78,8 +78,30 @@
                 {{ avatar(t.owner_id, 30) }}
                 <span class="nm">{{ t.username }}</span>
               </span>
-              <span class="tm">{% if t.slot %}slot {{ t.slot }}
-                {%- else %}no slot yet{% endif %}</span>
+              {# A slot someone has actually chosen is settled and reads as
+                 text. One nobody has chosen is the reader's to try people
+                 in, in their own session, the same bargain the placeholders
+                 make. Choosing for real still happens on the draft order
+                 page, in front of everyone. #}
+              {% if t.slot %}
+                <span class="tm">slot {{ t.slot }}</span>
+              {% else %}
+                <form method="post" action="/draft-prep/slot"
+                      class="seatpick loadonpick">
+                  <input type="hidden" name="season" value="{{ season }}">
+                  <input type="hidden" name="owner_id" value="{{ t.owner_id }}">
+                  <select name="slot" aria-label="Try {{ t.username }} in a slot">
+                    <option value="">no slot yet</option>
+                    {% for s in free_slots %}
+                      {% if s == t.mock_slot or s not in mock %}
+                        <option value="{{ s }}"
+                          {% if s == t.mock_slot %}selected{% endif %}>slot {{ s }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                  <button type="submit">Set</button>
+                </form>
+              {% endif %}
             </th>
           {% endfor %}</tr>
         </thead>
@@ -147,17 +169,24 @@
     </div>
     <p class="note">
       <span class="swatch real"></span> contract or submitted keeper
-      <span class="swatch hold"></span> placeholder
+      <span class="swatch hold"></span> your placeholder
       <span class="swatch void"></span> forced defence
       &middot; the add list is that manager's own eligible roster.
+      Placeholders and any slot you try a manager in are what-ifs held in
+      your own session: nobody else sees them and nothing is written down.
+      A slot already chosen cannot be changed here.
     </p>
+    {# Offered only when there is something to clear, the way the lottery
+       page only offers to remove one that exists. #}
+    {% if held_count %}
     <form method="post" action="/draft-prep/placeholder">
       <input type="hidden" name="season" value="{{ season }}">
       <p class="actionrow">
-        <span class="tm">Every manager's placeholders for {{ season }}, not just yours.</span>
-        <button type="submit" name="action" value="clear" class="seal">Clear all placeholders</button>
+        <span class="tm">{{ held_count }} on the board, yours alone.</span>
+        <button type="submit" name="action" value="clear" class="seal">Clear placeholders</button>
       </p>
     </form>
+    {% endif %}
   </section>
 
   <section>
@@ -173,8 +202,9 @@
                 {% if c.owner_id %}
                   <span class="stack">
                     {{ avatar(c.owner_id, 30) }}
-                    <span class="nm">{{ c.username }}</span>
+                    <span class="nm{% if c.modelled %} guess{% endif %}">{{ c.username }}</span>
                   </span>
+                  {% if c.modelled %}<span class="tm">if</span>{% endif %}
                 {% else %}
                   <span class="tm">unclaimed</span>
                 {% endif %}
