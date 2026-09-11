@@ -1,28 +1,45 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% block title %}Draft prep | We the North{% endblock %}
 
 {% block content %}
 <div class="page wide">
-  <header class="page-head">
-    <h1>Draft prep</h1>
-    <p class="lede">Keepers, contracts and voids on the board. Pick numbers skip
-      keeper slots, so they count only the picks you actually make.</p>
-    {# Also the route to the sibling page on a phone, where the nav's Draft
-       submenu is hidden. #}
-    <p class="crumbs"><a href="/draft-order">&larr; Draft order</a></p>
+  {# The lede's first half said what the two headings below it say. Its
+     second half explained the pick numbering, which is worth keeping and
+     belongs under the board it describes, not above two sections you have
+     not reached yet.
+
+     The header freezes and condenses like the season, history, manager and
+     draft order pages. This is the longest page on the site -- thirteen
+     rounds by twelve managers -- so it has the most to gain from it. #}
+  <header class="page-head tight stuck">
+    <h1>{{ leaf(20) }}Draft prep</h1>
+    {# Only reachable once the header has condensed, which is to say once
+       there is somewhere to go back from. A plain anchor, so it works with
+       the script off and the browser does the scrolling. #}
+    <a class="to-top" href="#top">Top</a>
   </header>
 
+  {# The way back on the left, the season you are looking at on the right,
+     the same line as the season, history and manager pages use. The crumb
+     cannot live in the header any more: the header condenses to a bar and a
+     back-link riding along inside it would be furniture. #}
   <section>
-    <form method="get" action="/draft-prep" class="picker">
-      <label for="season">Season</label>
-      <select id="season" name="season">
-        {% for y in years %}
-          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit">Load</button>
-    </form>
+    <div class="pickhead">
+      <p class="crumbs"><a href="/draft-order">&larr; Draft order</a></p>
+
+      {# loadonpick: app.js hides the button and loads on change. The button
+         stays in the markup so the form still works with the script off. #}
+      <form method="get" action="/draft-prep" class="picker loadonpick">
+        <label for="season">Season</label>
+        <select id="season" name="season">
+          {% for y in years %}
+            <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="seal">Load</button>
+      </form>
+    </div>
   </section>
 
   {% if not order %}
@@ -115,7 +132,10 @@
     </p>
     <form method="post" action="/draft-prep/placeholder">
       <input type="hidden" name="season" value="{{ season }}">
-      <button type="submit" name="action" value="clear" class="ghost">Clear all placeholders</button>
+      <p class="actionrow">
+        <span class="tm">Every manager's placeholders for {{ season }}, not just yours.</span>
+        <button type="submit" name="action" value="clear" class="seal">Clear all placeholders</button>
+      </p>
     </form>
   </section>
 
@@ -148,6 +168,8 @@
         </tbody>
       </table>
     </div>
+    <p class="note">Pick numbers skip keeper slots, so they count only the
+      picks you actually make.</p>
   </section>
   {% endif %}
 </div>
