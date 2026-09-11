@@ -3240,12 +3240,20 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         if not season:
             season = years[0]["season_year"]
 
-        order = query(conn, """
-            select d.owner_id, o.username, d.slot
+        # Everyone in the lottery, whether or not they have taken a slot.
+        # Filtering on a slot here was the page's central fault: a manager
+        # who had not chosen yet vanished from both grids, keepers and all,
+        # and keepers have nothing to do with choosing a draft slot.
+        entrants = query(conn, """
+            select d.owner_id, o.username, d.slot, d.lottery_position
             from draft_order d join owners o on o.owner_id = d.owner_id
-            where d.season_year = %s and d.slot is not null
-            order by d.slot
+            where d.season_year = %s
+            order by d.lottery_position
         """, (season,))
+
+        size = query(conn, "select team_count from seasons where season_year = %s",
+                     (season,))
+        team_count = size[0]["team_count"] if size else 12
 
         voided = {r["contract_id"] for r in query(conn, """
             select contract_id from keeper_voids where season_year = %s
@@ -3302,24 +3310,39 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         cells.setdefault((h["owner_id"], h["cost_round"]), {
             "name": h["full_name"], "kind": "hold", "tag": "placeholder"})
 
+    # The board is one column per draft slot, not per manager who has taken
+    # one. A slot nobody holds still exists and still costs picks; it just
+    # does not know yet whose keepers will sit in it.
+    slots = list(range(1, team_count + 1))
+    holder = {e["slot"]: e for e in entrants if e["slot"]}
+    columns = [{"slot": s,
+                "owner_id": holder[s]["owner_id"] if s in holder else None,
+                "username": holder[s]["username"] if s in holder else None}
+               for s in slots]
+
     board, n = [], 0
     for rnd in range(1, 14):
-        cols = order if rnd % 2 == 1 else list(reversed(order))
+        seq = slots if rnd % 2 == 1 else list(reversed(slots))
         row = {}
-        for o in cols:
-            c = cells.get((o["owner_id"], rnd))
+        for s in seq:
+            who = holder.get(s)
+            c = cells.get((who["owner_id"], rnd)) if who else None
             if c:
-                row[o["slot"]] = dict(c, pick=None)
+                row[s] = dict(c, pick=None)
             else:
                 n += 1
-                row[o["slot"]] = {"name": None, "kind": "open", "pick": n}
-        board.append({"round": rnd, "cells": [row[o["slot"]] for o in order]})
+                row[s] = {"name": None, "pick": n,
+                          "kind": "open" if who else "unclaimed"}
+        board.append({"round": rnd, "cells": [row[s] for s in slots]})
 
     used = {r["player_id"] for r in real} | {h["player_id"] for h in holds}
     used |= {c["player_id"] for c in contracts}
 
+    # Keyed on managers in lottery order, because every one of them has
+    # keepers and only some of them have a slot. The board beside it is keyed
+    # on slots; the two answer different questions and do not line up.
     by_owner = []
-    for o in order:
+    for o in entrants:
         oid = o["owner_id"]
         by_owner.append({
             "username": o["username"], "slot": o["slot"], "owner_id": oid,
@@ -3338,8 +3361,9 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
 
     return templates.TemplateResponse(
         request=request, name="draft_prep.html",
-        context={"years": years, "season": season, "order": order,
-                 "board": board, "by_owner": by_owner,
+        context={"years": years, "season": season, "entrants": entrants,
+                 "columns": columns, "board": board, "by_owner": by_owner,
+                 "chosen": len(holder), "team_count": team_count,
                  "is_admin": is_admin, "msg": msg, "error": error})
 
 

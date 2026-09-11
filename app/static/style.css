@@ -1626,6 +1626,10 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .board thead .tm, .board .rhead .tm { color: #a49c8c; }
 
 .board .cell.open { color: var(--ink-soft); }
+/* A slot nobody has taken yet. The ground outside the panel, because that is
+   what the column is: a real set of picks that is not part of anyone's board
+   until they choose it. */
+.board .cell.unclaimed { background: var(--page-bg); color: var(--ink-muted); }
 .board .cell.real { background: var(--mark-kept); font-weight: 600; text-align: left; }
 .board .cell.hold { background: var(--mark-hold); font-style: italic; text-align: left; }
 .board .cell.void { background: var(--mark-void); text-align: left; }

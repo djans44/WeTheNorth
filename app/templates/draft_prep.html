@@ -20,11 +20,30 @@
     <a class="to-top" href="#top">Top</a>
   </header>
 
-  {# The season you are looking at, right, where every other page puts its
-     own chooser. The left of this line is empty for now; the draft order
-     page carries a state banner there and this one will want the same. #}
+  {# Where the season stands on the left, the season you are looking at on
+     the right, the same line the draft order page uses. It matters more here
+     than there: until every slot is taken the pick numbers below are
+     provisional, and nothing on the page said so. #}
   <section>
     <div class="pickhead">
+      {% if not entrants %}
+        <p class="draftstate none">
+          <span>Not yet drawn</span>
+          <span class="sub">The lottery for {{ season }} has not been held.</span>
+        </p>
+      {% elif chosen < team_count %}
+        <p class="draftstate live">
+          <span>Slots still to choose</span>
+          <span class="sub">{{ chosen }} of {{ team_count }} taken. Pick numbers
+            move as the rest are chosen.</span>
+        </p>
+      {% else %}
+        <p class="draftstate set">
+          <span>The order is set</span>
+          <span class="sub">All {{ team_count }} slots taken.</span>
+        </p>
+      {% endif %}
+
       {# loadonpick: app.js hides the button and loads on change. The button
          stays in the markup so the form still works with the script off. #}
       <form method="get" action="/draft-prep" class="picker loadonpick">
@@ -39,9 +58,13 @@
     </div>
   </section>
 
-  {% if not order %}
-  <section><p class="note">Draft slots have not been chosen yet.
-    Run the lottery and let managers pick their slots first.</p></section>
+  {# Only when there is no lottery at all. A lottery with no slots taken yet
+     still has twelve managers with keepers and thirteen rounds of picks, and
+     both are worth looking at while the choosing happens. #}
+  {% if not entrants %}
+  <section><p class="note">Draw the lottery on the
+    <a href="/draft-order?season={{ season }}">draft order</a> page and the
+    board will fill in from there.</p></section>
   {% else %}
 
   <section>
@@ -55,7 +78,8 @@
                 {{ avatar(t.owner_id, 30) }}
                 <span class="nm">{{ t.username }}</span>
               </span>
-              <span class="tm">slot {{ t.slot }}</span>
+              <span class="tm">{% if t.slot %}slot {{ t.slot }}
+                {%- else %}no slot yet{% endif %}</span>
             </th>
           {% endfor %}</tr>
         </thead>
@@ -141,15 +165,19 @@
     <div class="scroller">
       <table class="board">
         <thead>
-          <tr><th class="rhead">Pick</th>
-            {% for o in order %}<th>{{ o.slot }}</th>{% endfor %}</tr>
+          <tr><th class="rhead">Slot</th>
+            {% for c in columns %}<th>{{ c.slot }}</th>{% endfor %}</tr>
           <tr><th class="rhead">Round</th>
-            {% for o in order %}
+            {% for c in columns %}
               <th class="who">
-                <span class="stack">
-                  {{ avatar(o.username, 30) }}
-                  <span class="nm">{{ o.username }}</span>
-                </span>
+                {% if c.owner_id %}
+                  <span class="stack">
+                    {{ avatar(c.owner_id, 30) }}
+                    <span class="nm">{{ c.username }}</span>
+                  </span>
+                {% else %}
+                  <span class="tm">unclaimed</span>
+                {% endif %}
               </th>
             {% endfor %}</tr>
         </thead>
