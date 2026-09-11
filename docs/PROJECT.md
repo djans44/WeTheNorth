@@ -336,6 +336,10 @@ survives, so they can adjust and resubmit.
 4. Admin can pick for anyone or override any slot at any time
 5. A season has a lottery or it has not. Drawing over an existing one is
    refused; removing it is a separate button that asks first
+6. While a draft is running the page reloads itself every ten seconds, so
+   the other eleven are not looking at a frozen screen. Anything typed or
+   chosen stops it, since a reload would throw the entry away, and the tab
+   title says **Your turn** for whoever is on the clock
 
 Slot choice happens **before** keeper selection.
 

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar, leaf %}
-{% block title %}Draft order | We the North{% endblock %}
+{# The tab is the notification. The reload below is what delivers it: the
+   last refresh a manager gets before their turn is the one that renders
+   this, and after that they are the one choosing and it stops. #}
+{% block title %}{% if my_turn %}Your turn — {% endif %}Draft order | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
@@ -52,6 +55,18 @@
         <button type="submit" class="seal">Load</button>
       </form>
     </div>
+
+    {# app.js reloads the page every ten seconds while this is here, and stops
+       the moment anything on the page is typed or chosen -- which covers both
+       the slot picker and the admin override table without either knowing
+       about it. Only a live draft on the newest season: a finished order, a
+       season with no lottery and every past year leave this out entirely, so
+       nothing reloads. #}
+    {% set live = rows and on_clock and season == years[0].season_year %}
+    {% if live %}
+      <p class="note" data-live hidden>Updates paused while you have unsaved
+        changes. Reload when you are done.</p>
+    {% endif %}
   </section>
 
   {% if rows %}

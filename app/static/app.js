@@ -120,6 +120,46 @@
     });
   }
 
+  // ---- a live draft reloads itself ----
+  // Twelve people watch /draft-order during the one session a year where the
+  // order is chosen, and nothing on it used to change until they reloaded.
+  //
+  // A whole reload rather than polling a state endpoint and swapping the
+  // board in: this runs for twenty minutes a year, and code that rare is
+  // untested code, so what matters is how it fails. This fails by not
+  // reloading, which is what every other day of the year looks like. A swap
+  // fails by showing a board where a taken slot still looks free.
+  var live = document.querySelector("[data-live]");
+  if (live) {
+    // Bounded, because a tab left open on a draft that stopped half way
+    // would hold Render's free instance awake indefinitely for nobody. Per
+    // tab, and the hour starts again in a new one.
+    var LIMIT = 60 * 60 * 1000;
+    var began = 0;
+    try { began = Number(sessionStorage.getItem("draftlive")) || 0; } catch (e) {}
+    if (!began) {
+      began = Date.now();
+      try { sessionStorage.setItem("draftlive", began); } catch (e) {}
+    }
+
+    if (Date.now() - began < LIMIT) {
+      // location.reload() and not a fixed URL: app.js has already dropped
+      // ?msg= from the address by now, so a pick's toast does not come back
+      // every ten seconds.
+      var beat = setInterval(function () { window.location.reload(); }, 10000);
+
+      // Anything chosen or typed stops it, because a reload would throw the
+      // entry away. Capturing, so it does not matter which form it was.
+      // Submitting starts it again: the post redirects to a fresh page.
+      var hold = function () {
+        clearInterval(beat);
+        live.hidden = false;
+      };
+      document.addEventListener("change", hold, true);
+      document.addEventListener("input", hold, true);
+    }
+  }
+
   // ---- a form that asks before it acts ----
   // data-confirm on the form, its text the question. For the few posts that
   // destroy something and have no undo. Enhancement only: without the script
