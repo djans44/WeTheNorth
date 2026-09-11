@@ -77,6 +77,10 @@
   var stuck = document.querySelector(".page-head.stuck");
   if (stuck) {
     var fullHeight = 0;
+    // How far down the document the header sits. It is inside the page panel,
+    // which starts below the site nav, so it has ninety-odd pixels to travel
+    // before it touches the top of the window.
+    var reaches = 0;
     var frozen = function () {
       return window.getComputedStyle(stuck).position === "sticky";
     };
@@ -85,6 +89,7 @@
       stuck.classList.remove("condensed");
       stuck.style.marginBottom = "";
       fullHeight = stuck.offsetHeight;
+      reaches = stuck.getBoundingClientRect().top + window.scrollY;
     };
 
     // The header keeps its place in the flow while stuck, so shrinking it
@@ -98,13 +103,19 @@
     //
     // Condensed the moment it starts to stick, rather than part way down the
     // page: whole at the top, a bar once you have left it, nothing between.
+    //
+    // "Starts to stick" is when it reaches the top of the window, not when
+    // you begin to scroll. scrollY > 4 was the latter, so the header shrank
+    // while it was still travelling down the page and arrived already small.
+    // Measured rather than guessed, because the distance depends on the nav
+    // above it, which changes height on a phone.
     var syncStuck = function () {
       if (!frozen()) {
         stuck.classList.remove("condensed");
         stuck.style.marginBottom = "";
         return;
       }
-      var want = window.scrollY > 4;
+      var want = window.scrollY + 1 >= reaches;
       if (want === stuck.classList.contains("condensed")) { return; }
       stuck.classList.toggle("condensed", want);
       stuck.style.marginBottom =

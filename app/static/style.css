@@ -652,10 +652,7 @@ h3 {
   gap: var(--s3) var(--s4);
   margin: 0 0 var(--s4);
 }
-/* .crumbs carries its own gutter margin for when it sits alone under a
-   header; inside the row the row's padding is already there. */
 .pickhead .note,
-.pickhead .crumbs,
 .pickhead .draftstate { flex: 1 1 18rem; margin: 0; }
 
 /* .field sets a 9rem label column for the admin forms, which left "Show"

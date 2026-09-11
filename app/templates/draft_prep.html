@@ -20,14 +20,11 @@
     <a class="to-top" href="#top">Top</a>
   </header>
 
-  {# The way back on the left, the season you are looking at on the right,
-     the same line as the season, history and manager pages use. The crumb
-     cannot live in the header any more: the header condenses to a bar and a
-     back-link riding along inside it would be furniture. #}
+  {# The season you are looking at, right, where every other page puts its
+     own chooser. The left of this line is empty for now; the draft order
+     page carries a state banner there and this one will want the same. #}
   <section>
     <div class="pickhead">
-      <p class="crumbs"><a href="/draft-order">&larr; Draft order</a></p>
-
       {# loadonpick: app.js hides the button and loads on change. The button
          stays in the markup so the form still works with the script off. #}
       <form method="get" action="/draft-prep" class="picker loadonpick">
