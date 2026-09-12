@@ -519,6 +519,30 @@ response actually came from the app. Cold starts can take **50 seconds or more**
 **Neon pooling.** Migrations and multi-statement scripts use
 `DATABASE_URL_DIRECT`. The pooled connection runs PgBouncer in transaction mode.
 
+**The app keeps its connections.** `get_db()` hands out a connection from a
+`psycopg_pool.ConnectionPool` rather than dialling Neon each time. It used to
+open a new one per request, and that was the whole of the site's latency:
+measured from a dev machine, opening a connection cost **2.6 seconds** cold
+and **17.7 seconds** when several were opened back to back, while the queries
+behind the busiest page cost 69ms and a trivial one 47ms. Every page took
+about three seconds and all but a few hundred milliseconds of it was the
+handshake. With the pool, `/health` went from 2,720ms to **207ms** and
+`/draft-prep` from 3,051ms to **703ms**.
+
+Three things about it matter:
+
+- It is built on **first use, not at import**. Render's free tier cold-starts,
+  and a pool that blocked startup would turn every wake into a failed boot
+  rather than one slow request.
+- `check=ConnectionPool.check_connection` is **not optional**. Neon drops idle
+  connections and the instance sleeps, so a pooled connection can be dead when
+  it is next handed out. Without the check, the first request after a quiet
+  spell raises `OperationalError` — a 500 for whoever arrives first. With it,
+  that request is merely slow. Both halves of that were measured.
+- `max_size` is **4**. Twelve people on one instance need far fewer than
+  twelve, and Neon counts connections. Twelve simultaneous requests against
+  four were served without deadlock, the slowest in 2.5 seconds.
+
 **PowerShell.** `>` redirection writes UTF-16, which Git treats as binary — use
 `| Set-Content -Encoding utf8`. Here-strings need `@'` last on its line and `'@`
 first on its line. PowerShell has **no triple-quoted strings**. `.Replace()`

@@ -2,6 +2,7 @@ import contextvars
 import logging
 import os
 import pathlib
+import threading
 import time
 
 import psycopg
@@ -11,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import crests as crestrules
@@ -390,8 +392,66 @@ def season_roll(rows):
     return held, groups
 
 
+# Opening a connection to Neon costs about two and a half seconds from cold
+# and far worse when several are asked for back to back -- seventeen seconds
+# was measured opening them one after another. Running the queries costs tens
+# of milliseconds: the page with the most work on the site spends 69ms on its
+# largest query and 47ms on a trivial one. Every page took three seconds, and
+# all but a few hundred milliseconds of that was dialling the database.
+#
+# So the connections are kept rather than made. Four is plenty for twelve
+# people on one instance, and Neon counts them.
+_pool = None
+_pool_lock = threading.Lock()
+
+
+def _db_pool():
+    """Built on first use, not at import.
+
+    Render's free tier cold-starts, and a pool that blocks startup would turn
+    every wake into a failed boot rather than one slow request. The first
+    request after a wake pays for the first connection, which is what it paid
+    for every request before this.
+    """
+    global _pool
+    if _pool is None:
+        with _pool_lock:
+            if _pool is None:
+                pool = ConnectionPool(
+                    os.environ["DATABASE_URL"],
+                    kwargs={"row_factory": dict_row},
+                    min_size=1,
+                    max_size=4,
+                    # Neon drops idle connections and the instance itself
+                    # sleeps, so a connection handed out after a quiet spell
+                    # may be dead. check tests it first and replaces it,
+                    # which is the difference between a slow page and a 500.
+                    check=ConnectionPool.check_connection,
+                    max_idle=120,
+                    open=False,
+                )
+                pool.open()
+                _pool = pool
+    return _pool
+
+
 def get_db():
-    return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
+    """A connection from the pool, returned to it on the way out.
+
+    Same shape as the psycopg.connect() this replaces: used as a context
+    manager it commits on a clean exit and rolls back on an exception. The
+    only difference is that it goes back to the pool instead of being closed,
+    so all fifty-odd callers are unchanged.
+    """
+    return _db_pool().connection()
+
+
+@app.on_event("shutdown")
+def _close_pool():
+    global _pool
+    if _pool is not None:
+        _pool.close()
+        _pool = None
 
 
 def query(conn, sql, params=None):
