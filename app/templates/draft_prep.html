@@ -74,10 +74,11 @@
         <thead>
           <tr>{% for t in by_owner %}
             <th>
-              <span class="stack">
-                {{ avatar(t.owner_id, 30) }}
-                <span class="nm">{{ t.username }}</span>
-              </span>
+              {# The sigil alone, larger. Its title carries the name, which
+                 is the same bargain the head-to-head grid made: twelve
+                 columns of names cost more width than they are worth when
+                 every column already has a face on it. #}
+              {{ avatar(t.owner_id, 40) }}
               {# A slot someone has actually chosen is settled and reads as
                  text. One nobody has chosen is the reader's to try people
                  in, in their own session, the same bargain the placeholders
@@ -147,7 +148,12 @@
               {% endif %}
 
               {% if t.options %}
-              <form method="post" action="/draft-prep/placeholder" class="add-form">
+              {# Choosing a name is the whole act. loadonpick hides the +
+                 and submits on change; data-needs-value stops the blank
+                 "add..." from posting, which the seat picker below must not
+                 do -- blank is how you empty a slot there. #}
+              <form method="post" action="/draft-prep/placeholder"
+                    class="add-form loadonpick" data-needs-value>
                 <input type="hidden" name="season" value="{{ season }}">
                 <input type="hidden" name="owner_id" value="{{ t.owner_id }}">
                 <select name="player_id">
@@ -200,11 +206,11 @@
             {% for c in columns %}
               <th class="who">
                 {% if c.owner_id %}
-                  <span class="stack">
-                    {{ avatar(c.owner_id, 30) }}
-                    <span class="nm{% if c.modelled %} guess{% endif %}">{{ c.username }}</span>
-                  </span>
-                  {% if c.modelled %}<span class="tm">if</span>{% endif %}
+                  {# Whether the seat is settled or one the reader tried is
+                     said once, in the grid above: a chosen slot reads as
+                     text there and an open one is a dropdown. Saying it
+                     again under every sigil here was noise. #}
+                  {{ avatar(c.owner_id, 40) }}
                 {% else %}
                   <span class="tm">unclaimed</span>
                 {% endif %}

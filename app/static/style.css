@@ -1609,7 +1609,13 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   text-align: center;
 }
 .board thead th { background: var(--ink); color: var(--parchment); border-color: var(--ink); }
-.board thead .who { font-size: var(--t-xs); font-weight: 400; }
+/* The column head is a sigil and, at most, one small word. Room to breathe
+   around it now that the name has gone. */
+.board thead .who {
+  font-size: var(--t-xs);
+  font-weight: 400;
+  padding: var(--s2) 0.35rem;
+}
 .board .rhead { background: var(--ink); color: var(--parchment); width: 3rem; }
 
 /* A row header naming a person needs room the 3rem pick/round column
@@ -1682,9 +1688,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 }
 .seatpick button { padding: 0.1rem 0.4rem; font-size: var(--t-xs); }
 
-/* A name on the board that the reader put there rather than the league.
-   The placeholder mark, because it means the same thing: a what-if. */
-.board thead .nm.guess { font-style: italic; color: var(--mark-hold); }
 
 .add-form { display: flex; gap: 0.2rem; margin-top: 0.4rem; }
 .add-form select { font-size: 0.72rem; max-width: 8.5rem; padding: 0.15rem; }

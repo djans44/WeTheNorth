@@ -375,6 +375,10 @@
       // requestSubmit, not submit: the plain method skips validation and
       // fires no submit event, so nothing else on the page can see it go.
       sel.addEventListener("change", function () {
+        // data-needs-value: the blank option is this form's resting state,
+        // not a choice. Without the opt-in an empty value still posts,
+        // because elsewhere -- the seat picker -- blank is how you clear one.
+        if (form.hasAttribute("data-needs-value") && !sel.value) { return; }
         if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
       });
     }(pickers[p]));

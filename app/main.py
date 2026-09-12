@@ -3406,8 +3406,7 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
 
     columns = [{"slot": s,
                 "owner_id": seated[s]["owner_id"] if s in seated else None,
-                "username": seated[s]["username"] if s in seated else None,
-                "modelled": s in mock}
+                "username": seated[s]["username"] if s in seated else None}
                for s in slots]
 
     # Who is still free to be put somewhere, and where there is room. A slot
@@ -3429,7 +3428,6 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                 n += 1
                 row[s] = {"name": None, "pick": n,
                           "kind": "open" if who else "unclaimed"}
-            row[s]["modelled"] = s in mock
         board.append({"round": rnd, "cells": [row[s] for s in slots]})
 
     used = {r["player_id"] for r in real} | {h["player_id"] for h in holds}
@@ -3464,7 +3462,6 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                  "chosen": len(holder), "team_count": team_count,
                  "held_count": len(holds), "spare": spare,
                  "free_slots": free_slots, "mock": mock,
-                 "mock_count": len(mock),
                  "is_admin": is_admin, "msg": msg, "error": error})
 
 
