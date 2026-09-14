@@ -109,6 +109,16 @@
     return out;
   }
 
+  // The round a keeper actually costs when its own is spoken for: no two of
+  // your keepers may cost the same round, and the later arrival moves up to
+  // the next free, more expensive one. Up the board is down the number.
+  //
+  // This mirrors next_free_round() in app/main.py and takes its arguments in
+  // the same order so the two read alike. It is the one rule this file
+  // restates rather than being told, and it has to be: the card redraws on
+  // every click and cannot ask the server between them. The server decides,
+  // so a divergence shows up as a preview that lied, not as a keeper in the
+  // wrong round. Change one and change the other.
   function firstFree(from, taken) {
     for (var r = from; r >= 1; r--) {
       if (taken.indexOf(r) === -1) { return r; }

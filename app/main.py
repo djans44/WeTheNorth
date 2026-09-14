@@ -2592,7 +2592,26 @@ def health():
     return {"status": "ok", "database": "connected"}
 
 
-def _first_free(want, taken):
+def next_free_round(want, taken):
+    """The round a keeper actually costs when its own is spoken for.
+
+    From /rules: no two of your keepers may cost the same round, and the one
+    who arrived later moves **up** to the next free, more expensive round.
+    Up the board is down the number, and there is nothing above round one --
+    which is why two round-one keepers are impossible. None says there was
+    nowhere left to go.
+
+    This is the only copy of the rule on the server. It was four: this, a
+    _first_free that took the same two arguments the other way round, and two
+    generator expressions inlined where they were needed. All four agreed,
+    which is the kind of luck that does not survive an edit to one of them.
+
+    firstFree() in static/keepers.js is the fifth and has to stay: the card
+    redraws as an owner clicks and cannot ask the server between clicks. It
+    takes its arguments in this order so the two read alike. This one decides.
+    Nothing is written without it, so a divergence shows up as a preview that
+    lied rather than as a keeper in the wrong round.
+    """
     for r in range(want, 0, -1):
         if r not in taken:
             return r
@@ -2678,7 +2697,7 @@ def resolve_keeper_phase(conn, season, phase, apply=False):
 
         c = contracts.get((oid, phase))
         if c:
-            rd = _first_free(c["cost_round"], taken.get(oid, set()))
+            rd = next_free_round(c["cost_round"], taken.get(oid, set()))
             if rd is None:
                 actions.append({"owner": names.get(oid), "owner_id": oid,
                                 "kind": "error", "player": pnames.get(c["player_id"], ""),
@@ -2703,7 +2722,7 @@ def resolve_keeper_phase(conn, season, phase, apply=False):
                                 "player": pnames.get(p["player_id"], ""),
                                 "round": None, "note": "planned player not eligible"})
                 continue
-            rd = _first_free(e["cost_round"], taken.get(oid, set()))
+            rd = next_free_round(e["cost_round"], taken.get(oid, set()))
             if rd is None:
                 actions.append({"owner": names.get(oid), "owner_id": oid,
                                 "kind": "error", "player": e["full_name"],
@@ -3188,7 +3207,7 @@ async def submit_phase(request: Request):
             if not err:
                 taken = _rounds_taken(cur, season, target, phase)
                 want = elig["cost_round"]
-                rd = next((r for r in range(want, 0, -1) if r not in taken), None)
+                rd = next_free_round(want, taken)
                 if rd is None:
                     err = (f"{elig['full_name']} cannot be kept, "
                            f"no free round at or below R{want}.")
@@ -3776,7 +3795,7 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
     def claim(oid, want, payload, movable):
         """Put a keeper on the board, moving it up if its round is spoken for."""
         seats = taken.setdefault(oid, set())
-        got = next_free_round(seats, want) if movable else want
+        got = next_free_round(want, seats) if movable else want
         if got is None:
             return None
         seats.add(got)
@@ -4002,10 +4021,10 @@ async def draft_prep_placeholder(request: Request):
                     """, (season, mine["owner_id"], held)) if held else [],
                         key=lambda x: order.get(x["player_id"], 0))
                     for m in movers:
-                        got = next_free_round(seats, m["cost_round"])
+                        got = next_free_round(m["cost_round"], seats)
                         if got:
                             seats.add(got)
-                    landing = next_free_round(seats, mine["cost_round"])
+                    landing = next_free_round(mine["cost_round"], seats)
             if not mine:
                 err = "That player is not eligible."
             elif pid in held:
@@ -4166,21 +4185,6 @@ async def submit_voids(request: Request):
 
 
 
-def next_free_round(seats, want):
-    """The round a keeper actually costs when its own is spoken for.
-
-    From /rules: no two of your keepers may cost the same round, and the one
-    who arrived later moves **up** to the next free, more expensive round.
-    Up the board is down the number, and there is nothing above round one --
-    which is why two round-one keepers are impossible. None says there was
-    nowhere left to go.
-    """
-    got = want
-    while got >= 1 and got in seats:
-        got -= 1
-    return got if got >= 1 else None
-
-
 def _plan_conflicts(cur, season, target, form):
     """Return a list of problems with the plan as submitted."""
     taken = set()
@@ -4225,7 +4229,7 @@ def _plan_conflicts(cur, season, target, form):
             continue
         seen[pid] = n
 
-        rd = next((r for r in range(e["cost_round"], 0, -1) if r not in taken), None)
+        rd = next_free_round(e["cost_round"], taken)
         if rd is None:
             problems.append(
                 f"{e['full_name']} costs R{e['cost_round']} and every round "
