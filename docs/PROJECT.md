@@ -181,6 +181,15 @@ share a round, which enforces the collision rule structurally.
 `resolved_at`. A phase is closed when an admin resolves it, not when the clock
 passes.
 
+**The gap between those two is a real grace period, and it is deliberate.**
+`closes_at` going by does not stop anything: `save_plan` refuses only a phase
+that is already *resolved*, and resolution reads the plans as they stand at
+the moment it runs. So a plan saved after the window shut and before the
+commissioner resolves it still becomes that manager's pick. CLAUDE.md's
+"missing a window forfeits that keeper" is about resolution finding nothing
+there, not about the clock. `/keepers` says so on the card of any window in
+that state, because nobody would guess it.
+
 **`keeper_plans`** — an owner's intended pick per phase, editable until that
 phase resolves.
 
