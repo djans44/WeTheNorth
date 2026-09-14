@@ -281,7 +281,7 @@
     <table class="keepers picker-table">
       <thead>
         <tr>
-          <th>Player</th><th>Pos</th><th>Cost</th><th class="name">Basis</th>
+          <th class="name">Player</th><th>Pos</th><th>Cost</th><th>Basis</th>
         </tr>
       </thead>
       <tbody>
@@ -290,7 +290,12 @@
           <td class="name">{{ c.full_name }}</td>
           <td>{{ c.position }}</td>
           <td class="rd">R{{ c.cost_round }}</td>
-          <td class="tm">{{ c.basis_source }}{% if c.state == "must_sign" %} &middot; needs term{% endif %}</td>
+          {# .tm on the cell sets display:block, which takes a td out of the
+             table: the last column drifted out of line with the four beside
+             it. The class belongs on something inside the cell. The same
+             fault the keeper results grid had. #}
+          <td><span class="tm">{{ c.basis_source }}
+            {%- if c.state == "must_sign" %} &middot; needs term{% endif %}</span></td>
         </tr>
       {% endfor %}
       </tbody>
