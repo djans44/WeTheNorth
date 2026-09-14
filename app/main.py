@@ -1930,6 +1930,18 @@ def keeper_context(conn, season, owner_id):
 # ---------------------------------------------------------------------------
 
 
+@app.get("/keepers/results", response_class=HTMLResponse)
+def keeper_results(request: Request):
+    """What settled, as opposed to the choosing of it.
+
+    A stub for now: the title and a way in. /keepers is where the three
+    phases are worked through, and that page is about what you are about to
+    do. This one is about what was done.
+    """
+    return templates.TemplateResponse(request=request, name="keeper_results.html",
+                                      context={})
+
+
 @app.get("/keepers", response_class=HTMLResponse)
 def keepers(request: Request, season: int = 0, owner: int = 0,
             error: str = "", submitted: int = 0, msg: str = ""):

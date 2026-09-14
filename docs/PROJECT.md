@@ -407,7 +407,8 @@ Everything else requires a session (middleware redirects to `/`).
 | `POST /admin/draft-order/lottery`, `POST /admin/draft-order/clear` | Draw the lottery, or remove it. One or the other, never both |
 | `GET /draft-prep` | The board by draft slot and keepers by manager. A finished season shows what was kept, from `keeper_selections`; the season being prepped shows contracts, voids and what-ifs |
 | `POST /draft-prep/placeholder`, `POST /draft-prep/slot` | What-ifs — a keeper tried on a manager, a manager tried in an empty slot. **Session only**: nothing is written to the database and nobody else sees them, which is why neither needs a permission check |
-| `GET /keepers` | Keeper selection page |
+| `GET /keepers` | Keeper selection: three phases, one keeper each |
+| `GET /keepers/results` | What settled, once selection has. A stub: title and nav only |
 | `POST /keepers/plan` | Save plan (validates round conflicts, refuses to save a conflict) |
 | `POST /keepers/submit` | Submit one phase |
 | `POST /keepers/void-submit` | Submit voids (writes and confirms in one step) |

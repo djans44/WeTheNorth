@@ -69,7 +69,16 @@
           <li><a href="/draft-prep">Draft prep</a></li>
         </ul>
       </li>
-      <li><a href="/keepers" {% if path.startswith('/keeper') %}class="on"{% endif %}>Keepers</a></li>
+      {# Two halves of the same thing, the way Draft splits order from prep:
+         choosing your keepers, and reading what everyone settled on. The
+         parent points at the choosing, which is the one with a deadline. #}
+      <li class="has-menu">
+        <a href="/keepers" {% if path.startswith('/keeper') %}class="on"{% endif %}>Keepers</a>
+        <ul class="submenu">
+          <li><a href="/keepers">Keeper selection</a></li>
+          <li><a href="/keepers/results">Keeper results</a></li>
+        </ul>
+      </li>
       <li><a href="/rules" {% if path == '/rules' %}class="on"{% endif %}>Rules</a></li>
       {% if request.session.get("is_admin") %}
       <li class="has-menu">
