@@ -1,4 +1,5 @@
 import contextvars
+import datetime
 import logging
 import os
 import pathlib
@@ -46,6 +47,30 @@ def league_dates(opens, closes):
         return "%s %d" % (d.strftime("%b"), d.day)
 
     return "%s – %s" % (day(opens), day(closes))
+
+
+def league_moment(s):
+    """A wall-clock string from a datetime-local input, read as league time.
+
+    The browser sends "2026-09-10T23:59" with no zone on it at all. Handed
+    to Postgres as text it is cast using the session's timezone, which is
+    GMT -- so an admin typing 11:59pm set the deadline to 7:59pm Eastern,
+    four hours early, and nothing on any page said so. Attaching the zone
+    here means the instant stored is the one that was typed.
+    """
+    return datetime.datetime.fromisoformat(s).replace(tzinfo=LEAGUE_TZ)
+
+
+def league_field(ts):
+    """A stored instant as the wall-clock string a datetime-local expects.
+
+    The mirror of league_moment. Without it the form reads back the UTC
+    hour, so an admin who saved 11:59pm correctly would reopen the page,
+    see 3:59am, and "fix" it.
+    """
+    if not ts:
+        return ""
+    return ts.astimezone(LEAGUE_TZ).strftime("%Y-%m-%dT%H:%M")
 
 
 STATIC_DIR = pathlib.Path("app/static")
@@ -115,6 +140,7 @@ def ordinal(n):
 
 
 templates.env.globals["static_url"] = static_url
+templates.env.filters["league_field"] = league_field
 def crest_when(row):
     """When a crest was won, and what earned it, on one line.
 
@@ -2843,6 +2869,10 @@ async def admin_keeper_windows(request: Request):
                 closes = (form.get(f"w{n}_closes") or "").strip()
                 if not opens or not closes:
                     continue
+                # Read as league time, not as whatever the database session
+                # happens to be set to. See league_moment.
+                opens = league_moment(opens)
+                closes = league_moment(closes)
                 cur.execute("""
                     insert into keeper_windows (season_year, phase, opens_at, closes_at)
                     values (%s, %s, %s, %s)
