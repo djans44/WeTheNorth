@@ -1907,34 +1907,45 @@ def keeper_context(conn, season, owner_id):
     choices = [e for e in elig if e["state"] in ("free", "must_sign")]
 
     # Where selection stands, for the line at the top. Worked out here rather
-    # than in four branches of Jinja, and it answers the question the page
-    # never answered: which season this is and whether anything is waiting
-    # on you right now.
-    live = next((p for p in phases if p["is_open"]), None)
-    late = next((p for p in phases if p["is_lapsed"]), None)
-    # The season leads every sub, because which year you are choosing for is
-    # the thing this page never said anywhere.
+    # than in four branches of Jinja.
+    #
+    # The round you are in is the earliest one nobody has resolved, not
+    # whichever window the clock has open. The two come apart whenever the
+    # commissioner is slow: round one's window shuts, round two's opens the
+    # same minute, and until round one is resolved the league is still in it.
+    # Naming the open window made the page say Round 2 while Round 1 was
+    # unsettled, which is a different and wrong story.
     lead = "%d selection" % season
+    current = next((p for p in phases if not p["resolved_at"]), None)
+    live = next((p for p in phases if p["is_open"]), None)
+
     if not phases:
         standing = {"kind": "none", "word": "No windows",
                     "sub": "%s. No windows have been set." % lead}
-    elif all(p["resolved_at"] for p in phases):
+    elif current is None:
         standing = {"kind": "set", "word": "Settled",
                     "sub": "%s. All %d rounds resolved." % (lead, len(phases))}
-    elif live:
-        standing = {"kind": "live", "word": "Keeper %d of %d open"
-                                            % (live["n"], len(phases)),
-                    "sub": "%s. Closes %s."
-                           % (lead, live["closes_at"].strftime("%b %d"))}
-    elif late:
-        standing = {"kind": "live", "word": "Keeper %d closed" % late["n"],
-                    "sub": "%s. Waiting on the commissioner to resolve it, "
-                           "and a plan saved before they do still counts." % lead}
     else:
-        nxt = min(phases, key=lambda p: p["opens_at"])
-        standing = {"kind": "none", "word": "Not yet open",
-                    "sub": "%s. Keeper %d opens %s."
-                           % (lead, nxt["n"], nxt["opens_at"].strftime("%b %d"))}
+        word = "Keeper Round %d" % current["n"]
+        if current["is_open"]:
+            standing = {"kind": "live", "word": word,
+                        "sub": "%s. Open until %s."
+                               % (lead, current["closes_at"].strftime("%b %d"))}
+        elif current["is_lapsed"]:
+            # Another window is usually open by now, and saying so is the
+            # actionable half: the round you are in is waiting on someone
+            # else, the one after it is waiting on you.
+            after = (" Round %d is open until %s."
+                     % (live["n"], live["closes_at"].strftime("%b %d"))
+                     if live and live["n"] != current["n"] else
+                     " A plan saved before they do still counts.")
+            standing = {"kind": "live", "word": word,
+                        "sub": "%s. Closed, and with the commissioner.%s"
+                               % (lead, after)}
+        else:
+            standing = {"kind": "none", "word": word,
+                        "sub": "%s. Opens %s."
+                               % (lead, current["opens_at"].strftime("%b %d"))}
 
     return {
         "windows": windows, "phases": phases, "standing": standing,

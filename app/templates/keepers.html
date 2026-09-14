@@ -114,7 +114,7 @@
          still ahead of them. #}
       <div class="phase-card {% if ph.resolved_at %}done{% elif ph.is_open %}open
                               {%- elif ph.is_lapsed %} late{% endif %}">
-        <h3>Keeper {{ ph.n }}
+        <h3>Keeper Round {{ ph.n }}
           {% if ph.resolved_at %}<span class="pill">resolved</span>
           {% elif ph.is_open %}<span class="pill live">open</span>
           {% elif ph.is_lapsed %}<span class="pill late">closed</span>
@@ -151,7 +151,7 @@
             <button type="submit" class="submit-phase" formaction="/keepers/submit"
                     name="phase" value="{{ ph.n }}"
                     {% if not ph.is_open and not is_admin %}disabled{% endif %}>
-              Submit Keeper {{ ph.n }}
+              Submit Round {{ ph.n }}
             </button>
             {% if not ph.is_open and not is_admin %}
               <span class="tm">{% if ph.is_lapsed %}window closed
