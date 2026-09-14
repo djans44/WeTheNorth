@@ -53,7 +53,7 @@
     <div class="week-grid">
     {% for w in weeks %}
       <div class="week-card {% if w.rival %}rival{% endif %}">
-        <h3>Week {{ w.week }}{% if w.rival %} <span class="pill live">rivalry</span>{% endif %}</h3>
+        <h3>Week {{ w.week }}{% if w.rival %} <span class="pill live">Rivalry</span>{% endif %}</h3>
         <ul>
         {% for a, b in w.games %}
           <li>{{ a }} <span class="tm">v</span> {{ b }}</li>

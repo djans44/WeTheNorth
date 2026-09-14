@@ -183,10 +183,10 @@
       <div class="phase-card {% if ph.resolved_at %}done{% elif ph.is_open %}open
                               {%- elif ph.is_lapsed %} late{% endif %}">
         <h3>Keeper Round {{ ph.n }}
-          {% if ph.resolved_at %}<span class="pill">resolved</span>
-          {% elif ph.is_open %}<span class="pill live">open</span>
-          {% elif ph.is_lapsed %}<span class="pill late">closed</span>
-          {% else %}<span class="pill">upcoming</span>{% endif %}
+          {% if ph.resolved_at %}<span class="pill">Resolved</span>
+          {% elif ph.is_open %}<span class="pill live">Open</span>
+          {% elif ph.is_lapsed %}<span class="pill late">Closed</span>
+          {% else %}<span class="pill">Upcoming</span>{% endif %}
         </h3>
         {# When the round runs. Part of naming it rather than a message
            about it, so it sits with the title and above the player. Built in

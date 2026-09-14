@@ -56,9 +56,9 @@
                        value="{{ w.closes_at | league_field if w else '' }}"></td>
             <td>
               {% if not w %}<span class="tm">not set</span>
-              {% elif w.resolved_at %}<span class="pill">resolved</span>
-              {% elif w.is_open %}<span class="pill live">open</span>
-              {% else %}<span class="pill">closed</span>{% endif %}
+              {% elif w.resolved_at %}<span class="pill">Resolved</span>
+              {% elif w.is_open %}<span class="pill live">Open</span>
+              {% else %}<span class="pill">Closed</span>{% endif %}
             </td>
             <td>
               {% if w and not w.resolved_at %}
