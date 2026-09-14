@@ -1,15 +1,21 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% block title %}Keeper selection | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
-    <h1>Keeper selection</h1>
-    <p class="lede">
-      Three phases, one keeper each. Contracts fill the earliest phases
-      automatically. Plan ahead and your picks submit themselves when a window closes.
-    </p>
+  {# The lede said three things and the page said all three again below it:
+     the phase cards are the three phases, the contracts note says they fill
+     the earliest ones, and the plan section says a saved plan submits itself.
+     What it never said is which season this is, and that is now on the line
+     under the header where the other pages keep theirs.
+
+     The header freezes and condenses like the season, history, manager and
+     draft pages. This one scrolls a long way -- contracts, three cards, a
+     twelve-row picker and a plan -- so the title staying put matters. #}
+  <header class="page-head tight stuck">
+    <h1>{{ leaf(20) }}Keeper selection</h1>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   {% if not years %}
@@ -18,22 +24,32 @@
     <section><p class="note">You have no keeper eligibility for {{ season }}.</p></section>
   {% else %}
 
-  {% if is_admin and owners|length > 1 %}
+  {# Where selection stands on the left, whose page this is on the right --
+     the line every other page with a season keeps. The admin's Acting for
+     control had a section of its own and belongs here: it is the same kind
+     of thing as a season chooser, the answer to "what am I looking at". #}
   <section>
-    <form method="get" action="/keepers" class="picker">
-      <input type="hidden" name="season" value="{{ season }}">
-      {# Whose page this is, since an admin can be acting for anyone. #}
-      {{ avatar(owner, 40) }}
-      <label for="owner">Acting for</label>
-      <select id="owner" name="owner">
-        {% for o in owners %}
-          <option value="{{ o.owner_id }}" {% if o.owner_id == owner %}selected{% endif %}>{{ o.username }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit">Switch</button>
-    </form>
+    <div class="pickhead">
+      <p class="draftstate {{ ctx.standing.kind }}">
+        <span>{{ ctx.standing.word }}</span>
+        <span class="sub">{{ ctx.standing.sub }}</span>
+      </p>
+
+      {% if is_admin and owners|length > 1 %}
+        <form method="get" action="/keepers" class="picker loadonpick">
+          <input type="hidden" name="season" value="{{ season }}">
+          {{ avatar(owner, 30) }}
+          <label for="owner">Acting for</label>
+          <select id="owner" name="owner">
+            {% for o in owners %}
+              <option value="{{ o.owner_id }}" {% if o.owner_id == owner %}selected{% endif %}>{{ o.username }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="seal">Switch</button>
+        </form>
+      {% endif %}
+    </div>
   </section>
-  {% endif %}
 
   <form method="post" action="/keepers/plan" id="planform">
   <input type="hidden" name="season" value="{{ season }}">

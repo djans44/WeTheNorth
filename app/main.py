@@ -1905,8 +1905,39 @@ def keeper_context(conn, season, owner_id):
 
     has_plans = any(p["player_id"] for p in plans.values())
     choices = [e for e in elig if e["state"] in ("free", "must_sign")]
+
+    # Where selection stands, for the line at the top. Worked out here rather
+    # than in four branches of Jinja, and it answers the question the page
+    # never answered: which season this is and whether anything is waiting
+    # on you right now.
+    live = next((p for p in phases if p["is_open"]), None)
+    late = next((p for p in phases if p["is_lapsed"]), None)
+    # The season leads every sub, because which year you are choosing for is
+    # the thing this page never said anywhere.
+    lead = "%d selection" % season
+    if not phases:
+        standing = {"kind": "none", "word": "No windows",
+                    "sub": "%s. No windows have been set." % lead}
+    elif all(p["resolved_at"] for p in phases):
+        standing = {"kind": "set", "word": "Settled",
+                    "sub": "%s. All %d rounds resolved." % (lead, len(phases))}
+    elif live:
+        standing = {"kind": "live", "word": "Keeper %d of %d open"
+                                            % (live["n"], len(phases)),
+                    "sub": "%s. Closes %s."
+                           % (lead, live["closes_at"].strftime("%b %d"))}
+    elif late:
+        standing = {"kind": "live", "word": "Keeper %d closed" % late["n"],
+                    "sub": "%s. Waiting on the commissioner to resolve it, "
+                           "and a plan saved before they do still counts." % lead}
+    else:
+        nxt = min(phases, key=lambda p: p["opens_at"])
+        standing = {"kind": "none", "word": "Not yet open",
+                    "sub": "%s. Keeper %d opens %s."
+                           % (lead, nxt["n"], nxt["opens_at"].strftime("%b %d"))}
+
     return {
-        "windows": windows, "phases": phases,
+        "windows": windows, "phases": phases, "standing": standing,
         "contracts": [e for e in elig if e["state"] == "contract"],
         "choices": choices,
         "blocked": [e for e in elig if e["state"].startswith("ineligible")],
