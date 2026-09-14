@@ -116,10 +116,11 @@ the earliest phases automatically, plans, voids, and a submit per phase.
 The most intricate rules in the league meet the page most owners use least
 often, which is the hard combination.
 
-`.picker-table tr.picked` is dead: nothing in the templates, `app.js` or
-`main.py` ever sets `picked`, so the highlight on the row you chose has never
-appeared. Found while auditing `/draft-order`, which was carrying the same
-class for the same reason.
+This entry used to say `.picker-table tr.picked` was dead CSS. **It is not.**
+`keepers.js` sets it and the highlight works -- the row you have assigned is
+gold on the page right now. The claim came from grepping the templates,
+`app.js` and `main.py` and not `keepers.js`, which is the one file that page
+keeps its behaviour in.
 
 ## 6. Audit `/rules`
 
