@@ -8,10 +8,12 @@ then start the next. Nothing here is in flight.
 
 Done and removed: the player-scoring note, now
 `docs/features/player-scoring.md`; the `/draft-order` audit and everything it
-turned up, twelve commits; the `/draft-prep` audit, seven. Both pages are
-finished. The connection pool came out of the second of those and is written
-up in `PROJECT.md`, since it made every page on the site faster rather than
-just that one.
+turned up, twelve commits; the `/draft-prep` audit, eight. Both pages are
+finished. Two things came out of the second that belong to the whole site
+rather than to that page: the connection pool, written up in `PROJECT.md`,
+and per-season sigil rings on both draft pages. The admin pages that carry a
+season picker still wear today's crowns on an old season -- worth taking
+under each of their own audits below.
 
 ---
 
