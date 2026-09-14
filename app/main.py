@@ -3311,9 +3311,13 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
             order by d.lottery_position
         """, (season,))
 
-        size = query(conn, "select team_count from seasons where season_year = %s",
-                     (season,))
+        size = query(conn, """
+            select team_count, keeper_count from seasons where season_year = %s
+        """, (season,))
         team_count = size[0]["team_count"] if size else 12
+        # The league's own number rather than a 3 written in here. 2022 ran
+        # with no keepers at all and the column says so.
+        keeper_count = (size[0]["keeper_count"] if size else 3) or 0
 
         voided = {r["contract_id"] for r in query(conn, """
             select contract_id from keeper_voids where season_year = %s
@@ -3454,6 +3458,14 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                         and e["player_id"] not in used],
             "all_options": [e for e in elig if e["owner_id"] == oid],
         })
+        # Contracts and approved keepers fill the same slots a placeholder
+        # would, so a what-if has to respect the limit the season sets --
+        # otherwise the board it draws is one that could never happen. Voids
+        # do not count: voiding frees the slot, and the forced defence it
+        # costs is a pick, not a keeper.
+        row = by_owner[-1]
+        row["kept"] = len(row["contracts"]) + len(row["keepers"]) + len(row["holds"])
+        row["room"] = max(0, keeper_count - row["kept"])
 
     return templates.TemplateResponse(
         request=request, name="draft_prep.html",
@@ -3462,6 +3474,7 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                  "chosen": len(holder), "team_count": team_count,
                  "held_count": len(holds), "spare": spare,
                  "free_slots": free_slots, "mock": mock,
+                 "keeper_count": keeper_count,
                  "is_admin": is_admin, "msg": msg, "error": error})
 
 
@@ -3507,6 +3520,33 @@ async def draft_prep_placeholder(request: Request):
                     where for_season = %s and player_id = %s
                 """, (season, pid))
                 mine = rows[0] if rows else None
+                # What that manager already holds, against what the season
+                # allows. The template hides the control at the limit; this
+                # is the half that cannot be got round.
+                limit, kept = 3, 0
+                if mine:
+                    seats = query(conn, """
+                        select keeper_count from seasons where season_year = %s
+                    """, (season,))
+                    limit = (seats[0]["keeper_count"] if seats else 3) or 0
+                    kept = query(conn, """
+                        select count(*) n from keeper_eligibility k
+                        where k.for_season = %s and k.owner_id = %s
+                          and k.state = 'contract'
+                          and k.contract_id not in (
+                              select contract_id from keeper_voids
+                              where season_year = %s)
+                    """, (season, mine["owner_id"], season))[0]["n"]
+                    kept += query(conn, """
+                        select count(*) n from keeper_submissions
+                        where season_year = %s and owner_id = %s
+                          and status = 'approved' and player_id is not null
+                    """, (season, mine["owner_id"]))[0]["n"]
+                    kept += len(query(conn, """
+                        select 1 from keeper_eligibility
+                        where for_season = %s and owner_id = %s
+                          and player_id = any(%s)
+                    """, (season, mine["owner_id"], held)) if held else [])
                 # Two at the same cost would land on one board cell and the
                 # second would be invisible, so it is refused rather than
                 # silently swallowed.
@@ -3519,6 +3559,9 @@ async def draft_prep_placeholder(request: Request):
                 err = "That player is not eligible."
             elif pid in held:
                 err = f"{mine['full_name']} is already on the board."
+            elif kept >= limit:
+                err = (f"That manager already has {kept} of {limit} keepers. "
+                       "Take one off first.")
             elif clash:
                 err = (f"R{mine['cost_round']} is taken by "
                        f"{clash[0]['full_name']} for that manager.")

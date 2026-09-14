@@ -145,9 +145,16 @@
 
               {% if not t.contracts and not t.keepers and not t.voids and not t.holds %}
                 <div class="opt-line tm">nothing yet</div>
+              {% elif not t.room %}
+                <div class="opt-line tm">{{ t.kept }} of {{ keeper_count }} kept</div>
               {% endif %}
 
-              {% if t.options %}
+              {# Up to {{ keeper_count }} kept, so the add list goes once a
+                 manager is full. A what-if that breaks the league's own
+                 limit draws a board that could never happen. Voids are not
+                 counted: voiding frees the slot and the defence it forces
+                 is a pick, not a keeper. #}
+              {% if t.room and t.options %}
               {# Choosing a name is the whole act. loadonpick hides the +
                  and submits on change; data-needs-value stops the blank
                  "add..." from posting, which the seat picker below must not
