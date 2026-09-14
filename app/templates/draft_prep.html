@@ -68,7 +68,7 @@
   {% else %}
 
   <section>
-    <h2>Keepers by manager</h2>
+    <h2>{% if finished %}Kept in {{ season }}{% else %}Keepers by manager{% endif %}</h2>
     <div class="scroller">
       <table class="board options-table">
         <thead>
@@ -125,6 +125,7 @@
                   <b>R{{ k.round or k.cost_round }}</b> {{ k.full_name }}
                   {% if k.round and k.round != k.cost_round %}
                     <span class="tm">up from {{ k.cost_round }}</span>
+                  {% elif k.keeper_year %}<span class="tm">yr {{ k.keeper_year }}</span>
                   {% elif k.term_years %}<span class="tm">{{ k.term_years }} yr</span>{% endif %}
                 </div>
               {% endfor %}
@@ -188,15 +189,24 @@
         </tbody>
       </table>
     </div>
-    <p class="note">
-      <span class="swatch real"></span> contract or submitted keeper
-      <span class="swatch hold"></span> your placeholder
-      <span class="swatch void"></span> forced defence
-      &middot; the add list is that manager's own eligible roster.
-      Placeholders and any slot you try a manager in are what-ifs held in
-      your own session: nobody else sees them and nothing is written down.
-      A slot already chosen cannot be changed here.
-    </p>
+    {# A finished season has nothing to prepare. It is the record of what was
+       kept, so it says so and offers none of the what-if machinery. #}
+    {% if finished %}
+      <p class="note">
+        <span class="swatch real"></span> kept in {{ season }}, at the round it
+        cost &middot; drawn from the selections written when the season closed.
+      </p>
+    {% else %}
+      <p class="note">
+        <span class="swatch real"></span> contract or submitted keeper
+        <span class="swatch hold"></span> your placeholder
+        <span class="swatch void"></span> forced defence
+        &middot; the add list is that manager's own eligible roster.
+        Placeholders and any slot you try a manager in are what-ifs held in
+        your own session: nobody else sees them and nothing is written down.
+        A slot already chosen cannot be changed here.
+      </p>
+    {% endif %}
     {# Offered only when there is something to clear, the way the lottery
        page only offers to remove one that exists. #}
     {% if held_count %}

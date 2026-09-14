@@ -1616,7 +1616,23 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   font-weight: 400;
   padding: var(--s2) 0.35rem;
 }
-.board .rhead { background: var(--ink); color: var(--parchment); width: 3rem; }
+/* The round number stays put while the board scrolls sideways, which is what
+   a phone does with thirteen columns of it. Without this you scroll out to
+   slot eleven and no longer know which round you are reading, on the page
+   most likely to be open at the draft table.
+
+   The edge is an inset shadow, not a border: the table collapses its borders,
+   so a border on a sticky cell belongs to the table and slides away with
+   everything else. The same bargain the head-to-head grid makes. */
+.board .rhead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--ink);
+  color: var(--parchment);
+  width: 3rem;
+  box-shadow: inset -1px 0 0 var(--panel-edge);
+}
 
 /* A row header naming a person needs room the 3rem pick/round column
    does not. */
@@ -1640,14 +1656,17 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .board .cell.hold { background: var(--mark-hold); font-style: italic; text-align: left; }
 .board .cell.void { background: var(--mark-void); text-align: left; }
 
-/* The legend squares beneath the board. */
+/* The legend squares beneath the board. Bigger than they were and edged in
+   ink rather than the panel edge: the three fills are all pale marks on a
+   pale ground, so at 0.8rem inside a grey hairline they read as nothing at
+   all and the legend explained itself to no one. */
 .swatch {
   display: inline-block;
-  width: 0.8rem;
-  height: 0.8rem;
-  margin: 0 0.2rem 0 0.8rem;
-  border: 1px solid var(--panel-edge);
-  vertical-align: -1px;
+  width: 1rem;
+  height: 1rem;
+  margin: 0 0.3rem 0 0.8rem;
+  border: 1px solid var(--ink-soft);
+  vertical-align: -2px;
 }
 .swatch.real { background: var(--mark-kept); }
 .swatch.hold { background: var(--mark-hold); }
@@ -1672,7 +1691,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .opt-line.kept      { background: var(--mark-kept); }
 .opt-line.voided    { background: var(--mark-void); }
 .opt-line.held      { background: var(--mark-hold); font-style: italic; }
-.opt-line.must_sign { background: var(--mark-sign); }
 
 /* Trying a manager in a slot, in the keeper grid's header. It sits on the
    board's ink ground, so the control has to carry its own light field

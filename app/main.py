@@ -3293,8 +3293,8 @@ async def admin_draft_set(request: Request):
 
 @app.get("/draft-prep", response_class=HTMLResponse)
 def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""):
-    is_admin = bool(request.session.get("is_admin"))
-
+    # No is_admin here. Nothing on this page is gated: what it shows is the
+    # league's own record, and what it lets you change is your own session.
     with get_db() as conn:
         years = query(conn, "select season_year from seasons order by season_year desc")
         if not season:
@@ -3312,12 +3312,19 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         """, (season,))
 
         size = query(conn, """
-            select team_count, keeper_count from seasons where season_year = %s
+            select team_count, keeper_count, is_complete
+            from seasons where season_year = %s
         """, (season,))
         team_count = size[0]["team_count"] if size else 12
         # The league's own number rather than a 3 written in here. 2022 ran
         # with no keepers at all and the column says so.
         keeper_count = (size[0]["keeper_count"] if size else 3) or 0
+        # A finished season is a record, not a plan. Its keepers live in
+        # keeper_selections, written when the year closed. keeper_eligibility
+        # only ever holds the season being prepped and keeper_submissions is
+        # the queue for it, which is why reading those for 2023 drew a board
+        # with nothing on it.
+        finished = bool(size and size[0]["is_complete"])
 
         voided = {r["contract_id"] for r in query(conn, """
             select contract_id from keeper_voids where season_year = %s
@@ -3333,14 +3340,25 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
             order by o.username, k.cost_round, k.full_name
         """, (season,))
 
-        real = query(conn, """
-            select s.owner_id, s.cost_round, s.term_years, s.player_id,
-                   p.full_name, p.position
-            from keeper_submissions s
-            join players p on p.player_id = s.player_id
-            where s.season_year = %s and s.status = 'approved'
-              and s.player_id is not null
-        """, (season,))
+        if finished:
+            real = query(conn, """
+                select t.owner_id, ks.cost_round, ks.player_id, ks.keeper_year,
+                       p.full_name, p.position, null::smallint as term_years
+                from keeper_selections ks
+                join teams t on t.team_id = ks.team_id
+                            and t.season_year = ks.season_year
+                join players p on p.player_id = ks.player_id
+                where ks.season_year = %s
+            """, (season,))
+        else:
+            real = query(conn, """
+                select s.owner_id, s.cost_round, s.term_years, s.player_id,
+                       p.full_name, p.position, null::smallint as keeper_year
+                from keeper_submissions s
+                join players p on p.player_id = s.player_id
+                where s.season_year = %s and s.status = 'approved'
+                  and s.player_id is not null
+            """, (season,))
 
         # Placeholders live in the reader's own session, not the database.
         # They are a what-if -- "say Chris keeps Mahomes at R1, where does
@@ -3350,7 +3368,7 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         #
         # The round trip stays, so the board's numbering is still worked out
         # once, in Python, rather than a second copy of it in the browser.
-        held_ids = [int(x) for x in
+        held_ids = [] if finished else [int(x) for x in
                     (request.session.get("prep") or {}).get(str(season), [])]
         holds = query(conn, """
             select k.owner_id, k.player_id, k.full_name, k.position, k.cost_round
@@ -3439,10 +3457,8 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                 "username": seated[s]["username"] if s in seated else None}
                for s in slots]
 
-    # Who is still free to be put somewhere, and where there is room. A slot
-    # someone has really chosen never appears: that one is settled.
-    spare = [e for e in entrants
-             if not e["slot"] and e["owner_id"] not in mock.values()]
+    # The slots still free to be tried. One someone has really chosen never
+    # appears: that one is settled.
     free_slots = [s for s in slots if s not in holder]
 
     board, n = [], 0
@@ -3484,7 +3500,6 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                         if e["owner_id"] == oid
                         and e["state"] != "contract"
                         and e["player_id"] not in used],
-            "all_options": [e for e in elig if e["owner_id"] == oid],
         })
         # Contracts and approved keepers fill the same slots a placeholder
         # would, so a what-if has to respect the limit the season sets --
@@ -3500,10 +3515,10 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         context={"years": years, "season": season, "entrants": entrants,
                  "columns": columns, "board": board, "by_owner": by_owner,
                  "chosen": len(holder), "team_count": team_count,
-                 "held_count": len(holds), "spare": spare,
+                 "held_count": len(holds),
                  "free_slots": free_slots, "mock": mock,
-                 "keeper_count": keeper_count,
-                 "is_admin": is_admin, "msg": msg, "error": error})
+                 "keeper_count": keeper_count, "finished": finished,
+                 "msg": msg, "error": error})
 
 
 @app.post("/draft-prep/placeholder")
