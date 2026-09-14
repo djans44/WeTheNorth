@@ -3171,6 +3171,93 @@ async def submit_phase(request: Request):
 
 
 
+@app.post("/keepers/forfeit")
+async def forfeit_phase(request: Request):
+    """Give up one round on purpose, rather than by missing it.
+
+    A forfeit already existed, but only as something resolution did to you
+    when a window shut with nothing in it. There was no way to say "I am not
+    keeping anyone this round" and have it recorded, which an owner with one
+    player worth keeping and three rounds to fill wants to do.
+
+    **It settles one round and nothing else.** Rounds are filled
+    independently -- contracts take the earliest ones, free choices fill what
+    is left -- so giving up round two leaves round three exactly as it was.
+    The same guards as a submission, because it is one: a row with no player
+    against it, auto-approved the way resolution's own forfeits are.
+    """
+    from urllib.parse import quote
+    me = request.session.get("owner_id")
+    is_admin = bool(request.session.get("is_admin"))
+    form = await request.form()
+    season = int(form["season"])
+    target = int(form.get("owner") or me)
+    phase = int(form["phase"])
+
+    if target != me and not is_admin:
+        raise HTTPException(status_code=403, detail="Not your selection")
+
+    err = None
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                select resolved_at, (now() between opens_at and closes_at) as is_open
+                from keeper_windows where season_year = %s and phase = %s
+            """, (season, phase))
+            win = cur.fetchone()
+            if not win:
+                err = "No such round."
+            elif win["resolved_at"]:
+                err = f"Keeper Round {phase} has already closed."
+            elif not win["is_open"] and not is_admin:
+                err = f"The Keeper Round {phase} window is not open."
+
+            if not err:
+                cur.execute("""
+                    select 1 from keeper_submissions
+                    where season_year = %s and phase = %s and owner_id = %s
+                """, (season, phase, target))
+                if cur.fetchone():
+                    err = f"Keeper Round {phase} is already submitted."
+
+            if not err:
+                cur.execute("""
+                    select player_id from keeper_phase_plan
+                    where season_year = %s and owner_id = %s and phase = %s
+                """, (season, target, phase))
+                if cur.fetchone():
+                    err = (f"Keeper Round {phase} is filled by a contract. "
+                           "A contract is an obligation; void it instead.")
+
+            if not err and phase == 1:
+                cur.execute("""
+                    select count(*) as n from keeper_voids
+                    where season_year = %s and owner_id = %s and confirmed_at is null
+                """, (season, target))
+                if cur.fetchone()["n"]:
+                    err = ("Submit or clear your void first. Voiding changes "
+                           "which rounds are available.")
+
+            if not err:
+                cur.execute("""
+                    insert into keeper_submissions
+                        (season_year, phase, owner_id, origin, status, note)
+                    values (%s, %s, %s, 'forfeit', 'approved', %s)
+                """, (season, phase, target, "forfeited deliberately"))
+                # The plan for this round is spent. The others are untouched:
+                # forfeiting one round is not forfeiting the rest.
+                cur.execute("""
+                    delete from keeper_plans
+                    where season_year = %s and phase = %s and owner_id = %s
+                """, (season, phase, target))
+        conn.commit()
+
+    url = f"/keepers?season={season}&owner={target}"
+    url += ("&error=" + quote(err) if err
+            else "&msg=" + quote(f"Keeper Round {phase} forfeited"))
+    return RedirectResponse(url=url, status_code=303)
+
+
 @app.post("/admin/keepers/reset")
 async def admin_keeper_reset(request: Request):
     if not request.session.get("is_admin"):

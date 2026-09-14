@@ -236,6 +236,17 @@
                     {% if not ph.is_open and not is_admin %}disabled{% endif %}>
               Submit Round {{ ph.n }}
             </button>
+            {# Giving up one round on purpose. Hidden by keepers.js the moment
+               a player is chosen for the round, because the two are opposite
+               answers to the same question and offering both is a way to
+               press the wrong one. Forfeiting one round leaves the rest
+               alone -- rounds are filled independently. #}
+            <button type="submit" class="forfeit-btn ghost" formaction="/keepers/forfeit"
+                    name="phase" value="{{ ph.n }}" data-phase="{{ ph.n }}"
+                    data-confirm="Forfeit Keeper Round {{ ph.n }}? You keep nobody in this round. The other rounds are unaffected, and this cannot be undone without the commissioner."
+                    {% if not ph.is_open and not is_admin %}disabled{% endif %}>
+              Forfeit round
+            </button>
           </p>
         {% endif %}
       </div>

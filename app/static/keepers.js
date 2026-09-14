@@ -250,6 +250,12 @@
     warn.innerHTML = problems.join("<br>");
     warn.className = problems.length ? "note error" : "note";
 
+    // Forfeiting and choosing are opposite answers to the same question, so
+    // only one of them is ever on offer for a round.
+    document.querySelectorAll(".forfeit-btn").forEach(function (b) {
+      b.hidden = !!chosen[b.dataset.phase];
+    });
+
     // Last, so the options reflect what was just decided: a player placed in
     // one round drops out of the others' lists.
     fillSelects();
@@ -267,6 +273,14 @@
       render();
       var p = byId[s.value];
       if (p && p.state === "must_sign") { openModal(phase, s.value); }
+    });
+  });
+
+  // A button that asks before it acts. The page is one big form, so this is
+  // per button rather than per form the way app.js does it.
+  document.querySelectorAll("button[data-confirm]").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      if (!window.confirm(b.getAttribute("data-confirm"))) { e.preventDefault(); }
     });
   });
 

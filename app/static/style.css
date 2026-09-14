@@ -863,6 +863,28 @@ button[disabled] {
   border: 1px solid var(--panel-edge);
   font-weight: 400;
 }
+/* A ghost had no hover at all, on any of the six places it is used: a
+   transparent button with a grey hairline and muted text, giving back
+   nothing when you point at it. The gold tint is what the rest of the site
+   answers a pointer with -- the nav's menus, the crest options, a free cell
+   on the draft board -- and the edge and the text firm up with it. */
+.ghost:hover,
+.ghost:focus-visible {
+  background: var(--gold-ghost);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+/* The global button[disabled] fills a button with solid ink-soft, which is
+   right for the dark buttons it was written for and turns a ghost into a
+   black bar. Two classes' worth of specificity to outscore it, the same way
+   button.seal[disabled] does. */
+.ghost[disabled],
+.ghost[disabled]:hover {
+  background: transparent;
+  border-color: var(--rule);
+  color: var(--ink-muted);
+  cursor: not-allowed;
+}
 
 .linkish {
   background: none;
@@ -1434,11 +1456,26 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 }
 .term-btn.needed { background: var(--gold-bright); }
 .term-btn.edit { border-width: 1px; font-weight: 400; margin-left: var(--s2); }
+/* Same reason as the ghost: neither of these answered a pointer. Edit takes
+   the tint; the one still asking to be pressed is already gold, so it
+   deepens rather than lightening, which is the wrong direction for a hover. */
+.term-btn:hover,
+.term-btn:focus-visible { background: var(--gold-ghost); border-color: var(--ink); }
+.term-btn.needed:hover,
+.term-btn.needed:focus-visible { background: var(--gold); }
 
 /* The round's own action, in the round's own card: full width, because the
    card is narrow and a centred seal floating in it looks lost. The seal's
    own padding and disabled treatment carry over from button.seal. */
 .submit-phase { width: 100%; padding: 0.45rem 0.9rem; }
+/* Under the submit, quieter than it: giving a round up is a real choice but
+   it is not the one the card is asking you to make. */
+.forfeit-btn {
+  width: 100%;
+  margin-top: var(--s2);
+  padding: 0.3rem 0.9rem;
+  font-size: var(--t-xs);
+}
 
 /* The void warning sits inside an .errors box, which already has its own
    spacing above it. */
