@@ -1196,6 +1196,19 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    the colour picker. */
 .results tbody td, .results thead th { text-align: left; }
 .results tbody td { vertical-align: top; }
+/* The manager stays put while the rounds scroll sideways, which is what a
+   phone does with three of them: without it you scroll to round three and no
+   longer know whose row you are on. The edge is an inset shadow rather than
+   a border, because the table collapses its borders and a border on a sticky
+   cell belongs to the table and slides away with it -- the same bargain the
+   head-to-head grid and the draft board make. */
+.results .name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel-bg);
+  box-shadow: inset -1px 0 0 var(--rule);
+}
 /* A contract holding its place before the round has been resolved. It is a
    reservation, not a result, and the placeholder mark already means exactly
    that everywhere else on the site. */
@@ -2465,6 +2478,10 @@ button.seal[disabled]:hover {
      basis gives way and the name takes whatever is left. */
   .clockwho { flex: 1 1 8rem; }
   .clockcall { flex: 1 0 100%; }
+
+  /* 12rem of frozen manager in a 319px viewport leaves the three rounds
+     fighting over the rest. The sigil and a first name need far less. */
+  .results .name { min-width: 7rem; }
 
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }
