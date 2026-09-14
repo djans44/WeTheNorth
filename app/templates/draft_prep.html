@@ -117,10 +117,15 @@
                 </div>
               {% endfor %}
 
+              {# The round shown is where he actually lands. Two keepers
+                 cannot share one, so the later arrival moved up and the cell
+                 says where from. #}
               {% for k in t.keepers %}
                 <div class="opt-line kept">
-                  <b>R{{ k.cost_round }}</b> {{ k.full_name }}
-                  {% if k.term_years %}<span class="tm">{{ k.term_years }} yr</span>{% endif %}
+                  <b>R{{ k.round or k.cost_round }}</b> {{ k.full_name }}
+                  {% if k.round and k.round != k.cost_round %}
+                    <span class="tm">up from {{ k.cost_round }}</span>
+                  {% elif k.term_years %}<span class="tm">{{ k.term_years }} yr</span>{% endif %}
                 </div>
               {% endfor %}
 
@@ -133,7 +138,10 @@
 
               {% for h in t.holds %}
                 <div class="opt-line held">
-                  <b>R{{ h.cost_round }}</b> {{ h.full_name }}
+                  <b>R{{ h.round or h.cost_round }}</b> {{ h.full_name }}
+                  {% if h.round and h.round != h.cost_round %}
+                    <span class="tm">up from {{ h.cost_round }}</span>
+                  {% endif %}
                   <form method="post" action="/draft-prep/placeholder" class="inline">
                     <input type="hidden" name="season" value="{{ season }}">
                     <input type="hidden" name="owner_id" value="{{ t.owner_id }}">

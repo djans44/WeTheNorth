@@ -3369,19 +3369,45 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
     contracts = [e for e in elig
                  if e["state"] == "contract" and e["contract_id"] not in voided]
 
+    # Two keepers wanting one round is not an error, it is a rule: the later
+    # arrival moves up to the next free, more expensive round, and a player
+    # already under contract never moves. Up the board is down the number,
+    # and there is nothing above round one -- which is why two round-one
+    # keepers are impossible and say so on /rules.
+    #
+    # setdefault used to drop the loser of a collision on the floor, so a
+    # second waiver pickup at R13 simply never appeared.
     cells = {}
+    taken = {}
+    placed = {}
+
+    def claim(oid, want, payload, movable):
+        """Put a keeper on the board, moving it up if its round is spoken for."""
+        seats = taken.setdefault(oid, set())
+        got = next_free_round(seats, want) if movable else want
+        if got is None:
+            return None
+        seats.add(got)
+        cells[(oid, got)] = dict(payload, round=got, wanted=want)
+        return got
+
+    # Contracts and the defence a void forces are fixed points: an existing
+    # obligation does not shuffle to make room for a new idea.
     for c in contracts:
-        cells[(c["owner_id"], c["cost_round"])] = {
-            "name": c["full_name"], "kind": "real", "tag": "contract"}
-    for r in real:
-        cells[(r["owner_id"], r["cost_round"])] = {
-            "name": r["full_name"], "kind": "real", "tag": "keeper"}
+        claim(c["owner_id"], c["cost_round"],
+              {"name": c["full_name"], "kind": "real", "tag": "contract"}, False)
     for v in voids:
-        cells.setdefault((v["owner_id"], v["penalty_round"]), {
-            "name": "DEF (void)", "kind": "void", "tag": "void"})
-    for h in holds:
-        cells.setdefault((h["owner_id"], h["cost_round"]), {
-            "name": h["full_name"], "kind": "hold", "tag": "placeholder"})
+        claim(v["owner_id"], v["penalty_round"],
+              {"name": "DEF (void)", "kind": "void", "tag": "void"}, False)
+    for r in real:
+        placed[("keeper", r["player_id"])] = claim(
+            r["owner_id"], r["cost_round"],
+            {"name": r["full_name"], "kind": "real", "tag": "keeper"}, True)
+    # In the order they were added, so "later" means something.
+    for h in sorted(holds, key=lambda x: held_ids.index(x["player_id"])):
+        placed[("hold", h["player_id"])] = claim(
+            h["owner_id"], h["cost_round"],
+            {"name": h["full_name"], "kind": "hold", "tag": "placeholder"}, True)
 
     # The board is one column per draft slot, not per manager who has taken
     # one. A slot nobody holds still exists and still costs picks; it just
@@ -3448,10 +3474,12 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
             "mock_slot": next((s for s, m in mock.items() if m == oid), None),
             "contracts": [c for c in contracts if c["owner_id"] == oid],
             "voids": [v for v in voids if v["owner_id"] == oid],
-            "keepers": sorted([r for r in real if r["owner_id"] == oid],
-                              key=lambda x: x["cost_round"]),
-            "holds": sorted([h for h in holds if h["owner_id"] == oid],
-                            key=lambda x: x["cost_round"]),
+            "keepers": sorted([dict(r, round=placed.get(("keeper", r["player_id"])))
+                               for r in real if r["owner_id"] == oid],
+                              key=lambda x: (x["round"] is None, x["round"] or 0)),
+            "holds": sorted([dict(h, round=placed.get(("hold", h["player_id"])))
+                              for h in holds if h["owner_id"] == oid],
+                             key=lambda x: (x["round"] is None, x["round"] or 0)),
             "options": [e for e in elig
                         if e["owner_id"] == oid
                         and e["state"] != "contract"
@@ -3547,14 +3575,43 @@ async def draft_prep_placeholder(request: Request):
                         where for_season = %s and owner_id = %s
                           and player_id = any(%s)
                     """, (season, mine["owner_id"], held)) if held else [])
-                # Two at the same cost would land on one board cell and the
-                # second would be invisible, so it is refused rather than
-                # silently swallowed.
-                clash = query(conn, """
-                    select full_name from keeper_eligibility
-                    where for_season = %s and owner_id = %s and cost_round = %s
-                      and player_id = any(%s)
-                """, (season, mine["owner_id"], mine["cost_round"], held))                     if mine and held else []
+                # Where this one would actually land. A round already spoken
+                # for is not a refusal -- the newcomer moves up -- but if
+                # every round above it is taken as well there is nowhere for
+                # him to go, and round one has nothing above it at all.
+                landing = mine["cost_round"] if mine else None
+                if mine:
+                    seats = set()
+                    for r in query(conn, """
+                        select cost_round from keeper_eligibility k
+                        where k.for_season = %s and k.owner_id = %s
+                          and k.state = 'contract'
+                          and k.contract_id not in (
+                              select contract_id from keeper_voids
+                              where season_year = %s)
+                        union all
+                        select penalty_round from keeper_voids
+                        where season_year = %s and owner_id = %s
+                    """, (season, mine["owner_id"], season, season,
+                          mine["owner_id"])):
+                        seats.add(r["cost_round"])
+                    movers = query(conn, """
+                        select s.cost_round from keeper_submissions s
+                        where s.season_year = %s and s.owner_id = %s
+                          and s.status = 'approved' and s.player_id is not null
+                    """, (season, mine["owner_id"]))
+                    order = {p: i for i, p in enumerate(held)}
+                    movers += sorted(query(conn, """
+                        select player_id, cost_round from keeper_eligibility
+                        where for_season = %s and owner_id = %s
+                          and player_id = any(%s)
+                    """, (season, mine["owner_id"], held)) if held else [],
+                        key=lambda x: order.get(x["player_id"], 0))
+                    for m in movers:
+                        got = next_free_round(seats, m["cost_round"])
+                        if got:
+                            seats.add(got)
+                    landing = next_free_round(seats, mine["cost_round"])
             if not mine:
                 err = "That player is not eligible."
             elif pid in held:
@@ -3562,9 +3619,10 @@ async def draft_prep_placeholder(request: Request):
             elif kept >= limit:
                 err = (f"That manager already has {kept} of {limit} keepers. "
                        "Take one off first.")
-            elif clash:
-                err = (f"R{mine['cost_round']} is taken by "
-                       f"{clash[0]['full_name']} for that manager.")
+            elif landing is None:
+                err = (f"Nowhere to put {mine['full_name']}. R"
+                       f"{mine['cost_round']} and every round above it are "
+                       "taken for that manager.")
             else:
                 held.append(pid)
 
@@ -3712,6 +3770,21 @@ async def submit_voids(request: Request):
 
 
 
+
+
+def next_free_round(seats, want):
+    """The round a keeper actually costs when its own is spoken for.
+
+    From /rules: no two of your keepers may cost the same round, and the one
+    who arrived later moves **up** to the next free, more expensive round.
+    Up the board is down the number, and there is nothing above round one --
+    which is why two round-one keepers are impossible. None says there was
+    nowhere left to go.
+    """
+    got = want
+    while got >= 1 and got in seats:
+        got -= 1
+    return got if got >= 1 else None
 
 
 def _plan_conflicts(cur, season, target, form):
