@@ -795,6 +795,10 @@ h3 {
   background: var(--ink-soft);
 }
 .pill.live { background: var(--win); }
+/* A window whose clock has run out with nobody having resolved it. Oxblood
+   because it is the state that wants someone to act, which is the same thing
+   the colour means on the draft order page. */
+.pill.late { background: var(--accent); }
 
 
 /* ---- forms and buttons ---- */
@@ -1387,6 +1391,7 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 }
 .phase-card.open { border-color: var(--ink); }
 .phase-card.done { background: var(--panel-sink); }
+.phase-card.late { border-color: var(--accent); }
 .phase-card h3 {
   margin: 0 0 0.2rem;
   display: flex;

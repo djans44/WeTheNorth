@@ -1847,7 +1847,13 @@ async def admin_owner_edit_save(request: Request, oid: int):
 def keeper_context(conn, season, owner_id):
     windows = query(conn, """
         select phase, opens_at, closes_at, resolved_at,
-               (resolved_at is null and now() between opens_at and closes_at) as is_open
+               (resolved_at is null and now() between opens_at and closes_at) as is_open,
+               -- A window whose clock has run out and that nobody has
+               -- resolved yet. It is neither open nor settled, and the page
+               -- used to call it "upcoming", which is the one thing it
+               -- certainly is not. A phase is closed when an admin resolves
+               -- it, not when the clock passes, so this state can last days.
+               (resolved_at is null and now() > closes_at) as is_lapsed
         from keeper_windows where season_year = %s order by phase
     """, (season,))
     elig = query(conn, """
@@ -1890,6 +1896,7 @@ def keeper_context(conn, season, owner_id):
         phases.append({
             "n": n, "opens_at": w["opens_at"], "closes_at": w["closes_at"],
             "resolved_at": w["resolved_at"], "is_open": w["is_open"],
+            "is_lapsed": w["is_lapsed"],
             "contract": by_id.get(c["player_id"]) if c else None,
             "submission": subs.get(n),
             "planned_id": p["player_id"] if p else None,

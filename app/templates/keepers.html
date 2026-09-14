@@ -91,13 +91,27 @@
     <h2>Phases</h2>
     <div class="phase-strip">
     {% for ph in ctx.phases %}
-      <div class="phase-card {% if ph.resolved_at %}done{% elif ph.is_open %}open{% endif %}">
+      {# Four states, not three. A phase is settled when an admin resolves
+         it, not when the clock passes, so a window can sit closed for days
+         with nothing having happened to it. That state used to fall through
+         to "upcoming", which told a manager a deadline three days gone was
+         still ahead of them. #}
+      <div class="phase-card {% if ph.resolved_at %}done{% elif ph.is_open %}open
+                              {%- elif ph.is_lapsed %} late{% endif %}">
         <h3>Keeper {{ ph.n }}
-          {% if ph.resolved_at %}<span class="pill">closed</span>
+          {% if ph.resolved_at %}<span class="pill">resolved</span>
           {% elif ph.is_open %}<span class="pill live">open</span>
+          {% elif ph.is_lapsed %}<span class="pill late">closed</span>
           {% else %}<span class="pill">upcoming</span>{% endif %}
         </h3>
         <p class="tm">{{ ph.opens_at.strftime("%b %d") }} &ndash; {{ ph.closes_at.strftime("%b %d") }}</p>
+        {% if ph.is_lapsed %}
+          {# Worth saying plainly, because it is the one state where doing
+             something still helps: resolution reads the plans as they stand
+             at the moment it runs, not as they stood when the window shut. #}
+          <p class="tm">The window has closed. The commissioner has not
+            resolved it yet, and a plan saved before they do still counts.</p>
+        {% endif %}
         {% if ph.submission %}
           <p class="settled">
             {% if ph.submission.origin == "forfeit" %}<b>Forfeited</b>
@@ -124,7 +138,8 @@
               Submit Keeper {{ ph.n }}
             </button>
             {% if not ph.is_open and not is_admin %}
-              <span class="tm">window not open</span>
+              <span class="tm">{% if ph.is_lapsed %}window closed
+                {%- else %}window not open{% endif %}</span>
             {% endif %}
           {% endif %}
         {% endif %}
