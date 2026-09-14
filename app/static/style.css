@@ -1468,14 +1468,12 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    card is narrow and a centred seal floating in it looks lost. The seal's
    own padding and disabled treatment carry over from button.seal. */
 .submit-phase { width: 100%; padding: 0.45rem 0.9rem; }
-/* Under the submit, quieter than it: giving a round up is a real choice but
-   it is not the one the card is asking you to make. */
-.forfeit-btn {
-  width: 100%;
-  margin-top: var(--s2);
-  padding: 0.3rem 0.9rem;
-  font-size: var(--t-xs);
-}
+/* Above the submit and quieter than it: giving a round up is the
+   alternative to filling it, but it is not the one the card is asking you to
+   make. The gap belongs to whichever of the two is second, and the forfeit
+   is often not there at all. */
+.forfeit-btn { width: 100%; padding: 0.3rem 0.9rem; font-size: var(--t-xs); }
+.forfeit-btn:not([hidden]) + .submit-phase { margin-top: var(--s2); }
 
 /* The void warning sits inside an .errors box, which already has its own
    spacing above it. */
