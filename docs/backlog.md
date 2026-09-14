@@ -15,6 +15,14 @@ and per-season sigil rings on both draft pages. The admin pages that carry a
 season picker still wear today's crowns on an old season -- worth taking
 under each of their own audits below.
 
+Also done and not from this list: **Keeper results**, a new page at
+`/keepers/results`. Who was kept, by manager and by keeper round, for any
+season. A finished season's rounds are inferred from the record by the
+league's own rule, because `keeper_selections` never stored which round
+settled a pick; the season being chosen reads its contracts from
+`keeper_phase_plan` and fills in as an admin resolves each round. Keepers
+became two nav items with it -- selection and results.
+
 ---
 
 ## 1. Weekly summaries
