@@ -1390,7 +1390,13 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .phase h2 { display: flex; align-items: center; gap: var(--s3); }
 
 .phase-strip { display: flex; flex-wrap: wrap; gap: var(--s3); }
+/* A column, so the act can be pinned to the foot of it: three cards side by
+   side say different amounts -- one is a contract, one is waiting on the
+   commissioner, one has a sentence about its window -- and their buttons
+   should still land on one line. */
 .phase-card {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 12rem;
   padding: 0.9rem var(--s4);
   border: 2px solid var(--panel-edge);
@@ -1408,6 +1414,10 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   color: var(--ink);
 }
 .phase-card p { margin: 0.2rem 0 0; }
+/* Two classes, because `.phase-card p` above would otherwise win on
+   specificity and put the 0.2rem back. auto is what pins the act to the
+   foot of the column. */
+.phase-card .phase-act { margin: auto 0 0; padding-top: var(--s3); }
 
 .slots { font-size: var(--t-md); }
 #chosen li { margin-bottom: var(--s1); }
@@ -1430,11 +1440,7 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 /* The round's own action, in the round's own card: full width, because the
    card is narrow and a centred seal floating in it looks lost. The seal's
    own padding and disabled treatment carry over from button.seal. */
-.submit-phase {
-  width: 100%;
-  margin-top: var(--s3);
-  padding: 0.45rem 0.9rem;
-}
+.submit-phase { width: 100%; padding: 0.45rem 0.9rem; }
 
 /* The void warning sits inside an .errors box, which already has its own
    spacing above it. */

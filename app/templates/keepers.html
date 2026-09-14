@@ -113,6 +113,17 @@
          with nothing having happened to it. That state used to fall through
          to "upcoming", which told a manager a deadline three days gone was
          still ahead of them. #}
+      {# Four states, not three. A phase is settled when an admin resolves
+         it, not when the clock passes, so a window can sit closed for days
+         with nothing having happened to it. That state used to fall through
+         to "upcoming", which told a manager a deadline three days gone was
+         still ahead of them.
+
+         The card reads in the order you use it: what round this is, who is
+         in it, how to change that, anything you need to know, and then the
+         act. The buttons sit on one line across the three cards however much
+         any of them has to say. #}
+      {% set fixed = ph.submission or ph.contract %}
       <div class="phase-card {% if ph.resolved_at %}done{% elif ph.is_open %}open
                               {%- elif ph.is_lapsed %} late{% endif %}">
         <h3>Keeper Round {{ ph.n }}
@@ -121,14 +132,8 @@
           {% elif ph.is_lapsed %}<span class="pill late">closed</span>
           {% else %}<span class="pill">upcoming</span>{% endif %}
         </h3>
-        <p class="tm">{{ ph.opens_at.strftime("%b %d") }} &ndash; {{ ph.closes_at.strftime("%b %d") }}</p>
-        {% if ph.is_lapsed %}
-          {# Worth saying plainly, because it is the one state where doing
-             something still helps: resolution reads the plans as they stand
-             at the moment it runs, not as they stood when the window shut. #}
-          <p class="tm">The window has closed. The commissioner has not
-            resolved it yet, and a plan saved before they do still counts.</p>
-        {% endif %}
+
+        {# Who is in the round. #}
         {% if ph.submission %}
           <p class="settled">
             {% if ph.submission.origin == "forfeit" %}<b>Forfeited</b>
@@ -144,30 +149,52 @@
           <p class="slot-fill" data-phase="{{ ph.n }}">
             <span class="tm">nothing planned</span>
           </p>
+        {% endif %}
+
+        {# How to change it. Choosing happens here, in the round it belongs
+           to. It used to happen in the table below, in a grid of radio
+           columns headed K1 K2 K3 -- which asked you to hold the round in
+           your head while reading a list of players. app.js rebuilds these
+           options on every change, so a player you have put in one round
+           stops being offered in the others. #}
+        {% if not fixed %}
           <input type="hidden" name="p{{ ph.n }}_player" class="pick-field"
                  data-phase="{{ ph.n }}" value="{{ ph.planned_id or '' }}">
           <input type="hidden" name="p{{ ph.n }}_term" class="term-field"
                  data-phase="{{ ph.n }}" value="{{ ph.planned_term or '' }}">
           {% if editable %}
-            {# Choosing happens here, in the round it belongs to. It used to
-               happen in the table below, in a grid of radio columns headed
-               K1 K2 K3 -- which asked you to hold the round in your head
-               while reading a list of players. app.js rebuilds these options
-               on every change, so a player you have put in one round stops
-               being offered in the others. #}
             <select class="phase-pick" data-phase="{{ ph.n }}">
               <option value="">choose a keeper&hellip;</option>
             </select>
+          {% endif %}
+        {% endif %}
+
+        {# What you need to know. #}
+        <p class="tm">{{ ph.opens_at.strftime("%b %d") }} &ndash; {{ ph.closes_at.strftime("%b %d") }}</p>
+        {% if ph.is_lapsed %}
+          {# The one state where doing something still helps: resolution
+             reads the plans as they stand when it runs, not as they stood
+             when the window shut. #}
+          <p class="tm">The window has closed. The commissioner has not
+            resolved it yet, and a plan saved before they do still counts.</p>
+        {% endif %}
+        {# Only when the note above has not already said it: a lapsed round
+           opens with "The window has closed", and saying it twice in one
+           card is how a card ends up reading like a form letter. #}
+        {% if not fixed and editable and not ph.is_open and not is_admin
+              and not ph.is_lapsed %}
+          <p class="tm">The window is not open yet.</p>
+        {% endif %}
+
+        {# The act, pinned to the foot of the card. #}
+        {% if not fixed and editable %}
+          <p class="phase-act">
             <button type="submit" class="submit-phase seal" formaction="/keepers/submit"
                     name="phase" value="{{ ph.n }}"
                     {% if not ph.is_open and not is_admin %}disabled{% endif %}>
               Submit Round {{ ph.n }}
             </button>
-            {% if not ph.is_open and not is_admin %}
-              <span class="tm">{% if ph.is_lapsed %}window closed
-                {%- else %}window not open{% endif %}</span>
-            {% endif %}
-          {% endif %}
+          </p>
         {% endif %}
       </div>
     {% endfor %}
