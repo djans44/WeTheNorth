@@ -130,6 +130,10 @@
     document.querySelectorAll(".slot-fill").forEach(function (s) {
       s.innerHTML = "<span class='tm'>nothing planned</span>";
     });
+    document.querySelectorAll(".moved-note").forEach(function (n) {
+      n.hidden = true;
+      n.textContent = "";
+    });
     document.querySelectorAll(".picker-table tbody tr").forEach(function (tr) {
       tr.classList.remove("picked");
     });
@@ -159,13 +163,19 @@
       // A keeper whose own round is spoken for moves up, and the card says
       // so. It used to happen silently: you chose an R13 and the card showed
       // R12 with nothing to explain the difference, which reads as a bug
-      // rather than as the rule it is.
+      // rather than as the rule it is. The line sits under the chooser,
+      // because it is a consequence of the choice rather than part of the
+      // name above it.
       var moved = rd !== p.cost;
       var slot = document.querySelector(".slot-fill[data-phase='" + phase + "']");
-      if (slot) {
-        slot.innerHTML = "<b>R" + rd + " " + p.name + "</b>" +
-          (moved ? "<span class='tm moved'>R" + p.cost +
-                   " is taken, so this one moves up to R" + rd + "</span>" : "");
+      if (slot) { slot.innerHTML = "<b>R" + rd + " " + p.name + "</b>"; }
+
+      var why = document.querySelector(".moved-note[data-phase='" + phase + "']");
+      if (why) {
+        why.hidden = !moved;
+        why.textContent = moved
+            ? "R" + p.cost + " is taken, so this one moves up to R" + rd + "."
+            : "";
       }
 
       // The table's last column answers "where did I put this one", so the
@@ -221,11 +231,16 @@
                          " forced defence <span class='tm'>void, binding</span>" });
     });
 
+    // The plan had a summary list of its own; the round cards say the same
+    // thing in the place you chose it, so the list is gone and this tolerates
+    // its absence rather than assuming it.
     var list = document.getElementById("chosen");
-    list.innerHTML = "";
-    lines.sort(function (a, b) { return a.round - b.round; }).forEach(function (l) {
-      list.innerHTML += "<li>" + l.text + "</li>";
-    });
+    if (list) {
+      list.innerHTML = "";
+      lines.sort(function (a, b) { return a.round - b.round; }).forEach(function (l) {
+        list.innerHTML += "<li>" + l.text + "</li>";
+      });
+    }
 
     var warn = document.getElementById("warn");
     warn.innerHTML = problems.join("<br>");

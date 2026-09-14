@@ -1449,7 +1449,12 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 /* Why a keeper is not sitting on the round it costs. Oxblood rather than
    muted, because it is the one line in the card the reader did not ask for
    and would otherwise read as an error. */
-.slot-fill .tm.moved { color: var(--accent); font-style: italic; }
+.phase-card .moved-note {
+  margin: var(--s2) 0 0;
+  font-size: var(--t-xs);
+  font-style: italic;
+  color: var(--accent);
+}
 
 
 /* ---- modal ---- */

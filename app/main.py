@@ -1893,8 +1893,22 @@ def keeper_context(conn, season, owner_id):
         n = w["phase"]
         c = contract_phase.get(n)
         p = plans.get(n)
+        # Which year of the term a contract-filled round is in, out of how
+        # many, the way the results page says it. The card used to say only
+        # "contract", which is the least interesting half: a contract running
+        # out next year and one with two still to go are different facts.
+        term = None
+        if c:
+            held = by_id.get(c["player_id"]) or {}
+            yrs, signed = held.get("contract_years"), held.get("signed_season")
+            if yrs and signed and 1 <= season - signed + 1 <= yrs:
+                term = "%d/%d" % (season - signed + 1, yrs)
+
         phases.append({
             "n": n, "opens_at": w["opens_at"], "closes_at": w["closes_at"],
+            "contract_term": term, "contract_until": (by_id.get(c["player_id"])
+                                                      or {}).get("final_season")
+                                                     if c else None,
             "resolved_at": w["resolved_at"], "is_open": w["is_open"],
             "is_lapsed": w["is_lapsed"],
             "contract": by_id.get(c["player_id"]) if c else None,

@@ -104,6 +104,30 @@
   </section>
   {% endif %}
 
+  {% if ctx.blocked %}
+  {# Beside the contracts rather than at the foot of the page: both are the
+     league telling you what it has already decided about your roster, and
+     this half is usually the answer to "where did he go". #}
+  <section>
+    <h2>Not eligible</h2>
+    <ul class="records">
+    {% for b in ctx.blocked %}
+      <li>{{ b.full_name }} &mdash;
+        {% if b.state == "ineligible_expired" %}contract expired{% else %}kept four seasons{% endif %}</li>
+    {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {# The rounds still to fill. Worked out before the strip, because the acts
+     under it only make sense when there is one. #}
+  {% set ns = namespace(open=[]) %}
+  {% for ph in ctx.phases %}
+    {% if not ph.resolved_at and not ph.contract and not ph.submission %}
+      {% set ns.open = ns.open + [ph] %}
+    {% endif %}
+  {% endfor %}
+
   <section>
     <h2>Phases</h2>
     <div class="phase-strip">
@@ -132,6 +156,9 @@
           {% elif ph.is_lapsed %}<span class="pill late">closed</span>
           {% else %}<span class="pill">upcoming</span>{% endif %}
         </h3>
+        {# When the round runs. Part of naming it rather than a message
+           about it, so it sits with the title and above the player. #}
+        <p class="tm">{{ ph.opens_at.strftime("%b %d") }} &ndash; {{ ph.closes_at.strftime("%b %d") }}</p>
 
         {# Who is in the round. #}
         {% if ph.submission %}
@@ -141,9 +168,14 @@
               <span class="tm">{{ ph.submission.origin }}</span>{% endif %}
           </p>
         {% elif ph.contract %}
+          {# Which year of the term, and when it runs out. "contract" alone
+             was the least interesting half of it: one running out next year
+             and one with two still to go are different facts, and this is
+             the round that fact decides. #}
           <p class="settled">
             <b>R{{ ph.contract.cost_round }} {{ ph.contract.full_name }}</b>
-            <span class="tm">contract</span>
+            <span class="tm">contract{% if ph.contract_term %} {{ ph.contract_term }}{% endif %}
+              {%- if ph.contract_until %}, through {{ ph.contract_until }}{% endif %}</span>
           </p>
         {% else %}
           <p class="slot-fill" data-phase="{{ ph.n }}">
@@ -167,10 +199,13 @@
               <option value="">choose a keeper&hellip;</option>
             </select>
           {% endif %}
+          {# Why this keeper is not on the round they cost. Below the chooser
+             because it is a consequence of what you just chose, not a
+             property of the name above it. app.js fills it. #}
+          <p class="moved-note" data-phase="{{ ph.n }}" hidden></p>
         {% endif %}
 
-        {# What you need to know. #}
-        <p class="tm">{{ ph.opens_at.strftime("%b %d") }} &ndash; {{ ph.closes_at.strftime("%b %d") }}</p>
+        {# What else you need to know. #}
         {% if ph.is_lapsed %}
           {# The one state where doing something still helps: resolution
              reads the plans as they stand when it runs, not as they stood
@@ -199,14 +234,23 @@
       </div>
     {% endfor %}
     </div>
-  </section>
 
-  {% set ns = namespace(open=[]) %}
-  {% for ph in ctx.phases %}
-    {% if not ph.resolved_at and not ph.contract and not ph.submission %}
-      {% set ns.open = ns.open + [ph] %}
+    {# What is wrong with the plan as it stands, under the rounds it is wrong
+       about. #}
+    <p id="warn" class="note"></p>
+
+    {# Both acts on one line under the rounds they act on. Clearing every
+       round and saving the lot are decisions about the strip above, and they
+       used to sit at the foot of a table and at the foot of the page, two
+       scrolls from the thing they change. #}
+    {% if ns.open and editable %}
+      <p class="actionrow">
+        <span class="tm">A saved plan submits itself when its round closes.</span>
+        <button type="button" class="seal" id="clear">Clear all rounds</button>
+        <button type="submit" class="seal">Save plan</button>
+      </p>
     {% endif %}
-  {% endfor %}
+  </section>
 
   {% if ns.open and editable %}
   <section>
@@ -233,36 +277,9 @@
       {% endfor %}
       </tbody>
     </table>
-    <p class="actionrow">
-      <button type="button" class="seal" id="clear">Clear all rounds</button>
-    </p>
   </section>
   {% endif %}
-
-  <section id="summary">
-    <h2>Plan</h2>
-    <ul id="chosen" class="records"></ul>
-    <p id="warn" class="note"></p>
-    {% if editable %}
-      <p class="actionrow">
-        <span class="tm">A saved plan submits itself when its round closes.</span>
-        <button type="submit" class="seal">Save plan</button>
-      </p>
-    {% endif %}
-  </section>
   </form>
-
-  {% if ctx.blocked %}
-  <section>
-    <h2>Not eligible</h2>
-    <ul class="records">
-    {% for b in ctx.blocked %}
-      <li>{{ b.full_name }} &mdash;
-        {% if b.state == "ineligible_expired" %}contract expired{% else %}kept four seasons{% endif %}</li>
-    {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
 
   <div id="modal" class="modal" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
