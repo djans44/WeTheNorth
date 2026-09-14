@@ -2004,21 +2004,6 @@ def keeper_context(conn, season, owner_id):
     }
 
 
-# ---------------------------------------------------------------------------
-# REPLACE the existing keepers() function in app/main.py with this whole block.
-#
-# Find this line in app/main.py:
-#
-#     @app.get("/keepers", response_class=HTMLResponse)
-#
-# Select from there down to (but NOT including) the line:
-#
-#     @app.post("/keepers/plan")
-#
-# ...and paste this in its place.
-# ---------------------------------------------------------------------------
-
-
 def keeper_grid(conn, season, finished, phases):
     """Who was kept, by manager and by the phase they were kept in.
 
