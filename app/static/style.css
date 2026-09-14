@@ -1186,6 +1186,15 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .owners-grid th, .owners-grid td { text-align: left; vertical-align: middle; }
 .owners-grid a { white-space: nowrap; }
 
+/* Keeper results: one column per round of choosing. Left-aligned because
+   the cells are names, not numbers, and the round marker leads each one. */
+.results td.kept, .results thead th { text-align: left; }
+.results td.kept { vertical-align: top; }
+/* A contract holding its place before the round has been resolved. It is a
+   reservation, not a result, and the placeholder mark already means exactly
+   that everywhere else on the site. */
+.results td.kept.reserved { background: var(--mark-hold); font-style: italic; }
+
 .picker-table .ph-col { width: 3rem; text-align: center; }
 .picker-table tr.picked { background: var(--gold-ghost); }
 .picker-table .term-line { font-size: var(--t-sm); white-space: nowrap; text-align: left; }

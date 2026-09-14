@@ -1,19 +1,114 @@
 {% extends "base.html" %}
-{% from "macros.html" import leaf %}
-{% block title %}Keeper results | We the North{% endblock %}
+{% from "macros.html" import avatar, leaf %}
+{% block title %}Keeper results {{ season }} | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
-  {# A stub: the title and the way in. What settled, once the phases have
-     resolved -- who kept whom, at what round, and what it cost -- goes here.
-     Keeper selection is the doing; this is the reading. #}
-  <header class="page-head tight">
+  <header class="page-head tight stuck">
     <h1>{{ leaf(20) }}Keeper results</h1>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
+  {# Where the season stands on the left, the season you are reading on the
+     right, the same line the draft pages use. #}
   <section>
-    <p class="note">Nothing here yet. This is where a season's keepers will
-      be read once selection has settled.</p>
+    <div class="pickhead">
+      {# A season with no keeper rounds at all is answered first: it is
+         finished too, and "settled, nobody kept" is a stranger way to say
+         the league did not run keepers that year. #}
+      {% if not phases %}
+        <p class="draftstate none">
+          <span>No keepers</span>
+          <span class="sub">{{ season }} was played without them.</span>
+        </p>
+      {% elif finished %}
+        <p class="draftstate set">
+          <span>Settled</span>
+          <span class="sub">{{ kept }} kept in {{ season }}.</span>
+        </p>
+      {% elif resolved|length == phases|length %}
+        <p class="draftstate set">
+          <span>Settled</span>
+          <span class="sub">All {{ phases|length }} rounds resolved,
+            {{ kept }} kept.</span>
+        </p>
+      {% else %}
+        <p class="draftstate live">
+          <span>Still choosing</span>
+          <span class="sub">{{ resolved|length }} of {{ phases|length }} rounds
+            resolved. Contracts already hold their place.</span>
+        </p>
+      {% endif %}
+
+      <form method="get" action="/keepers/results" class="picker loadonpick">
+        <label for="season">Season</label>
+        <select id="season" name="season">
+          {% for y in years %}
+            <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="seal">Load</button>
+      </form>
+    </div>
   </section>
+
+  {% if not phases %}
+    <section><p class="note">The league kept nobody in {{ season }}. Its first
+      season ran without keepers at all.</p></section>
+  {% else %}
+  <section>
+    <h2>By keeper round</h2>
+    <div class="scroller">
+      <table class="keepers results">
+        <thead>
+          <tr>
+            <th class="name">Manager</th>
+            {% for n in phases %}
+              <th>Round {{ n }}
+                {%- if not finished and n not in resolved %}
+                  <span class="tm">open</span>
+                {% endif %}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for o in owners %}
+          <tr>
+            <td class="name">
+              <span class="avatar-line">{{ avatar(o.owner_id, 30) }}{{ o.username }}</span>
+            </td>
+            {% for n in phases %}
+              {% set c = grid.get(o.owner_id, {}).get(n) %}
+              <td class="kept{% if c and not c.settled %} reserved{% endif %}">
+                {% if c %}
+                  <b>R{{ c.round }}</b> {{ c.name }}
+                  {% if c.contract %}<span class="tm">contract</span>{% endif %}
+                {% else %}
+                  <span class="tm">&mdash;</span>
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# The honest bit. A finished season records who was kept and at what
+       round, and nothing at all about which round of choosing it happened
+       in, so the order here is worked out by the rule rather than read from
+       anywhere. #}
+    {% if finished %}
+      <p class="note">{{ season }} recorded who was kept and what each cost,
+        but not which round of choosing settled them. The order here applies
+        the league's own rule to the record: contracts first, longest
+        remaining, then cheapest round.</p>
+    {% else %}
+      <p class="note">A contract holds its round from the start and is shown
+        as soon as it does. Everything else appears as an admin resolves each
+        round.</p>
+    {% endif %}
+  </section>
+  {% endif %}
 </div>
 {% endblock %}

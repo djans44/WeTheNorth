@@ -408,7 +408,7 @@ Everything else requires a session (middleware redirects to `/`).
 | `GET /draft-prep` | The board by draft slot and keepers by manager. A finished season shows what was kept, from `keeper_selections`; the season being prepped shows contracts, voids and what-ifs |
 | `POST /draft-prep/placeholder`, `POST /draft-prep/slot` | What-ifs — a keeper tried on a manager, a manager tried in an empty slot. **Session only**: nothing is written to the database and nobody else sees them, which is why neither needs a permission check |
 | `GET /keepers` | Keeper selection: three phases, one keeper each |
-| `GET /keepers/results` | What settled, once selection has. A stub: title and nav only |
+| `GET /keepers/results` | Who was kept, by manager and keeper round. A finished season's rounds are **inferred** — `keeper_selections` records who and what it cost, never which round settled it — by the same rule the live page uses. The season being chosen reads contracts from `keeper_phase_plan` and results from approved `keeper_submissions` |
 | `POST /keepers/plan` | Save plan (validates round conflicts, refuses to save a conflict) |
 | `POST /keepers/submit` | Submit one phase |
 | `POST /keepers/void-submit` | Submit voids (writes and confirms in one step) |

@@ -1930,16 +1930,124 @@ def keeper_context(conn, season, owner_id):
 # ---------------------------------------------------------------------------
 
 
+def keeper_grid(conn, season, finished, phases):
+    """Who was kept, by manager and by the phase they were kept in.
+
+    Two sources, because a finished season and the one being chosen are
+    different kinds of fact.
+
+    **The season being chosen** knows its phases exactly. Contracts reserve
+    the earliest ones automatically -- keeper_phase_plan is that rule -- and
+    an approved submission is the settled answer for its phase, so it lands
+    on top of whatever the plan reserved there.
+
+    **A finished season does not record a phase at all.** keeper_selections
+    says who was kept and at what round, and nothing about the order it
+    happened in. So the phases are reconstructed by applying the same rule
+    the live page uses: contracts first, longest remaining, then cheapest
+    round, then name; free choices after them in round order. That is an
+    inference and the page says so rather than passing it off as a record.
+    """
+    grid = {}
+
+    def put(oid, phase, cell):
+        if phase and phase <= phases:
+            grid.setdefault(oid, {})[phase] = cell
+
+    if finished:
+        rows = query(conn, """
+            select t.owner_id, ks.cost_round, ks.keeper_year, p.full_name,
+                   ks.contract_id,
+                   kc.signed_season + kc.contract_years - 1 as final_season
+            from keeper_selections ks
+            join teams t on t.team_id = ks.team_id
+                        and t.season_year = ks.season_year
+            join players p on p.player_id = ks.player_id
+            left join keeper_contracts kc on kc.contract_id = ks.contract_id
+            where ks.season_year = %s
+        """, (season,))
+        by_owner = {}
+        for r in rows:
+            by_owner.setdefault(r["owner_id"], []).append(r)
+        for oid, mine in by_owner.items():
+            mine.sort(key=lambda r: (
+                r["contract_id"] is None,
+                -((r["final_season"] or season) - season + 1),
+                r["cost_round"], r["full_name"]))
+            for i, r in enumerate(mine, start=1):
+                put(oid, i, {"name": r["full_name"], "round": r["cost_round"],
+                             "contract": r["contract_id"] is not None,
+                             "settled": True, "inferred": True})
+    else:
+        for r in query(conn, """
+            select owner_id, phase, cost_round, p.full_name
+            from keeper_phase_plan k
+            join players p on p.player_id = k.player_id
+            where k.season_year = %s
+        """, (season,)):
+            put(r["owner_id"], r["phase"],
+                {"name": r["full_name"], "round": r["cost_round"],
+                 "contract": True, "settled": False, "inferred": False})
+        for r in query(conn, """
+            select s.owner_id, s.phase, s.cost_round, s.contract_id, p.full_name
+            from keeper_submissions s
+            join players p on p.player_id = s.player_id
+            where s.season_year = %s and s.status = 'approved'
+              and s.player_id is not null
+        """, (season,)):
+            put(r["owner_id"], r["phase"],
+                {"name": r["full_name"], "round": r["cost_round"],
+                 "contract": r["contract_id"] is not None,
+                 "settled": True, "inferred": False})
+    return grid
+
+
 @app.get("/keepers/results", response_class=HTMLResponse)
-def keeper_results(request: Request):
+def keeper_results(request: Request, season: int = 0):
     """What settled, as opposed to the choosing of it.
 
-    A stub for now: the title and a way in. /keepers is where the three
-    phases are worked through, and that page is about what you are about to
-    do. This one is about what was done.
+    /keepers is where the three phases are worked through, and it is about
+    what you are about to do. This is about what was done.
     """
-    return templates.TemplateResponse(request=request, name="keeper_results.html",
-                                      context={})
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"]
+
+        size = query(conn, """
+            select keeper_count, is_complete from seasons where season_year = %s
+        """, (season,))
+        phases = (size[0]["keeper_count"] if size else 3) or 0
+        finished = bool(size and size[0]["is_complete"])
+
+        owners = query(conn, """
+            select distinct o.owner_id, o.username
+            from teams t join owners o on o.owner_id = t.owner_id
+            where t.season_year = %s order by o.username
+        """, (season,))
+
+        grid = keeper_grid(conn, season, finished, phases)
+
+        # Which windows an admin has closed. A phase nobody has resolved is
+        # still open, and a cell in it is a reservation rather than a result.
+        done = {r["phase"] for r in query(conn, """
+            select phase from keeper_windows
+            where season_year = %s and resolved_at is not null
+        """, (season,))}
+
+        rings = season_rings(conn, season)
+
+    kept = sum(1 for m in grid.values() for c in m.values() if c["settled"])
+    token = _page_rings.set(rings) if rings else None
+    try:
+        return templates.TemplateResponse(
+            request=request, name="keeper_results.html",
+            context={"years": years, "season": season, "owners": owners,
+                     "grid": grid, "phases": list(range(1, phases + 1)),
+                     "resolved": done, "finished": finished, "kept": kept})
+    finally:
+        if token is not None:
+            _page_rings.reset(token)
 
 
 @app.get("/keepers", response_class=HTMLResponse)
