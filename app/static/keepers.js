@@ -126,13 +126,12 @@
     document.querySelectorAll(".settled b").forEach(function (b) {
       lines.push({ round: 0, text: b.textContent.trim() + " <span class='tm'>locked</span>" });
     });
-    document.querySelectorAll(".term-line").forEach(function (t) { t.innerHTML = ""; });
     document.querySelectorAll(".slot-fill").forEach(function (s) {
       s.innerHTML = "<span class='tm'>nothing planned</span>";
     });
-    document.querySelectorAll(".moved-note").forEach(function (n) {
+    document.querySelectorAll(".moved-note, .term-note").forEach(function (n) {
       n.hidden = true;
-      n.textContent = "";
+      n.innerHTML = "";
     });
     document.querySelectorAll(".picker-table tbody tr").forEach(function (tr) {
       tr.classList.remove("picked");
@@ -178,25 +177,30 @@
             : "";
       }
 
-      // The table's last column answers "where did I put this one", so the
-      // round of choosing leads and everything else sits under it in one
-      // block rather than breaking across three lines.
-      var detail = "R" + rd + (rd !== p.cost ? ", from R" + p.cost : "");
-      if (p.state === "must_sign") {
-        var t = field("term-field", phase).value;
-        if (!t) {
-          problems.push(p.name + " needs a contract term.");
-          detail += " <button type='button' class='term-btn needed' data-phase='" +
-                    phase + "' data-id='" + id + "'>Choose term</button>";
+      // The contract goes in the round's own card, because that is where the
+      // question is being asked. The table keeps the round and the cost and
+      // nothing that needs answering.
+      var term = document.querySelector(".term-note[data-phase='" + phase + "']");
+      if (term) {
+        if (p.state !== "must_sign") {
+          term.hidden = true;
+          term.innerHTML = "";
         } else {
-          detail += " &middot; " + (t === "1" ? "1 yr" : "3 yr then R" + p.later) +
-                    " <button type='button' class='term-btn edit' data-phase='" +
-                    phase + "' data-id='" + id + "'>Edit</button>";
+          var t = field("term-field", phase).value;
+          term.hidden = false;
+          if (!t) {
+            problems.push(p.name + " needs a contract term.");
+            term.innerHTML = "Needs a contract term " +
+              "<button type='button' class='term-btn needed' data-phase='" +
+              phase + "' data-id='" + id + "'>Choose term</button>";
+          } else {
+            term.innerHTML = "contract " +
+              (t === "1" ? "1/1" : "1/3, then R" + p.later) +
+              " <button type='button' class='term-btn edit' data-phase='" +
+              phase + "' data-id='" + id + "'>Edit</button>";
+          }
         }
       }
-      var note = "Round " + phase + "<span class='tm'>" + detail + "</span>";
-      var cell = document.querySelector(".term-line[data-id='" + id + "']");
-      if (cell) { cell.innerHTML = note; }
 
       lines.push({ round: rd,
                    text: "R" + rd + " " + p.name +

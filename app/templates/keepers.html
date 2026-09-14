@@ -199,9 +199,16 @@
               <option value="">choose a keeper&hellip;</option>
             </select>
           {% endif %}
+          {# The contract a newly chosen keeper signs, and the question that
+             has to be answered before they are one. It used to appear only
+             in the table's last column, which is a strange place to be asked
+             something about the round you are looking at. app.js fills both
+             of these. #}
+          <p class="term-note" data-phase="{{ ph.n }}" hidden></p>
+
           {# Why this keeper is not on the round they cost. Below the chooser
              because it is a consequence of what you just chose, not a
-             property of the name above it. app.js fills it. #}
+             property of the name above it. #}
           <p class="moved-note" data-phase="{{ ph.n }}" hidden></p>
         {% endif %}
 
@@ -255,14 +262,13 @@
   {% if ns.open and editable %}
   <section>
     <h2>Available to keep</h2>
-    <p class="note">Everyone you could still keep, and where you have put
-      them. Rounds already used are skipped, so a clash moves the later pick
-      to an earlier round.</p>
+    <p class="note">Everyone you could still keep, and what each would cost.
+      Where you have put them is on the rounds above; a row shaded here is
+      one you have already used.</p>
     <table class="keepers picker-table">
       <thead>
         <tr>
-          <th>Player</th><th>Pos</th><th>Cost</th><th>Basis</th>
-          <th class="name">Kept in</th>
+          <th>Player</th><th>Pos</th><th>Cost</th><th class="name">Basis</th>
         </tr>
       </thead>
       <tbody>
@@ -272,7 +278,6 @@
           <td>{{ c.position }}</td>
           <td class="rd">R{{ c.cost_round }}</td>
           <td class="tm">{{ c.basis_source }}{% if c.state == "must_sign" %} &middot; needs term{% endif %}</td>
-          <td class="term-line" data-id="{{ c.player_id }}"></td>
         </tr>
       {% endfor %}
       </tbody>
