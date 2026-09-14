@@ -1186,14 +1186,20 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .owners-grid th, .owners-grid td { text-align: left; vertical-align: middle; }
 .owners-grid a { white-space: nowrap; }
 
-/* Keeper results: one column per round of choosing. Left-aligned because
-   the cells are names, not numbers, and the round marker leads each one. */
-.results td.kept, .results thead th { text-align: left; }
-.results td.kept { vertical-align: top; }
+/* Keeper results: one column per round of choosing. Left-aligned because the
+   cells are names, not numbers, and the round marker leads each one.
+
+   No class on the cell. It was `kept`, which is the season and manager
+   pages' own paragraph class, and it dragged their rules in with it --
+   including `.kept .tm { display: inline }`, which is why the contract term
+   sat beside the name instead of under it. The same trap `.swatch` set for
+   the colour picker. */
+.results tbody td, .results thead th { text-align: left; }
+.results tbody td { vertical-align: top; }
 /* A contract holding its place before the round has been resolved. It is a
    reservation, not a result, and the placeholder mark already means exactly
    that everywhere else on the site. */
-.results td.kept.reserved { background: var(--mark-hold); font-style: italic; }
+.results tbody td.reserved { background: var(--mark-hold); font-style: italic; }
 
 .picker-table .ph-col { width: 3rem; text-align: center; }
 .picker-table tr.picked { background: var(--gold-ghost); }
@@ -1697,7 +1703,7 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   text-overflow: ellipsis;
 }
 .opt-line.contract  { background: var(--mark-kept); font-weight: 600; }
-.opt-line.kept      { background: var(--mark-kept); }
+.opt-line.keeper    { background: var(--mark-kept); }
 .opt-line.voided    { background: var(--mark-void); }
 .opt-line.held      { background: var(--mark-hold); font-style: italic; }
 

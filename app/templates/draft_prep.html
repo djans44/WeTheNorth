@@ -121,7 +121,7 @@
                  cannot share one, so the later arrival moved up and the cell
                  says where from. #}
               {% for k in t.keepers %}
-                <div class="opt-line kept">
+                <div class="opt-line keeper">
                   <b>R{{ k.round or k.cost_round }}</b> {{ k.full_name }}
                   {% if k.round and k.round != k.cost_round %}
                     <span class="tm">up from {{ k.cost_round }}</span>

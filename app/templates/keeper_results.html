@@ -79,7 +79,7 @@
             </td>
             {% for n in phases %}
               {% set c = grid.get(o.owner_id, {}).get(n) %}
-              <td class="kept{% if c and not c.settled %} reserved{% endif %}">
+              <td{% if c and not c.settled %} class="reserved"{% endif %}>
                 {% if c %}
                   <b>R{{ c.round }}</b> {{ c.name }}
                   {% if c.contract %}
