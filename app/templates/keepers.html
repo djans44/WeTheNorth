@@ -2,6 +2,29 @@
 {% from "macros.html" import avatar, leaf %}
 {% block title %}Keeper selection | We the North{% endblock %}
 
+{# The Acting for control, drawn in two places: on the page an admin can
+   already see, and beside the bail for an admin with no eligibility of their
+   own. `subject` is what separates them and it settles three things at once.
+   With a subject there is a manager being acted for, so the sigil is drawn,
+   their option is selected, and loadonpick may hide the button and navigate
+   on change. With none, there is nobody to draw, nothing is selected, and
+   loadonpick would be a trap: choosing the manager already showing fires no
+   change event, and the button it hides is the only other way out. #}
+{% macro actingfor(owners, owner, season, verb="Switch", subject=true) -%}
+  <form method="get" action="/keepers" class="picker{% if subject %} loadonpick{% endif %}">
+    <input type="hidden" name="season" value="{{ season }}">
+    {% if subject %}{{ avatar(owner, 30) }}{% endif %}
+    <label for="owner">Acting for</label>
+    <select id="owner" name="owner">
+      {% for o in owners %}
+        <option value="{{ o.owner_id }}"
+          {%- if subject and o.owner_id == owner %} selected{% endif %}>{{ o.username }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="seal">{{ verb }}</button>
+  </form>
+{%- endmacro %}
+
 {% block content %}
 <div class="page">
   {# The lede said three things and the page said all three again below it:
@@ -20,8 +43,27 @@
 
   {% if not years %}
     <section><p class="note">No keeper windows have been set up yet.</p></section>
+  {% elif not owners %}
+    {# Eligibility is a view over the previous season's rosters, not something
+       anyone sets. Nobody has any until those rosters are loaded, and until
+       then this said "you have no keeper eligibility" -- blaming the viewer
+       for a season that is not stood up yet. #}
+    <section><p class="note">Keeper eligibility for {{ season }} is drawn from
+      the {{ season - 1 }} end-of-season rosters, and those are not loaded
+      yet. Nobody can choose keepers until they are.</p></section>
   {% elif not who %}
-    <section><p class="note">You have no keeper eligibility for {{ season }}.</p></section>
+    {# An admin who is not playing this season still runs the selection for
+       everyone else. The Acting for control used to sit below this bail, so
+       the page was a dead end for them unless they hand-typed ?owner=. The
+       way out belongs with the message that stops them. #}
+    <section>
+      <div class="pickhead">
+        <p class="note">You have no keeper eligibility for {{ season }}.</p>
+        {% if is_admin %}
+          {{ actingfor(owners, 0, season, verb="Open", subject=false) }}
+        {% endif %}
+      </div>
+    </section>
   {% else %}
 
   {# Where selection stands on the left, whose page this is on the right --
@@ -36,17 +78,7 @@
       </p>
 
       {% if is_admin and owners|length > 1 %}
-        <form method="get" action="/keepers" class="picker loadonpick">
-          <input type="hidden" name="season" value="{{ season }}">
-          {{ avatar(owner, 30) }}
-          <label for="owner">Acting for</label>
-          <select id="owner" name="owner">
-            {% for o in owners %}
-              <option value="{{ o.owner_id }}" {% if o.owner_id == owner %}selected{% endif %}>{{ o.username }}</option>
-            {% endfor %}
-          </select>
-          <button type="submit" class="seal">Switch</button>
-        </form>
+        {{ actingfor(owners, owner, season) }}
       {% endif %}
     </div>
   </section>
