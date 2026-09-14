@@ -1427,12 +1427,23 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .term-btn.needed { background: var(--gold-bright); }
 .term-btn.edit { border-width: 1px; font-weight: 400; margin-left: var(--s2); }
 
-.submit-phase { margin-top: 0.6rem; padding: 0.45rem 0.9rem; font-size: var(--t-sm); }
-.submit-phase[disabled] {
-  background: var(--ink-soft);
-  border-color: var(--ink-soft);
-  cursor: not-allowed;
+/* The round's own action, in the round's own card: full width, because the
+   card is narrow and a centred seal floating in it looks lost. The seal's
+   own padding and disabled treatment carry over from button.seal. */
+.submit-phase {
+  width: 100%;
+  margin-top: var(--s3);
+  padding: 0.45rem 0.9rem;
 }
+
+/* The void warning sits inside an .errors box, which already has its own
+   spacing above it. */
+.errors .actionrow { margin-top: var(--s3); }
+
+/* Why a keeper is not sitting on the round it costs. Oxblood rather than
+   muted, because it is the one line in the card the reader did not ask for
+   and would otherwise read as an error. */
+.slot-fill .tm.moved { color: var(--accent); font-style: italic; }
 
 
 /* ---- modal ---- */

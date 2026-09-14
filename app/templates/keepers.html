@@ -90,15 +90,16 @@
       {% endfor %}
       </tbody>
     </table>
-    <div id="void-warning" class="errors" style="margin-top:1rem" hidden>
+    <div id="void-warning" class="errors" hidden>
       <b>Void not submitted.</b>
       Marked for voiding: <span id="void-names"></span>.
       This is not binding yet. If it is not submitted before Keeper 1 closes,
       the void is discarded and the contract stands.
-      <div id="void-submit-wrap" style="margin-top:0.6rem" hidden>
-        <button type="submit" formaction="/keepers/void-submit" id="void-submit-btn"
+      <p id="void-submit-wrap" class="actionrow" hidden>
+        <button type="submit" class="seal" formaction="/keepers/void-submit"
+                id="void-submit-btn"
                 data-hasplans="{% if ctx.has_plans %}1{% else %}0{% endif %}">Submit void</button>
-      </div>
+      </p>
     </div>
   </section>
   {% endif %}
@@ -157,7 +158,7 @@
             <select class="phase-pick" data-phase="{{ ph.n }}">
               <option value="">choose a keeper&hellip;</option>
             </select>
-            <button type="submit" class="submit-phase" formaction="/keepers/submit"
+            <button type="submit" class="submit-phase seal" formaction="/keepers/submit"
                     name="phase" value="{{ ph.n }}"
                     {% if not ph.is_open and not is_admin %}disabled{% endif %}>
               Submit Round {{ ph.n }}
@@ -216,8 +217,10 @@
     <ul id="chosen" class="records"></ul>
     <p id="warn" class="note"></p>
     {% if editable %}
-      <button type="submit">Save plan</button>
-      <p class="note">Saved plans submit automatically when each window closes.</p>
+      <p class="actionrow">
+        <span class="tm">A saved plan submits itself when its round closes.</span>
+        <button type="submit" class="seal">Save plan</button>
+      </p>
     {% endif %}
   </section>
   </form>

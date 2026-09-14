@@ -156,8 +156,17 @@
       var row = document.querySelector(".picker-table tr[data-id='" + id + "']");
       if (row) { row.classList.add("picked"); }
 
+      // A keeper whose own round is spoken for moves up, and the card says
+      // so. It used to happen silently: you chose an R13 and the card showed
+      // R12 with nothing to explain the difference, which reads as a bug
+      // rather than as the rule it is.
+      var moved = rd !== p.cost;
       var slot = document.querySelector(".slot-fill[data-phase='" + phase + "']");
-      if (slot) { slot.innerHTML = "<b>R" + rd + " " + p.name + "</b>"; }
+      if (slot) {
+        slot.innerHTML = "<b>R" + rd + " " + p.name + "</b>" +
+          (moved ? "<span class='tm moved'>R" + p.cost +
+                   " is taken, so this one moves up to R" + rd + "</span>" : "");
+      }
 
       // The table's last column answers "where did I put this one", so the
       // round of choosing leads and everything else sits under it in one
@@ -179,7 +188,10 @@
       var cell = document.querySelector(".term-line[data-id='" + id + "']");
       if (cell) { cell.innerHTML = note; }
 
-      lines.push({ round: rd, text: "R" + rd + " " + p.name });
+      lines.push({ round: rd,
+                   text: "R" + rd + " " + p.name +
+                         (moved ? " <span class='tm'>up from R" + p.cost +
+                                  "</span>" : "") });
     });
 
     ["1", "2", "3"].forEach(function (n) {
