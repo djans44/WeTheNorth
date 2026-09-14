@@ -4,6 +4,7 @@ import os
 import pathlib
 import threading
 import time
+from zoneinfo import ZoneInfo
 
 import psycopg
 from dotenv import load_dotenv
@@ -22,6 +23,30 @@ load_dotenv()
 # Uvicorn's logger, so anything reported here lands in the Render log beside
 # the request that caused it.
 log = logging.getLogger("uvicorn.error")
+
+# The league runs on Eastern time and every keeper window closes at
+# 11:59:59pm Eastern on its last day. Timestamps are stored as UTC, so a
+# window closing at the end of Sep 10 is 03:59 UTC on Sep 11 -- printed raw it
+# names the wrong day. Anything shown as a league date converts through here
+# first. ZoneInfo, not a fixed -5, so the switch to daylight time is handled.
+LEAGUE_TZ = ZoneInfo("America/Toronto")
+
+
+def league_dates(opens, closes):
+    """The span of a window as two league dates, e.g. "Sep 4 - Sep 11".
+
+    No time of day: every window closes at the same hour, so printing it on
+    each of three cards says nothing the page cannot say once. The day is the
+    part that differs, and it is the part an owner is counting.
+    """
+    def day(ts):
+        d = ts.astimezone(LEAGUE_TZ)
+        # Not %-d: that is glibc only and would work on Render and crash on
+        # the Windows machine this is developed on.
+        return "%s %d" % (d.strftime("%b"), d.day)
+
+    return "%s – %s" % (day(opens), day(closes))
+
 
 STATIC_DIR = pathlib.Path("app/static")
 PUBLIC_PATHS = {"/", "/login", "/logout", "/health", "/preview"}
@@ -1906,6 +1931,7 @@ def keeper_context(conn, season, owner_id):
 
         phases.append({
             "n": n, "opens_at": w["opens_at"], "closes_at": w["closes_at"],
+            "dates": league_dates(w["opens_at"], w["closes_at"]),
             "contract_term": term, "contract_until": (by_id.get(c["player_id"])
                                                       or {}).get("final_season")
                                                      if c else None,

@@ -130,13 +130,13 @@
 
   <section>
     <h2>Phases</h2>
+    {# The hour is the same for all three, so it is said once here rather than
+       three times on the cards. Softly worded on purpose: the clock passing
+       does not actually stop a plan, the commissioner resolving the round
+       does, and the card of a closed round says so itself. #}
+    <p class="note">Each round closes at 11:59pm Eastern on its last day.</p>
     <div class="phase-strip">
     {% for ph in ctx.phases %}
-      {# Four states, not three. A phase is settled when an admin resolves
-         it, not when the clock passes, so a window can sit closed for days
-         with nothing having happened to it. That state used to fall through
-         to "upcoming", which told a manager a deadline three days gone was
-         still ahead of them. #}
       {# Four states, not three. A phase is settled when an admin resolves
          it, not when the clock passes, so a window can sit closed for days
          with nothing having happened to it. That state used to fall through
@@ -157,8 +157,10 @@
           {% else %}<span class="pill">upcoming</span>{% endif %}
         </h3>
         {# When the round runs. Part of naming it rather than a message
-           about it, so it sits with the title and above the player. #}
-        <p class="tm">{{ ph.opens_at.strftime("%b %d") }} &ndash; {{ ph.closes_at.strftime("%b %d") }}</p>
+           about it, so it sits with the title and above the player. Built in
+           Python because the dates are league dates, not UTC ones, and
+           because strftime's day format is not portable. #}
+        <p class="tm">{{ ph.dates }}</p>
 
         {# Who is in the round. #}
         {% if ph.submission %}
