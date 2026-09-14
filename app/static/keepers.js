@@ -6,21 +6,49 @@
   var byId = {};
   players.forEach(function (p) { byId[String(p.id)] = p; });
 
-  var radios = Array.prototype.slice.call(document.querySelectorAll(".assign"));
+  // One select per round, in the round's own card. Choosing is done there
+  // now; the table below is a list of who is left and where they have gone.
+  var picks = Array.prototype.slice.call(document.querySelectorAll(".phase-pick"));
   var voids = Array.prototype.slice.call(document.querySelectorAll(".void-box"));
   var modal = document.getElementById("modal");
   var openFor = null;
+
+  // The chosen player per round, keyed by round number. Seeded from the
+  // hidden fields the server renders from a saved plan, so a reload comes
+  // back with the plan you left.
+  var chosen = {};
+  picks.forEach(function (s) {
+    var f = document.querySelector(".pick-field[data-phase='" + s.dataset.phase + "']");
+    if (f && f.value) { chosen[s.dataset.phase] = f.value; }
+  });
 
   function field(cls, phase) {
     return document.querySelector("." + cls + "[data-phase='" + phase + "']");
   }
 
   function assigned() {
-    var out = {};
-    radios.forEach(function (r) {
-      if (r.checked) { out[r.dataset.phase] = r.dataset.id; }
+    return chosen;
+  }
+
+  // Rebuild every round's options from the players not spoken for elsewhere,
+  // which is what makes the list shrink as you fill rounds in.
+  function fillSelects() {
+    picks.forEach(function (s) {
+      var phase = s.dataset.phase;
+      var mine = chosen[phase] || "";
+      var html = "<option value=''>choose a keeper…</option>";
+      players.forEach(function (p) {
+        var id = String(p.id);
+        var elsewhere = Object.keys(chosen).some(function (n) {
+          return n !== phase && chosen[n] === id;
+        });
+        if (elsewhere) { return; }
+        html += "<option value='" + id + "'" + (mine === id ? " selected" : "") +
+                ">R" + p.cost + " " + p.name + "</option>";
+      });
+      s.innerHTML = html;
+      s.value = mine;
     });
-    return out;
   }
 
   function openModal(phase, id) {
@@ -50,10 +78,10 @@
   }
 
   function cancelModal() {
+    // Backing out of the term question undoes the choice that asked it: a
+    // must-sign keeper with no term is not a keeper.
     if (openFor !== null && !field("term-field", openFor).value) {
-      radios.forEach(function (r) {
-        if (r.dataset.phase === openFor) { r.checked = false; r.dataset.wasChecked = "0"; }
-      });
+      delete chosen[openFor];
     }
     modal.hidden = true;
     openFor = null;
@@ -131,20 +159,23 @@
       var slot = document.querySelector(".slot-fill[data-phase='" + phase + "']");
       if (slot) { slot.innerHTML = "<b>R" + rd + " " + p.name + "</b>"; }
 
-      var note = "R" + rd;
-      if (rd !== p.cost) { note += " <span class='tm'>from R" + p.cost + "</span>"; }
+      // The table's last column answers "where did I put this one", so the
+      // round of choosing leads and everything else sits under it in one
+      // block rather than breaking across three lines.
+      var detail = "R" + rd + (rd !== p.cost ? ", from R" + p.cost : "");
       if (p.state === "must_sign") {
         var t = field("term-field", phase).value;
         if (!t) {
           problems.push(p.name + " needs a contract term.");
-          note += " <button type='button' class='term-btn needed' data-phase='" +
-                  phase + "' data-id='" + id + "'>Choose term</button>";
+          detail += " <button type='button' class='term-btn needed' data-phase='" +
+                    phase + "' data-id='" + id + "'>Choose term</button>";
         } else {
-          note += " &middot; " + (t === "1" ? "1 yr" : "3 yr then R" + p.later) +
-                  " <button type='button' class='term-btn edit' data-phase='" +
-                  phase + "' data-id='" + id + "'>Edit</button>";
+          detail += " &middot; " + (t === "1" ? "1 yr" : "3 yr then R" + p.later) +
+                    " <button type='button' class='term-btn edit' data-phase='" +
+                    phase + "' data-id='" + id + "'>Edit</button>";
         }
       }
+      var note = "Round " + phase + "<span class='tm'>" + detail + "</span>";
       var cell = document.querySelector(".term-line[data-id='" + id + "']");
       if (cell) { cell.innerHTML = note; }
 
@@ -187,27 +218,25 @@
     var warn = document.getElementById("warn");
     warn.innerHTML = problems.join("<br>");
     warn.className = problems.length ? "note error" : "note";
+
+    // Last, so the options reflect what was just decided: a player placed in
+    // one round drops out of the others' lists.
+    fillSelects();
   }
 
-  radios.forEach(function (r) {
-    r.addEventListener("click", function () {
-      if (r.dataset.wasChecked === "1") {
-        r.checked = false;
-        r.dataset.wasChecked = "0";
-        field("term-field", r.dataset.phase).value = "";
-        render();
-        return;
+  picks.forEach(function (s) {
+    s.addEventListener("change", function () {
+      var phase = s.dataset.phase;
+      if (s.value) {
+        chosen[phase] = s.value;
+      } else {
+        delete chosen[phase];
       }
-      radios.forEach(function (o) {
-        if (o.dataset.phase === r.dataset.phase) { o.dataset.wasChecked = "0"; }
-      });
-      r.dataset.wasChecked = "1";
-      field("term-field", r.dataset.phase).value = "";
+      field("term-field", phase).value = "";
       render();
-      var p = byId[r.dataset.id];
-      if (p && p.state === "must_sign") { openModal(r.dataset.phase, r.dataset.id); }
+      var p = byId[s.value];
+      if (p && p.state === "must_sign") { openModal(phase, s.value); }
     });
-    if (r.checked) { r.dataset.wasChecked = "1"; }
   });
 
   voids.forEach(function (v) { v.addEventListener("change", render); });
@@ -215,7 +244,7 @@
   var clear = document.getElementById("clear");
   if (clear) {
     clear.addEventListener("click", function () {
-      radios.forEach(function (r) { r.checked = false; r.dataset.wasChecked = "0"; });
+      chosen = {};
       document.querySelectorAll(".term-field").forEach(function (t) { t.value = ""; });
       render();
     });

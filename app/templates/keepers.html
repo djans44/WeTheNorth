@@ -148,6 +148,15 @@
           <input type="hidden" name="p{{ ph.n }}_term" class="term-field"
                  data-phase="{{ ph.n }}" value="{{ ph.planned_term or '' }}">
           {% if editable %}
+            {# Choosing happens here, in the round it belongs to. It used to
+               happen in the table below, in a grid of radio columns headed
+               K1 K2 K3 -- which asked you to hold the round in your head
+               while reading a list of players. app.js rebuilds these options
+               on every change, so a player you have put in one round stops
+               being offered in the others. #}
+            <select class="phase-pick" data-phase="{{ ph.n }}">
+              <option value="">choose a keeper&hellip;</option>
+            </select>
             <button type="submit" class="submit-phase" formaction="/keepers/submit"
                     name="phase" value="{{ ph.n }}"
                     {% if not ph.is_open and not is_admin %}disabled{% endif %}>
@@ -174,15 +183,14 @@
   {% if ns.open and editable %}
   <section>
     <h2>Available to keep</h2>
-    <p class="note">Assign a player to a phase. Rounds already used are skipped
-      automatically, so a clash moves the later pick to an earlier round.
-      Click a selected button again to clear it.</p>
+    <p class="note">Everyone you could still keep, and where you have put
+      them. Rounds already used are skipped, so a clash moves the later pick
+      to an earlier round.</p>
     <table class="keepers picker-table">
       <thead>
         <tr>
           <th>Player</th><th>Pos</th><th>Cost</th><th>Basis</th>
-          {% for ph in ns.open %}<th class="ph-col">K{{ ph.n }}</th>{% endfor %}
-          <th class="name">Result</th>
+          <th class="name">Kept in</th>
         </tr>
       </thead>
       <tbody>
@@ -192,19 +200,14 @@
           <td>{{ c.position }}</td>
           <td class="rd">R{{ c.cost_round }}</td>
           <td class="tm">{{ c.basis_source }}{% if c.state == "must_sign" %} &middot; needs term{% endif %}</td>
-          {% for ph in ns.open %}
-            <td class="ph-col">
-              <input type="radio" class="assign" name="phase{{ ph.n }}"
-                     data-phase="{{ ph.n }}" data-id="{{ c.player_id }}"
-                     {% if c.player_id == ph.planned_id %}checked{% endif %}>
-            </td>
-          {% endfor %}
           <td class="term-line" data-id="{{ c.player_id }}"></td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
-    <button type="button" class="ghost" id="clear">Clear all</button>
+    <p class="actionrow">
+      <button type="button" class="seal" id="clear">Clear all rounds</button>
+    </p>
   </section>
   {% endif %}
 

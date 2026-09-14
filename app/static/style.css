@@ -1218,7 +1218,14 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    that everywhere else on the site. */
 .results tbody td.reserved { background: var(--mark-hold); font-style: italic; }
 
-.picker-table .ph-col { width: 3rem; text-align: center; }
+/* The round's own chooser, inside its card. Full width because the card is
+   narrow and a player's name is not. */
+.phase-pick {
+  width: 100%;
+  margin-top: var(--s2);
+  font-size: var(--t-sm);
+  padding: 0.2rem 0.25rem;
+}
 .picker-table tr.picked { background: var(--gold-ghost); }
 .picker-table .term-line { font-size: var(--t-sm); white-space: nowrap; text-align: left; }
 
