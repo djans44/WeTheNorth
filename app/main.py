@@ -368,6 +368,33 @@ def title_lineage(rows):
     return sorted(out.values(), key=lambda t: t["sort_order"])
 
 
+def rings_from(titles):
+    """One ring per manager, from crest rows already in sort order.
+
+    setdefault keeps the same one the live ring would -- lowest sort_order
+    first, and the page lists the rest. An empty result is meaningful: a
+    season still being played has no snapshot to dress itself in, and the
+    caller leaves the rings unset so today's are used.
+    """
+    rings = {}
+    for c in titles:
+        rings.setdefault(c["owner_id"], {"code": c["code"], "name": c["name"],
+                                         "colour": c["colour"]})
+    return rings
+
+
+def season_rings(conn, year):
+    """What each manager wore when that season closed."""
+    return rings_from(query(conn, """
+        select c.code, c.name, c.colour, o.owner_id
+        from owner_crests oc
+        join crests c on c.crest_id = oc.crest_id
+        join owners o on o.owner_id = oc.owner_id
+        where oc.season_year = %s and oc.week is null and c.standing = 'held'
+        order by c.sort_order
+    """, (year,)))
+
+
 def season_roll(rows):
     """A season's honour roll: the titles it closed holding, then what it
     handed out.
@@ -1309,10 +1336,7 @@ def season(request: Request, year: int):
     # A season still being played has no snapshot to dress itself in, and the
     # empty map is left unset rather than passed: today's rings are the right
     # answer for today's season.
-    rings = {}
-    for c in titles:
-        rings.setdefault(c["owner_id"], {"code": c["code"], "name": c["name"],
-                                         "colour": c["colour"]})
+    rings = rings_from(titles)
     token = _page_rings.set(rings) if rings else None
     try:
         return templates.TemplateResponse(
@@ -3019,6 +3043,11 @@ def draft_order(request: Request, season: int = 0, msg: str = "", error: str = "
         # Shown so the weighting is checkable rather than taken on trust.
         _, _, finishes, weights, newcomers = lottery_entry(conn, season)
 
+        # The same as the draft prep and season pages: a sigil here wears
+        # what its manager held when the season being looked at closed, not
+        # what they hold today.
+        rings = season_rings(conn, season)
+
     for r in rows:
         r["finish"] = finishes.get(r["owner_id"])
         r["ballots"] = weights.get(r["owner_id"])
@@ -3037,14 +3066,20 @@ def draft_order(request: Request, season: int = 0, msg: str = "", error: str = "
         at = next(i for i, r in enumerate(rows) if r["is_on_the_clock"])
         on_deck = next((r for r in rows[at + 1:] if not r["slot"]), None)
 
-    return templates.TemplateResponse(
-        request=request, name="draft_order.html",
-        context={"years": years, "season": season, "rows": rows,
-                 "slots": list(range(1, team_count + 1)), "taken": taken,
-                 "on_clock": on_clock, "on_deck": on_deck, "my_turn": my_turn,
-                 "chosen": len(taken), "entrants": len(rows),
-                 "ballot_total": ballot_total, "prev_season": season - 1,
-                 "is_admin": is_admin, "me": me, "msg": msg, "error": error})
+    token = _page_rings.set(rings) if rings else None
+    try:
+        return templates.TemplateResponse(
+            request=request, name="draft_order.html",
+            context={"years": years, "season": season, "rows": rows,
+                     "slots": list(range(1, team_count + 1)), "taken": taken,
+                     "on_clock": on_clock, "on_deck": on_deck,
+                     "my_turn": my_turn, "chosen": len(taken),
+                     "entrants": len(rows), "ballot_total": ballot_total,
+                     "prev_season": season - 1, "is_admin": is_admin,
+                     "me": me, "msg": msg, "error": error})
+    finally:
+        if token is not None:
+            _page_rings.reset(token)
 
 
 @app.post("/draft-order/pick")
@@ -3360,6 +3395,14 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
                   and s.player_id is not null
             """, (season,))
 
+        # Every sigil on the page wears what its manager held when this
+        # season closed, the way the season page does. Without it a board
+        # from 2023 came out wearing today's crowns, which is a different
+        # story about a draft that happened three years ago. A season still
+        # being played returns nothing here and keeps today's rings, which
+        # is the right answer for it.
+        rings = season_rings(conn, season)
+
         # Placeholders live in the reader's own session, not the database.
         # They are a what-if -- "say Chris keeps Mahomes at R1, where does
         # that leave my third round" -- and a what-if one person is trying
@@ -3510,15 +3553,20 @@ def draft_prep(request: Request, season: int = 0, msg: str = "", error: str = ""
         row["kept"] = len(row["contracts"]) + len(row["keepers"]) + len(row["holds"])
         row["room"] = max(0, keeper_count - row["kept"])
 
-    return templates.TemplateResponse(
-        request=request, name="draft_prep.html",
-        context={"years": years, "season": season, "entrants": entrants,
-                 "columns": columns, "board": board, "by_owner": by_owner,
-                 "chosen": len(holder), "team_count": team_count,
-                 "held_count": len(holds),
-                 "free_slots": free_slots, "mock": mock,
-                 "keeper_count": keeper_count, "finished": finished,
-                 "msg": msg, "error": error})
+    token = _page_rings.set(rings) if rings else None
+    try:
+        return templates.TemplateResponse(
+            request=request, name="draft_prep.html",
+            context={"years": years, "season": season, "entrants": entrants,
+                     "columns": columns, "board": board, "by_owner": by_owner,
+                     "chosen": len(holder), "team_count": team_count,
+                     "held_count": len(holds),
+                     "free_slots": free_slots, "mock": mock,
+                     "keeper_count": keeper_count, "finished": finished,
+                     "msg": msg, "error": error})
+    finally:
+        if token is not None:
+            _page_rings.reset(token)
 
 
 @app.post("/draft-prep/placeholder")
