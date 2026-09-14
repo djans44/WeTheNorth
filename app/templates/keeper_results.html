@@ -82,7 +82,12 @@
               <td class="kept{% if c and not c.settled %} reserved{% endif %}">
                 {% if c %}
                   <b>R{{ c.round }}</b> {{ c.name }}
-                  {% if c.contract %}<span class="tm">contract</span>{% endif %}
+                  {% if c.contract %}
+                    {# Which year of the term, out of how many. A one-year
+                       contract reads 1/1; a three-year one counts up to
+                       3/3, which is as far as the rules go. #}
+                    <span class="tm">contract{% if c.year %} {{ c.year }}/{{ c.years }}{% endif %}</span>
+                  {% endif %}
                 {% else %}
                   <span class="tm">&mdash;</span>
                 {% endif %}

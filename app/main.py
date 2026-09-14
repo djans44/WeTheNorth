@@ -1950,6 +1950,21 @@ def keeper_grid(conn, season, finished, phases):
     """
     grid = {}
 
+    def term(r):
+        """Which year of a contract this is, out of how many.
+
+        A one-year contract reads 1/1 and a three-year one 1/3 through 3/3,
+        which is the whole of what there is: the rules allow those two
+        lengths and nothing else. A keeper in their first year has no
+        contract yet and gets neither number.
+        """
+        years, year = r.get("contract_years"), r.get("contract_year")
+        on = r.get("contract_id") is not None
+        fits = bool(years and year and 1 <= year <= years)
+        return {"contract": on, "inferred": finished,
+                "year": year if fits else None,
+                "years": years if fits else None}
+
     def put(oid, phase, cell):
         if phase and phase <= phases:
             grid.setdefault(oid, {})[phase] = cell
@@ -1957,7 +1972,8 @@ def keeper_grid(conn, season, finished, phases):
     if finished:
         rows = query(conn, """
             select t.owner_id, ks.cost_round, ks.keeper_year, p.full_name,
-                   ks.contract_id,
+                   ks.contract_id, kc.contract_years,
+                   ks.season_year - kc.signed_season + 1 as contract_year,
                    kc.signed_season + kc.contract_years - 1 as final_season
             from keeper_selections ks
             join teams t on t.team_id = ks.team_id
@@ -1975,30 +1991,34 @@ def keeper_grid(conn, season, finished, phases):
                 -((r["final_season"] or season) - season + 1),
                 r["cost_round"], r["full_name"]))
             for i, r in enumerate(mine, start=1):
-                put(oid, i, {"name": r["full_name"], "round": r["cost_round"],
-                             "contract": r["contract_id"] is not None,
-                             "settled": True, "inferred": True})
+                put(oid, i, dict(term(r), name=r["full_name"],
+                                 round=r["cost_round"], settled=True))
     else:
         for r in query(conn, """
-            select owner_id, phase, cost_round, p.full_name
+            select k.owner_id, k.phase, k.cost_round, k.contract_id,
+                   p.full_name, kc.contract_years,
+                   k.season_year - kc.signed_season + 1 as contract_year
             from keeper_phase_plan k
             join players p on p.player_id = k.player_id
+            join keeper_contracts kc on kc.contract_id = k.contract_id
             where k.season_year = %s
         """, (season,)):
             put(r["owner_id"], r["phase"],
-                {"name": r["full_name"], "round": r["cost_round"],
-                 "contract": True, "settled": False, "inferred": False})
+                dict(term(r), name=r["full_name"], round=r["cost_round"],
+                     settled=False))
         for r in query(conn, """
-            select s.owner_id, s.phase, s.cost_round, s.contract_id, p.full_name
+            select s.owner_id, s.phase, s.cost_round, s.contract_id,
+                   p.full_name, kc.contract_years,
+                   s.season_year - kc.signed_season + 1 as contract_year
             from keeper_submissions s
             join players p on p.player_id = s.player_id
+            left join keeper_contracts kc on kc.contract_id = s.contract_id
             where s.season_year = %s and s.status = 'approved'
               and s.player_id is not null
         """, (season,)):
             put(r["owner_id"], r["phase"],
-                {"name": r["full_name"], "round": r["cost_round"],
-                 "contract": r["contract_id"] is not None,
-                 "settled": True, "inferred": False})
+                dict(term(r), name=r["full_name"], round=r["cost_round"],
+                     settled=True))
     return grid
 
 
