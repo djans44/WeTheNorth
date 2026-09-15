@@ -92,7 +92,7 @@
     <h2>Contracts</h2>
     <p class="note">Each fills a phase automatically. Voiding frees the slot and
       obliges a defence pick. Voids are declared in phase 1.</p>
-    <table class="keepers">
+    <table class="keepers contract-table">
       <thead><tr><th>Player</th><th>Cost</th><th>Through</th><th>Void</th></tr></thead>
       <tbody>
       {% for c in ctx.contracts %}
@@ -315,21 +315,27 @@
     <table class="keepers picker-table">
       <thead>
         <tr>
-          <th class="name">Player</th><th>Pos</th><th>Cost</th><th>Basis</th>
+          <th class="name">Player</th><th>Pos</th><th>Cost</th>
         </tr>
       </thead>
       <tbody>
       {% for c in ctx.choices %}
         <tr data-id="{{ c.player_id }}">
-          <td class="name">{{ c.full_name }}</td>
+          {# Basis sits under the name rather than in a column of its own.
+             As a fourth column it was the one a phone cut off, and the cut
+             landed mid-word on "needs term" -- the part that tells an owner
+             a contract term is still owed. Under the name it is always
+             read, and the table keeps three columns at every width. The
+             position does the same thing in the contracts table above.
+
+             .tm on the cell would set display:block and take the td out of
+             the table, which is how this column drifted out of line with
+             its neighbours before. The class belongs on the span. #}
+          <td class="name">{{ c.full_name }}
+            <span class="tm">{{ c.basis_source }}
+              {%- if c.state == "must_sign" %} &middot; needs term{% endif %}</span></td>
           <td>{{ c.position }}</td>
           <td class="rd">R{{ c.cost_round }}</td>
-          {# .tm on the cell sets display:block, which takes a td out of the
-             table: the last column drifted out of line with the four beside
-             it. The class belongs on something inside the cell. The same
-             fault the keeper results grid had. #}
-          <td><span class="tm">{{ c.basis_source }}
-            {%- if c.state == "must_sign" %} &middot; needs term{% endif %}</span></td>
         </tr>
       {% endfor %}
       </tbody>

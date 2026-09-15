@@ -2420,6 +2420,21 @@ button.seal[disabled]:hover {
     overflow-x: visible;
   }
 
+  /* The contracts table wraps rather than scrolls. Its last column is the
+     void control, and on the blanket rule it sat off the right edge: what
+     showed was a bare checkbox with no header and no label beside it, for
+     the one act on this page the commissioner has to undo. The picker
+     opposite it needs none of this -- its basis note sits under the name
+     rather than in a column, so three columns fit unaided. */
+  .page .contract-table { display: table; white-space: normal; }
+  /* .void sets its own nowrap and a direct rule beats an inherited one, so
+     without this the cell keeps demanding the 146px that caused the cut. */
+  .page .contract-table .void { white-space: normal; }
+  /* 12rem of the 375px available went on the name, which left the void
+     label wrapping to four lines and the row 149px tall. The picker keeps
+     the wider name: it wants the room and has no control to fight for it. */
+  .page .contract-table .name { min-width: 6rem; }
+
   /* Champions: five columns need 628px and there are 319. Dropping columns
      cannot save it -- the season and the champion alone are 206px, and the
      runner-up takes it past the edge -- so each season stacks into a block
