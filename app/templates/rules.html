@@ -2,28 +2,95 @@
 {% block title %}Rules | We the North{% endblock %}
 
 {% block content %}
+{# The rail the season, history and manager pages carry: one icon per
+   section, widening on hover to name it, plain anchors so it still works as
+   jump links with the script off. Below 74rem it becomes a strip across the
+   top and the labels stay open, because a strip has room and touch has no
+   hover.
+
+   Seven entries, which is why the page is seven sections. It used to be
+   eleven behind a flat contents list, and eleven in that strip is 34px each
+   at phone width -- the labels would be unreadable and `nowrap` would push
+   the page sideways. The four keeper sub-topics belong under Keepers anyway.
+
+   The shield and the hand are the season page's own: crests and keepers mean
+   the same thing on both pages and should not be drawn twice. #}
+<nav class="sectionnav" aria-label="Sections of this page">
+  <a href="#league">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M5 3v14M5 3.6h10l-2.2 3.2L15 10H5z"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>League</span>
+  </a>
+  <a href="#playoffs">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M3 4h4v4H3M7 6h3M3 12h4v4H3M7 14h3M10 6v8M10 10h6"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Playoffs</span>
+  </a>
+  <a href="#keepers">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <rect x="2.5" y="9" width="3.2" height="7.5" rx="0.6"
+            fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M5.7 9.2l3.1-5.7a1.7 1.7 0 0 1 1.7 2.3L9.8 8.4h4.7a1.7 1.7 0 0 1 1.6 2.2
+               l-1.3 4.4a1.7 1.7 0 0 1-1.6 1.5H5.7"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Keepers</span>
+  </a>
+  <a href="#draft">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M3 4h14v12H3zM3 8h14M3 12h14M8 4v12M13 4v12"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Draft</span>
+  </a>
+  <a href="#rivalries">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M4.5 4.5l8 8M15.5 4.5l-8 8"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linecap="round"/>
+      <path d="M11.5 14.5l2.2 2.2 2-2-2.2-2.2zM8.5 14.5l-2.2 2.2-2-2 2.2-2.2z"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Rivalries</span>
+  </a>
+  <a href="#crests">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M10 2.6l6.2 2.2v5.4c0 3.4-2.9 5.9-6.2 7.2-3.3-1.3-6.2-3.8-6.2-7.2V4.8z"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+      <path d="M10 7.4l1.2 2.5 2.6.4-1.9 1.8.5 2.6L10 13.5l-2.4 1.2.5-2.6L6.2 10.3l2.6-.4z"
+            fill="none" stroke="currentColor" stroke-width="1.1"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Crests</span>
+  </a>
+  <a href="#joining">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M4 3.5h6.5v13H4z"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+      <path d="M10.5 10h6M14 7l3 3-3 3"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/>
+    </svg>
+    <span>Joining</span>
+  </a>
+</nav>
 <div class="page">
   <header class="page-head">
     <h1>Rules</h1>
     <p class="lede">Everything the league runs on. The keeper rules are the
       intricate part &mdash; the rest is mostly bookkeeping.</p>
   </header>
-
-  <section>
-    <ul class="contents">
-      <li><a href="#league">The league</a></li>
-      <li><a href="#season">The season</a></li>
-      <li><a href="#playoffs">Playoffs</a></li>
-      <li><a href="#keepers">Keepers</a></li>
-      <li><a href="#contracts">Contracts</a></li>
-      <li><a href="#voids">Voiding a contract</a></li>
-      <li><a href="#phases">Choosing your keepers</a></li>
-      <li><a href="#draft">Draft order and the board</a></li>
-      <li><a href="#rivalries">Rivalries</a></li>
-      <li><a href="#crests">Crests of honour</a></li>
-      <li><a href="#joining">Joining and leaving</a></li>
-    </ul>
-  </section>
 
   <section id="league">
     <h2>The league</h2>
@@ -32,10 +99,8 @@
     <p>Starters are QB, two WR, two RB, a TE, a W/R/T and a Q/W/R/T, plus a
       defence. Four bench spots and two IR. <b>There is no kicker slot.</b></p>
     <p>The draft is 13 rounds, snake order.</p>
-  </section>
 
-  <section id="season">
-    <h2>The season</h2>
+    <h3 id="season">The season</h3>
     <p>Fourteen weeks of regular season, then three weeks of playoffs.</p>
     <p>Each manager plays three opponents twice and the other eight once. The
       doubled-up pairings favour whoever you have faced least often, so the
@@ -112,10 +177,8 @@
       shifts.</p>
     <p class="note">Which means two round-one keepers are impossible. There is
       nowhere earlier to go.</p>
-  </section>
 
-  <section id="contracts">
-    <h2>Contracts</h2>
+    <h3 id="contracts">Contracts</h3>
     <p>At the start of a player's second keeper year you sign him for one year
       or for three.</p>
     <ul class="ruleset">
@@ -134,10 +197,8 @@
       player and you inherit the terms exactly as they stand. The commissioner
       will block any trade that would leave a manager holding a fourth
       contracted player.</p>
-  </section>
 
-  <section id="voids">
-    <h2>Voiding a contract</h2>
+    <h3 id="voids">Voiding a contract</h3>
     <p>The only way out of a contract.</p>
     <ul class="ruleset">
       <li>The slot frees up immediately &mdash; you may still keep
@@ -152,10 +213,8 @@
     <p>Voids must be declared during the first keeper phase, and have their own
       submit button. <b>A void you tick but never submit is discarded</b> when
       that phase resolves, and the contract stands.</p>
-  </section>
 
-  <section id="phases">
-    <h2>Choosing your keepers</h2>
+    <h3 id="phases">Choosing your keepers</h3>
     <p>Selection runs in three phases, one keeper each, each with its own
       submission window.</p>
     <ul class="ruleset">
