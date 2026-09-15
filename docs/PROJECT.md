@@ -560,6 +560,29 @@ first on its line. PowerShell has **no triple-quoted strings**. `.Replace()`
 fails **silently** when the pattern does not match, so always verify with
 `Select-String` afterwards.
 
+**Tables on a phone.** Inside `@media (max-width: 48rem)`, `.page table`
+already gives every table in a `.page` `display: block; overflow-x: auto;
+white-space: nowrap`, so a wide table scrolls inside itself and never pushes
+the document sideways. `.scroller` is **not** baseline overflow protection: it
+is the opt-in for the frozen-first-column treatment, and the blanket rule
+exempts it so the two do not nest. A table outside one is not thereby broken.
+What the blanket rule *does* cause is a **cut last column** -- `nowrap` holds
+every cell on one line, so columns to the right go off the edge with nothing
+to signal it. That is what to look for at 390px, not page overflow. `/keepers`
+had it in both tables, and in one it left a bare unlabelled checkbox as the
+only visible part of a control the commissioner has to undo.
+
+**Measuring a page at phone width.** Chrome will not open a window narrower
+than about 500px on Windows, so size a same-origin **iframe** to 390x844 and
+measure inside it -- the media queries evaluate against the iframe's own
+viewport. `documentElement.scrollWidth - clientWidth` is page overflow;
+`table.scrollWidth - table.clientWidth` is what a table is hiding. It works
+headless via `--dump-dom` when the browser extension is not connected. For a
+page behind sign-in, sign the session cookie directly rather than typing an
+address into the form. Use a fresh `--user-data-dir` each run: `static_url`
+stamps `?v=` from the file's mtime, so an edited stylesheet keeps the old URL
+and Chrome serves the cached copy.
+
 **`.gitattributes`** normalises line endings to LF. Without it, Windows CRLF
 produces phantom diffs and breaks on Render's Linux boxes.
 
