@@ -225,6 +225,10 @@
     <p>Voids must be declared during <b>Keeper Round 1</b>, and have their own
       submit button. <b>A void you tick but never submit is discarded</b> when
       that round resolves, and the contract stands.</p>
+    <p>Until you submit that void or clear it, <b>your Keeper Round 1 keeper
+      will not submit either</b>. Voiding changes which rounds are free, so the
+      two cannot be settled in either order. Saving your plan still works, and
+      Keeper Rounds 2 and 3 are unaffected.</p>
 
     {# The id stays "phases" though nothing here says the word any more: the
        rail commit kept every old anchor working and this is one of them. #}
