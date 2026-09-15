@@ -9,7 +9,7 @@ then start the next. Nothing here is in flight.
 Done and removed: the player-scoring note, now
 `docs/features/player-scoring.md`; the `/draft-order` audit and everything it
 turned up, twelve commits; the `/draft-prep` audit, eight; the `/keepers`
-audit, four. All three pages are finished.
+audit, four; the `/rules` audit, seven. All four pages are finished.
 
 Two things came out of `/draft-prep` that belong to the whole site rather than
 to that page: the connection pool, written up in `PROJECT.md`, and per-season
@@ -17,11 +17,21 @@ sigil rings on both draft pages. The admin pages that carry a season picker
 still wear today's crowns on an old season -- worth taking under each of their
 own audits below.
 
-One thing came out of `/keepers` that the nine audits left should know: the
+One thing came out of `/keepers` that the eight audits left should know: the
 finding this list had recorded -- that neither keeper table was in a
 `.scroller` and both pushed the page sideways -- was wrong on both counts, and
 the real fault was a cut last column, which hid a control. `PROJECT.md`
 section 10 now carries what to look for instead, and how to measure it.
+`/rules` had the same fault in its playoff bracket, found by looking for it.
+
+Two things came out of `/rules` that the admin audits inherit. The three
+selection steps are **keeper rounds** everywhere an owner can read, matching
+what `/keepers` calls them, but `/admin/keepers` and `/admin/keepers/edit`
+still say Phase in a column header and several notes -- settle that under
+their own audits rather than half-changing it from elsewhere. And the page
+carries the seven-entry `.sectionnav` rail: it does not survive more than
+about seven entries, because below 74rem it becomes a strip and each entry
+gets a share of 375px.
 
 Also done and not from this list: **Keeper results**, a new page at
 `/keepers/results`. Who was kept, by manager and by keeper round, for any
@@ -105,23 +115,18 @@ than fail on a foreign key.
 
 ---
 
-**Items 5 to 13 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
+**Items 5 to 12 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
 page, say what is wrong with it, agree the changes, build them. **Each is its
-own item** — one audit, one conversation, one commit. Nine left of
-the twelve; `/draft-order`, `/draft-prep` and `/keepers` are done.
+own item** — one audit, one conversation, one commit. Eight left of
+the twelve; `/draft-order`, `/draft-prep`, `/keepers` and `/rules` are done.
 
-A design and usability audit rather than form validation. `/rules` has no
-inputs and is on the list, which settles which is meant.
+A design and usability audit rather than form validation. `/rules` was on
+the list and has no inputs at all, which settled which is meant.
 
-None of them has ever been looked at this way. The three pages that have were
-each worth a handful of real changes, so expect the same here.
+None of the eight left has ever been looked at this way. The four that have
+were each worth a handful of real changes, so expect the same here.
 
-## 5. Audit `/rules`
-
-Eleven sections now, and it grew a crests section without anyone looking at
-the whole. Read-only, so this is purely about whether it can be read.
-
-## 6. Audit `/admin/scores`
+## 5. Audit `/admin/scores`
 
 Entering a week. Saving replaces every matchup for that week, and it now
 recomputes the crests as well.
@@ -129,7 +134,7 @@ recomputes the crests as well.
 The one admin page used every week during a season, so it earns the most
 polish.
 
-## 7. Audit `/admin/keepers`
+## 6. Audit `/admin/keepers`
 
 Windows, review and phase resolution in one page. Approving and rejecting
 submissions, and running a resolution that turns plans into submissions.
@@ -137,18 +142,18 @@ submissions, and running a resolution that turns plans into submissions.
 Rejecting deletes and reopens rather than labelling, which is worth checking
 reads clearly, because it is destructive and does not look it.
 
-## 8. Audit `/admin/keepers/edit/{sid}`
+## 7. Audit `/admin/keepers/edit/{sid}`
 
 Overriding one submission. Notably, an admin override deliberately does not
 validate a round against the manager's other phases, so a duplicate round can
 be created — visible in the Settled table, blocked by nothing. PROJECT.md §9
 records this; the audit should decide whether the page says so.
 
-## 9. Audit `/admin/owners`
+## 8. Audit `/admin/owners`
 
 Team name, colour and initials for everyone in one pass.
 
-## 10. Audit `/admin/owners/{oid}`
+## 9. Audit `/admin/owners/{oid}`
 
 One owner, in detail. The only page with **no lede and no h1** worth the
 name, which is where the audit starts.
@@ -156,12 +161,12 @@ name, which is where the audit starts.
 Emails are edited here and they are the sign-in credential, so whatever it
 does with them matters more than it looks.
 
-## 11. Audit `/admin/rivals`
+## 10. Audit `/admin/rivals`
 
 Generated pairings with a preview, and a manual override validated for mutual
 pairings.
 
-## 12. Audit `/admin/schedule`
+## 11. Audit `/admin/schedule`
 
 The generator: fourteen weeks, three opponents twice and the rest once,
 rivalry week pinned, no pair in consecutive weeks. Saves into `matchups` with
@@ -170,12 +175,12 @@ null scores so score entry pre-fills.
 Destructive on save and the results are hard to eyeball, which is the thing
 to look at.
 
-## 13. Audit `/admin/crests`
+## 12. Audit `/admin/crests`
 
 The grant flow, built last. Worth an audit precisely because it is new and
 was never looked at with fresh eyes.
 
-## 14. Let the league vote on the four honours
+## 13. Let the league vote on the four honours
 
 Named in Song, Legend of the Choosing, The Bargain of the Age, The Red Week.
 The commissioner is the right mechanism but the wrong decider — they are
