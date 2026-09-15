@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import leaf %}
 {% block title %}Rules | We the North{% endblock %}
 
 {% block content %}
@@ -86,10 +87,21 @@
   </a>
 </nav>
 <div class="page">
-  <header class="page-head">
-    <h1>Rules</h1>
-    <p class="lede">Everything the league runs on. The keeper rules are the
-      intricate part &mdash; the rest is mostly bookkeeping.</p>
+  {# tight stuck, the head every long page carries. Ten screens at phone
+     width and the rail beside you the whole way, while the title scrolled
+     off at the first section and never came back.
+
+     tight rather than the standard head because the lede is gone. It said
+     the page was everything the league runs on, which the seven sections in
+     the rail now say, and that the keeper rules are the intricate part,
+     which the reader finds out by reading them. Every other page that took
+     this header dropped its lede for the same reason. #}
+  <header class="page-head tight stuck">
+    <h1>{{ leaf(20) }}Rules</h1>
+    {# Only reachable once the header has condensed, which is to say once
+       there is somewhere to go back from. A plain anchor, so it works with
+       the script off. #}
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section id="league">
