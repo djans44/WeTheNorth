@@ -154,7 +154,7 @@
       if (pf) { pf.value = id; }
 
       if (seen.indexOf(id) !== -1) {
-        problems.push(p.name + " is assigned to more than one phase.");
+        problems.push(p.name + " is assigned to more than one keeper round.");
         return;
       }
       seen.push(id);
@@ -346,7 +346,7 @@
   btn.addEventListener("click", function (e) {
     if (btn.dataset.hasplans !== "1") { return; }
     var ok = window.confirm(
-      "Submitting this void will erase your saved keeper plan for every phase, " +
+      "Submitting this void will erase your saved keeper plan for every round, " +
       "because voiding changes which rounds are available.\n\n" +
       "Your plan will need to be built again. Continue?");
     if (!ok) { e.preventDefault(); }

@@ -90,8 +90,8 @@
   {% if ctx.contracts %}
   <section>
     <h2>Contracts</h2>
-    <p class="note">Each fills a phase automatically. Voiding frees the slot and
-      obliges a defence pick. Voids are declared in phase 1.</p>
+    <p class="note">Each fills a keeper round automatically. Voiding frees the
+      slot and obliges a defence pick. Voids are declared in Keeper Round 1.</p>
     <table class="keepers contract-table">
       <thead><tr><th>Player</th><th>Cost</th><th>Through</th><th>Void</th></tr></thead>
       <tbody>
@@ -161,7 +161,7 @@
   {% endfor %}
 
   <section>
-    <h2>Phases</h2>
+    <h2>Keeper rounds</h2>
     {# The hour is the same for all three, so it is said once here rather than
        three times on the cards. Softly worded on purpose: the clock passing
        does not actually stop a plan, the commissioner resolving the round

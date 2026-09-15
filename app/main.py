@@ -3150,11 +3150,11 @@ async def submit_phase(request: Request):
             """, (season, phase))
             win = cur.fetchone()
             if not win:
-                err = "No such phase."
+                err = "No such keeper round."
             elif win["resolved_at"]:
-                err = f"Keeper {phase} has already closed."
+                err = f"Keeper Round {phase} has already closed."
             elif not win["is_open"] and not is_admin:
-                err = f"The Keeper {phase} window is not open."
+                err = f"The Keeper Round {phase} window is not open."
 
             if not err:
                 cur.execute("""
@@ -3162,7 +3162,7 @@ async def submit_phase(request: Request):
                     where season_year = %s and phase = %s and owner_id = %s
                 """, (season, phase, target))
                 if cur.fetchone():
-                    err = f"Keeper {phase} is already submitted."
+                    err = f"Keeper Round {phase} is already submitted."
 
             if not err and phase == 1:
                 cur.execute("""
@@ -3179,7 +3179,7 @@ async def submit_phase(request: Request):
                     where season_year = %s and owner_id = %s and phase = %s
                 """, (season, target, phase))
                 if cur.fetchone():
-                    err = (f"Keeper {phase} is filled by a contract. "
+                    err = (f"Keeper Round {phase} is filled by a contract. "
                            "It submits itself when the window closes.")
 
             planned = None
@@ -3191,7 +3191,7 @@ async def submit_phase(request: Request):
                 """, (season, target, phase))
                 planned = cur.fetchone()
                 if not planned or not planned["player_id"]:
-                    err = f"Choose a player for Keeper {phase} first."
+                    err = f"Choose a player for Keeper Round {phase} first."
 
             if not err:
                 cur.execute("""
@@ -3226,7 +3226,7 @@ async def submit_phase(request: Request):
 
     url = f"/keepers?season={season}&owner={target}"
     url += ("&error=" + quote(err) if err
-            else "&msg=" + quote(f"Keeper {phase} submitted and locked"))
+            else "&msg=" + quote(f"Keeper Round {phase} submitted and locked"))
     return RedirectResponse(url=url, status_code=303)
 
 
