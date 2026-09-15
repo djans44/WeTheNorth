@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img">
+  <title>We the North</title>
+  <!-- The weirwood leaf the page headings carry, drawn for a 16px tab: the
+       heading version is a 1px outline in currentColor, which at this size
+       collapses into a grey smudge. Filled gold on the iron ground instead,
+       with the vein knocked back out in the ground colour so the shape still
+       reads as a leaf rather than a blob. Same geometry as macros.html. -->
+  <rect width="24" height="24" fill="#16181d"/>
+  <g transform="translate(12 12) scale(1.15) translate(-12 -12)">
+    <path d="M12 3C8 7 5.5 10 5.5 13.5a6.5 6.5 0 0 0 13 0C18.5 10 16 7 12 3z"
+          fill="#d4ab48"/>
+    <path d="M12 7v12" fill="none" stroke="#16181d" stroke-width="1.3"
+          stroke-linecap="round"/>
+  </g>
+</svg>

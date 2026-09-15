@@ -1,1 +1,5 @@
 * text=auto eol=lf
+
+# Images are binary: never line-ending normalised, never diffed as text.
+*.png binary
+*.ico binary
