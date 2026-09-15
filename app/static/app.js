@@ -67,6 +67,45 @@
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
       publishNavHeight();
     });
+
+    // Each group gets its own chevron, closed to start with. Fully unfolded
+    // the menu is about thirty-seven rows for an admin -- twelve managers and
+    // five seasons on their own are seventeen -- which is why it had to cap
+    // its height and scroll inside itself. Closed, it is seven.
+    //
+    // A button beside the parent rather than the parent itself: every one of
+    // these labels is a real link to a real page, and Seasons going nowhere
+    // until you have opened and chosen would cost a tap to reach the page it
+    // already points at.
+    //
+    // Built here for the same reason the hamburger is: with the script off
+    // .collapsible is never set, the CSS that hides the submenus never
+    // applies, and the nav stays fully open exactly as it was.
+    var groups = siteNav.querySelectorAll(".has-menu");
+    for (var g = 0; g < groups.length; g++) {
+      (function (li) {
+        var sub = li.querySelector(".submenu");
+        // Document order, so this is the group's own link rather than one of
+        // the submenu's.
+        var parent = li.querySelector("a");
+        if (!sub || !parent) { return; }
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "subtoggle";
+        b.setAttribute("aria-expanded", "false");
+        b.setAttribute("aria-label", parent.textContent.trim());
+        b.innerHTML =
+          '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+          '<path d="M6 8l4 4 4-4" fill="none" stroke="currentColor" ' +
+          'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        b.addEventListener("click", function () {
+          var open = li.classList.toggle("open");
+          b.setAttribute("aria-expanded", open ? "true" : "false");
+          publishNavHeight();
+        });
+        li.insertBefore(b, sub);
+      }(groups[g]));
+    }
   }
 
   // ---- a sticky manager header condenses once it sticks ----

@@ -470,6 +470,9 @@ section:last-child { border-bottom: 0; }
 .sitenav .navtoggle:hover { color: var(--accent); border-color: var(--accent); }
 
 .sitenav .has-menu { position: relative; }
+/* The per-group chevron exists only behind the hamburger; on a wide screen
+   the submenus open on hover and there is nothing for it to do. */
+.sitenav .subtoggle { display: none; }
 
 .submenu {
   position: absolute;
@@ -2335,11 +2338,16 @@ button.seal[disabled]:hover {
     --pad-gutter:  1.1rem;
   }
 
-  /* Submenus open on hover, which does not exist on touch. Rather than drop
-     them, they unfold in place under their parent and stay open: the menu is
-     already behind a hamburger, and making someone tap twice more to reach a
-     season buys nothing. A rule down the left says what belongs to what,
-     since there is no panel to do it. */
+  /* Submenus open on hover, which does not exist on touch, so they unfold in
+     place under their parent instead. They used to unfold and stay open, on
+     the reasoning that the menu was already behind a hamburger and two more
+     taps to reach a season bought nothing. What that missed is the length:
+     thirty-seven rows for an admin, which is why the open menu had to cap
+     its height and scroll inside itself. Closed it is seven, and the scroll
+     is a fallback rather than the normal case.
+
+     A rule down the left says what belongs to what, since there is no panel
+     to do it. */
   .submenu {
     position: static;
     display: block;
@@ -2351,6 +2359,37 @@ button.seal[disabled]:hover {
     border-left: 1px solid var(--rule);
     box-shadow: none;
   }
+  /* Closed unless its group is open. Scoped to .collapsible, which app.js
+     sets: with the script off this never matches, the submenu keeps the
+     display:block above, and the nav stays fully open as it always did. */
+  .sitenav.collapsible .has-menu > .submenu { display: none; }
+  .sitenav.collapsible .has-menu.open > .submenu { display: block; }
+
+  /* The group becomes a row holding its link and its chevron, with the
+     submenu wrapping onto a line of its own. */
+  .sitenav.collapsible .has-menu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--s2);
+  }
+  .sitenav.collapsible .has-menu > .submenu { flex-basis: 100%; }
+  .sitenav.collapsible .subtoggle {
+    display: flex;
+    align-items: center;
+    padding: 0.2rem;
+    color: var(--ink-muted);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .sitenav.collapsible .subtoggle svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.15s ease;
+  }
+  .sitenav.collapsible .has-menu.open > .subtoggle svg { transform: rotate(180deg); }
+
   .submenu a { padding: 0.3rem 0; font-size: var(--t-sm); }
   .submenu a:hover { background: none; color: var(--accent); }
   .submenu .sep { margin-top: 0.3rem; padding-top: 0.3rem; }

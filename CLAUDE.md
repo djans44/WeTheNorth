@@ -162,8 +162,11 @@ add a modifier class — never repeat the block lower down.
   reason. Wide
   tables scroll inside themselves. Hover does not exist on touch, so nothing
   at that width may depend on it: the nav's submenus unfold in place inside
-  the hamburger rather than opening on hover, and the open menu scrolls
-  inside itself.
+  the hamburger rather than opening on hover, each behind its own chevron and
+  closed to start with. They used to unfold and stay open, which made the menu
+  forty rows and 1184px of content scrolling inside a 591px box; closed it is
+  ten rows and 243px, and the height cap is a fallback rather than the normal
+  case. The open menu still scrolls inside itself.
 - **Watch what the desktop rules leave switched on.** A narrow-screen
   override inherits everything not overridden, and two of those have already
   broken a layout: `flex-wrap: wrap` turned a height-capped nav column into
