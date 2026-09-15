@@ -2129,6 +2129,27 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .kept .term { display: block; margin: 0 0 0 1.9rem; }
 
 
+/* ---- new season checklist ---- */
+
+/* Numbered by the list rather than by a marker drawn in: the order is the
+   dependency order, which is the whole point of the page. */
+.setup { margin: 0; padding-left: 1.4rem; }
+.setup-step { margin-bottom: var(--s5); }
+.setup-step:last-child { margin-bottom: 0; }
+.setup-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0 0 0.2rem;
+}
+.setup-step p { margin: 0.15rem 0 0; }
+/* A step nobody can start yet is set back, so the eye lands on the ones that
+   can be acted on. Not hidden: knowing what is waiting is half the page. */
+.setup-step.blocked .setup-head b,
+.setup-step.blocked .tm { color: var(--ink-soft); }
+.setup-where { margin-top: var(--s2); font-size: var(--t-sm); }
+
 /* ---- rules ---- */
 
 .ruleset { margin: 0.9rem 0 0; padding-left: 1.2rem; }

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}New season | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <h1>New season</h1>
+    <p class="lede">Everything needed to stand up a league year, in the order
+      the code forces. Each generator reads the output of the one before it,
+      so a step that is not ready says what is in its way rather than
+      disappearing.</p>
+  </header>
+
+  <section>
+    <div class="pickhead">
+      {# none / set / live are the modifiers this component has: nothing yet,
+         settled, and the one that wants someone to act. #}
+      <p class="draftstate {% if done == total %}set{% elif done %}live{% else %}none{% endif %}">
+        <span>{{ done }} of {{ total }} done</span>
+        <span class="sub">{{ season }}</span>
+      </p>
+      <form method="get" action="/admin/season-setup" class="picker loadonpick">
+        <label for="season">Season</label>
+        <select id="season" name="season">
+          {% for y in years %}
+            <option value="{{ y }}" {% if y == season %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="seal">Load</button>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <ol class="setup">
+      {% for s in steps %}
+        <li class="setup-step {{ s.state }}">
+          <p class="setup-head">
+            <b>{{ s.title }}</b>
+            {% if s.state == "done" %}<span class="pill live">Done</span>
+            {% elif s.state == "part" %}<span class="pill">Part done</span>
+            {% elif s.state == "blocked" %}<span class="pill late">Waiting</span>
+            {% else %}<span class="pill">Ready</span>{% endif %}
+          </p>
+          <p class="tm">{{ s.detail }}</p>
+          {% if s.blockers %}
+            <ul class="ruleset">
+              {% for b in s.blockers %}<li>{{ b }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+          <p class="setup-where">
+            {% if s.link %}
+              <a href="{{ s.link }}{% if '?' not in s.link %}?season={{ season }}{% endif %}">{{ s.where }}</a>
+            {% else %}
+              <span class="tm">{{ s.where }}</span>
+            {% endif %}
+          </p>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+</div>
+{% endblock %}

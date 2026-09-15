@@ -4399,6 +4399,150 @@ def best_pairing(ids, score):
     return best["pairs"], best["total"]
 
 
+def season_setup_steps(conn, year):
+    """The eight steps that stand up a league year, in the order the code
+    forces, with what is done and what is in the way.
+
+    Written from docs/features/season-setup.md. The dependencies are real
+    rather than stylistic: each generator reads the output of the one before
+    it, which is why the page reports a blocked step instead of hiding it.
+    """
+    n = query(conn, """
+        select
+          (select count(*) from seasons     where season_year = %(y)s) as season_row,
+          (select team_count   from seasons where season_year = %(y)s) as team_count,
+          (select keeper_count from seasons where season_year = %(y)s) as keeper_count,
+          (select count(*) from teams       where season_year = %(y)s) as teams,
+          (select count(*) from player_adp  where season_year = %(y)s) as adp,
+          (select count(*) from rivalries   where season_year = %(y)s) as rivalries,
+          (select count(*) from matchups    where season_year = %(y)s and week <= 14) as sched,
+          (select count(*) from draft_order where season_year = %(y)s) as lottery,
+          (select count(slot) from draft_order where season_year = %(y)s) as slots,
+          (select count(*) from keeper_windows where season_year = %(y)s) as windows,
+          (select count(resolved_at) from keeper_windows where season_year = %(y)s) as resolved,
+          (select count(*) from draft_picks where season_year = %(y)s) as picks,
+          (select count(*) from rosters     where season_year = %(y)s - 1) as prev_rosters
+    """, {"y": year})[0]
+
+    size = n["team_count"] or 12
+    full_schedule = size // 2 * 14
+    teams_done = n["teams"] and n["teams"] == size
+
+    def step(num, title, where, link, state, detail, blockers=()):
+        return {"n": num, "title": title, "where": where, "link": link,
+                "state": state, "detail": detail, "blockers": list(blockers)}
+
+    steps = []
+
+    steps.append(step(
+        1, "The season row", "Still hand-written SQL -- the form belongs here", None,
+        "done" if n["season_row"] else "ready",
+        ("%s teams, %s keepers each" % (size, n["keeper_count"])
+         if n["season_row"] else
+         "Nothing exists for %s yet. Everything below hangs off this row." % year)))
+
+    no_season = ["The season row has to exist first"] if not n["season_row"] else []
+    steps.append(step(
+        2, "Owners and teams", "Still hand-written SQL -- the form belongs here", None,
+        "blocked" if no_season else ("done" if teams_done else "ready"),
+        ("%s of %s teams" % (n["teams"], size) if n["teams"] else
+         "No owner is assigned to %s yet." % year),
+        no_season))
+
+    steps.append(step(
+        3, "Import ADP", "scripts/import_adp_text.py", None,
+        "blocked" if no_season else ("done" if n["adp"] else "ready"),
+        ("%s players priced" % n["adp"] if n["adp"] else
+         "Needed before keeper rounds resolve, not just before the draft."),
+        no_season))
+
+    not_teams = [] if teams_done else ["Every team has to be assigned first"]
+    steps.append(step(
+        4, "Rivalries", "/admin/rivals", "/admin/rivals",
+        "blocked" if (no_season or not_teams) else
+        ("done" if n["rivalries"] >= size else "ready"),
+        ("%s pairings" % n["rivalries"] if n["rivalries"] else
+         "One rival each, mutual, nobody is two managers' rival."),
+        no_season + not_teams))
+
+    no_rivals = [] if n["rivalries"] >= size else ["Rivalries decide week 10"]
+    steps.append(step(
+        5, "Schedule", "/admin/schedule", "/admin/schedule",
+        "blocked" if (no_season or not_teams or no_rivals) else
+        ("done" if n["sched"] >= full_schedule else "ready"),
+        ("%s of %s games" % (n["sched"], full_schedule) if n["sched"] else
+         "Fourteen weeks, with week 10 pinned to the rivalries above."),
+        no_season + not_teams + no_rivals))
+
+    if not n["lottery"]:
+        six = "ready", "Nobody has drawn a ballot yet."
+    elif n["slots"] < size:
+        six = "part", "Lottery drawn. %s of %s slots chosen." % (n["slots"], size)
+    else:
+        six = "done", "All %s slots chosen." % size
+    steps.append(step(
+        6, "Draft order: lottery, then slots", "/draft-order", "/draft-order",
+        "blocked" if (no_season or not_teams) else six[0], six[1],
+        no_season + not_teams))
+
+    slots_done = n["slots"] >= size and n["lottery"] >= size
+    seven_block = list(no_season + not_teams)
+    if not n["adp"]:
+        seven_block.append(
+            "ADP is missing, and a 3-year contract signed without it prices "
+            "its later years at round 13 for good")
+    if not slots_done:
+        seven_block.append("Slots are chosen before keepers, so an owner "
+                           "knows where they draft from")
+    if not n["prev_rosters"]:
+        seven_block.append("Keeper eligibility is drawn from the %s "
+                           "end-of-season rosters, which are not loaded" % (year - 1))
+    if n["windows"] and n["resolved"] >= n["windows"]:
+        seven = "done", "All %s rounds resolved." % n["windows"]
+    elif n["windows"]:
+        seven = "part", "%s rounds set, %s resolved." % (n["windows"], n["resolved"])
+    else:
+        seven = "ready", "Three rounds, each with its own window."
+    steps.append(step(
+        7, "Keeper rounds", "/admin/keepers", "/admin/keepers",
+        "blocked" if seven_block else seven[0], seven[1], seven_block))
+
+    eight_block = list(no_season + not_teams)
+    if not slots_done:
+        eight_block.append("The board needs every slot chosen")
+    steps.append(step(
+        8, "Import the draft", "scripts/import_draft.py", None,
+        "blocked" if eight_block else ("done" if n["picks"] else "ready"),
+        ("%s picks" % n["picks"] if n["picks"] else
+         "After the draft happens, not during setup."),
+        eight_block))
+
+    return steps, n
+
+
+@app.get("/admin/season-setup", response_class=HTMLResponse)
+def admin_season_setup(request: Request, season: int = 0):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        rows = query(conn, "select season_year, is_complete from seasons order by season_year desc")
+        known = [r["season_year"] for r in rows]
+        # The year to offer next is one past the newest, so a season with no
+        # row of its own can still be chosen and stood up.
+        nxt = (max(known) + 1) if known else 2022
+        years = [nxt] + known
+        if not season:
+            unfinished = [r["season_year"] for r in rows if not r["is_complete"]]
+            season = unfinished[-1] if unfinished else nxt
+        steps, counts = season_setup_steps(conn, season)
+
+    done = sum(1 for s in steps if s["state"] == "done")
+    return templates.TemplateResponse(
+        request=request, name="admin_season_setup.html",
+        context={"years": years, "season": season, "steps": steps,
+                 "counts": counts, "done": done, "total": len(steps)})
+
+
 @app.get("/admin/rivals", response_class=HTMLResponse)
 def admin_rivals(request: Request, season: int = 0, preview: int = 0):
     if not request.session.get("is_admin"):
