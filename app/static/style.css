@@ -2422,6 +2422,20 @@ button.seal[disabled]:hover {
      the wider name: it wants the room and has no control to fight for it. */
   .page .contract-table .name { min-width: 6rem; }
 
+  /* The playoff bracket wraps rather than scrolls. Three columns needed
+     586px against 319, and the one cut off was "Everyone else" -- every game
+     the eight teams outside the bracket play, gone with nothing to say so.
+     Wrapped rather than stacked because the two columns are parallel tracks
+     and reading across the row is the point: two semifinals in week 16
+     while fifth place, eleventh place and two consolation games happen.
+     Stacked, that pairing becomes a list. Three rows, so the height a wrap
+     costs is bounded.
+
+     Scoped by section id, which is how these three tables are already
+     addressed further down this file. #playoffs table scores above the
+     blanket .page table without needing a class of its own. */
+  #playoffs table { display: table; white-space: normal; }
+
   /* Champions: five columns need 628px and there are 319. Dropping columns
      cannot save it -- the season and the champion alone are 206px, and the
      runner-up takes it past the edge -- so each season stacks into a block
