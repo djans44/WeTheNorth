@@ -1270,6 +1270,14 @@ def current_season():
 # afterwards, so those rows are not part of being "still alive".
 CHAMP_ROUNDS = ("quarterfinal", "semifinal", "championship")
 
+# What being top of the pile is worth, said as the crest it is heading for
+# rather than as a position. The league knows its crests, and "leads the
+# league" says nothing a reader cannot already see in the table below.
+# Warden of the North is the best regular-season record, which is what the
+# table is ordered on; Crowned is the championship game.
+WARDEN_PACE = "on course for Warden of the North"
+CROWN_PACE = "on course for Crowned"
+
 
 def still_alive(games, week):
     """Managers who can still win the championship going into `week`.
@@ -1550,9 +1558,28 @@ def season(request: Request, year: int, week: str | None = None):
             seeds = playoff_labels(standings, remaining)
 
         def champion_of(y):
+            """The champion of a season, and the title they wore at its close.
+
+            The held-title snapshot for a season is taken after it ends, so
+            the champion of y is already wearing Protector of the Realm in
+            y's own rows -- which is why the caption can read as a title
+            rather than as "champion of y". Lowest sort_order wins, the same
+            rule the sigil rings use, so a face and the ring beside it can
+            never name two different titles.
+            """
             rows = query(conn, """
-                select username, team_name from team_season_stats
-                where season_year = %s and final_rank = 1
+                select s.username, s.team_name, t.name as title
+                from team_season_stats s
+                left join lateral (
+                    select c.name, c.sort_order
+                    from owner_crests oc
+                    join crests c on c.crest_id = oc.crest_id
+                    where oc.owner_id = s.owner_id
+                      and oc.season_year = s.season_year
+                      and oc.week is null and c.standing = 'held'
+                    order by c.sort_order limit 1
+                ) t on true
+                where s.season_year = %s and s.final_rank = 1
             """, (y,))
             return rows[0] if rows else None
 
@@ -1595,11 +1622,13 @@ def season(request: Request, year: int, week: str | None = None):
             # a season under way with no recap written -- it follows the table.
             recap = bool(season_summary and season_summary["kind"] == "season")
             if recap or finished:
-                who, aside = champion_of(year), "champion of %d" % year
+                who = champion_of(year)
+                aside = who["title"] if who else None
             elif played:
-                who, aside = leader(standings), "leads the league"
+                who, aside = leader(standings), WARDEN_PACE
             else:
-                who, aside = champion_of(year - 1), "champion of %d" % (year - 1)
+                who = champion_of(year - 1)
+                aside = who["title"] if who else None
             banner = {
                 "title": "How it went" if (recap or finished) else "The year ahead",
                 "body": season_summary["body"] if season_summary else None,
@@ -1623,16 +1652,16 @@ def season(request: Request, year: int, week: str | None = None):
             who = champion_of(year - 1)
             banner = {
                 "title": "The year ahead",
+                "aside": who["title"] if who else None,
                 "body": rows[0]["body"] if rows else None,
                 "waiting": "No word on the year ahead has been set down yet.",
                 "username": who["username"] if who else None,
-                "aside": "champion of %d" % (year - 1) if who else None,
             }
         else:
             if state == "regular":
                 # First in the table drawn underneath, so the face and the
                 # rows below it agree with each other.
-                who, aside = leader(standings), "leads the league"
+                who, aside = leader(standings), WARDEN_PACE
             else:
                 # The best regular-season finisher of those still in it. The
                 # regular table is the seeding, so it is read at the last week
@@ -1640,7 +1669,7 @@ def season(request: Request, year: int, week: str | None = None):
                 last_regular = max((n for n in numbers if n not in playoff_weeks),
                                    default=None)
                 alive = still_alive(games, shown)
-                who, aside = None, "best seed still standing"
+                who, aside = None, CROWN_PACE
                 if last_regular and alive:
                     who = next((r for r in standings_after(conn, year, last_regular)
                                 if r["username"] in alive), None)
