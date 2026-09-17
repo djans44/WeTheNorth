@@ -48,6 +48,68 @@
               {% for b in s.blockers %}<li>{{ b }}</li>{% endfor %}
             </ul>
           {% endif %}
+
+          {# Step 1 is the only one that has nowhere to link to: the seasons
+             row has never had a UI, so the form is here. #}
+          {% if s.n == 1 and s.state != "done" %}
+            <form method="post" action="/admin/season-setup/season" class="season-form">
+              <input type="hidden" name="season" value="{{ season }}">
+              <span class="field">
+                <label for="team_count">Teams</label>
+                <input id="team_count" name="team_count" type="number" min="2" max="32"
+                       step="2" value="{{ prev.team_count }}">
+              </span>
+              <span class="field">
+                <label for="keeper_count">Keepers each</label>
+                <input id="keeper_count" name="keeper_count" type="number" min="0" max="10"
+                       value="{{ prev.keeper_count }}">
+              </span>
+              <button type="submit" class="seal">Create {{ season }}</button>
+              {% if prev.season_year %}
+                <span class="tm">Carried from {{ prev.season_year }}.</span>
+              {% endif %}
+            </form>
+          {% endif %}
+
+          {# Step 2, the other one with no page of its own. Last season's
+             twelve are ticked and named already, because the roster changes
+             by a manager or two a year. #}
+          {% if s.n == 2 and s.state != "blocked" %}
+            <form method="post" action="/admin/season-setup/teams">
+              <input type="hidden" name="season" value="{{ season }}">
+              <div class="scroller">
+                <table class="roster-table">
+                  <thead>
+                    <tr><th>In</th><th class="name">Manager</th><th class="name">Team name</th></tr>
+                  </thead>
+                  <tbody>
+                  {% for o in roster %}
+                    <tr {% if o.is_retired %}class="retired"{% endif %}>
+                      <td>
+                        <input type="checkbox" name="owner" value="{{ o.owner_id }}"
+                               id="in_{{ o.owner_id }}"
+                               {% if o.assigned or (o.carried and not o.is_retired) %}checked{% endif %}>
+                      </td>
+                      <td class="name">
+                        <label for="in_{{ o.owner_id }}">{{ o.username }}</label>
+                        {% if o.is_retired %}<span class="tm">retired</span>{% endif %}
+                      </td>
+                      <td class="name">
+                        <input type="text" name="name_{{ o.owner_id }}"
+                               value="{{ o.current_name or o.carried or '' }}"
+                               placeholder="Team name">
+                      </td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <button type="submit" class="seal">Save the {{ season }} teams</button>
+              <span class="tm">Exactly {{ counts.team_count or prev.team_count }} are needed
+                &mdash; rivalries and the schedule both pair the league up.</span>
+            </form>
+          {% endif %}
+
           <p class="setup-where">
             {% if s.link %}
               <a href="{{ s.link }}{% if '?' not in s.link %}?season={{ season }}{% endif %}">{{ s.where }}</a>

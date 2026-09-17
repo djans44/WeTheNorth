@@ -4536,11 +4536,172 @@ def admin_season_setup(request: Request, season: int = 0):
             season = unfinished[-1] if unfinished else nxt
         steps, counts = season_setup_steps(conn, season)
 
+        # Defaults for a season that does not exist yet, cloned from the most
+        # recent one that does. team_count has been 12 and keeper_count 3
+        # every year, so cloning is right nearly always and retyping it is
+        # only a chance to get it wrong.
+        prev = query(conn, """
+            select season_year, team_count, keeper_count from seasons
+            where season_year < %s order by season_year desc limit 1
+        """, (season,))
+        prev = prev[0] if prev else {"season_year": None, "team_count": 12,
+                                     "keeper_count": 3}
+
+        # Every owner, with last season's team name carried forward. An owner
+        # who held a team last year is ticked; a retired one never is. The
+        # roster changes by a manager or two a year, so starting from last
+        # year's twelve and editing the exceptions is less work than starting
+        # from an empty page.
+        roster = query(conn, """
+            select o.owner_id, o.username, o.is_retired,
+                   prev.team_name as carried,
+                   now_t.team_name as current_name,
+                   (now_t.team_id is not null) as assigned
+            from owners o
+            left join teams prev on prev.owner_id = o.owner_id
+                                and prev.season_year = %s
+            left join teams now_t on now_t.owner_id = o.owner_id
+                                 and now_t.season_year = %s
+            order by o.is_retired, o.username
+        """, (prev["season_year"], season))
+
     done = sum(1 for s in steps if s["state"] == "done")
     return templates.TemplateResponse(
         request=request, name="admin_season_setup.html",
         context={"years": years, "season": season, "steps": steps,
-                 "counts": counts, "done": done, "total": len(steps)})
+                 "counts": counts, "done": done, "total": len(steps),
+                 "prev": prev, "roster": roster})
+
+
+@app.post("/admin/season-setup/season")
+async def admin_create_season(request: Request):
+    """Step 1: the seasons row. Every other step hangs off it."""
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    teams = int(form.get("team_count") or 12)
+    keepers = int(form.get("keeper_count") or 3)
+    back = "/admin/season-setup?season=%d" % season
+
+    err = ""
+    if teams % 2:
+        # The rivalry and schedule generators both pair the league up.
+        err = "An odd team count cannot be paired for rivalries or a schedule."
+    elif not 2 <= teams <= 32:
+        err = "That team count is not a league."
+
+    if not err:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("select 1 from seasons where season_year = %s", (season,))
+                if cur.fetchone():
+                    err = "%s already exists." % season
+                else:
+                    cur.execute("""
+                        insert into seasons (season_year, team_count, keeper_count, is_complete)
+                        values (%s, %s, %s, false)
+                    """, (season, teams, keepers))
+            if not err:
+                conn.commit()
+
+    if err:
+        return RedirectResponse(url=back + "&error=" + quote(err), status_code=303)
+    return RedirectResponse(
+        url=back + "&msg=" + quote("%s created, %d teams, %d keepers each"
+                                   % (season, teams, keepers)), status_code=303)
+
+
+@app.post("/admin/season-setup/teams")
+async def admin_season_teams(request: Request):
+    """Step 2: who is in the league this year, and what their team is called.
+
+    Adding and renaming are free. Removing is the careful half: a team_id is
+    referenced by matchups, rosters, draft picks, keeper selections and
+    transactions, so an owner who already has results against their name is
+    kept and reported rather than cascaded away.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    back = "/admin/season-setup?season=%d" % season
+    picked = [int(o) for o in form.getlist("owner")]
+
+    with get_db() as conn:
+        rows = query(conn, "select team_count from seasons where season_year = %s", (season,))
+        if not rows:
+            return RedirectResponse(
+                url=back + "&error=" + quote("Create the season row first."),
+                status_code=303)
+        want = rows[0]["team_count"]
+        if len(picked) != want:
+            return RedirectResponse(
+                url=back + "&error=" + quote(
+                    "%s needs exactly %d teams and %d were chosen. The rivalry "
+                    "and schedule generators both pair the league up."
+                    % (season, want, len(picked))), status_code=303)
+
+        existing = {r["owner_id"]: r for r in query(conn, """
+            select owner_id, team_id, team_name from teams where season_year = %s
+        """, (season,))}
+
+        blocked = []
+        added = renamed = removed = 0
+        with conn.cursor() as cur:
+            for oid in picked:
+                name = (form.get("name_%d" % oid) or "").strip()
+                if not name:
+                    return RedirectResponse(
+                        url=back + "&error=" + quote("Every team needs a name."),
+                        status_code=303)
+                if oid in existing:
+                    if existing[oid]["team_name"] != name:
+                        cur.execute("""update teams set team_name = %s, updated_at = now()
+                                       where season_year = %s and owner_id = %s""",
+                                    (name, season, oid))
+                        renamed += 1
+                else:
+                    # team_id is generated always as identity -- never supplied.
+                    cur.execute("""insert into teams (season_year, owner_id, team_name)
+                                   values (%s, %s, %s)""", (season, oid, name))
+                    added += 1
+
+            for oid, row in existing.items():
+                if oid in picked:
+                    continue
+                cur.execute("""
+                    select (select count(*) from matchups
+                              where team_a_id = %(t)s or team_b_id = %(t)s)
+                         + (select count(*) from rosters where team_id = %(t)s)
+                         + (select count(*) from draft_picks where team_id = %(t)s)
+                         + (select count(*) from keeper_selections where team_id = %(t)s)
+                         + (select count(*) from transactions
+                              where to_team_id = %(t)s or from_team_id = %(t)s)
+                """, {"t": row["team_id"]})
+                if cur.fetchone()[0]:
+                    blocked.append(row["team_name"])
+                else:
+                    cur.execute("delete from teams where team_id = %s", (row["team_id"],))
+                    removed += 1
+        conn.commit()
+
+    if blocked:
+        return RedirectResponse(
+            url=back + "&error=" + quote(
+                "Kept %s: there are already results against that team this "
+                "season. Clear those first if the owner really is leaving."
+                % ", ".join(blocked)), status_code=303)
+
+    said = []
+    for n, word in ((added, "added"), (renamed, "renamed"), (removed, "removed")):
+        if n:
+            said.append("%d %s" % (n, word))
+    return RedirectResponse(
+        url=back + "&msg=" + quote("%s teams: %s" % (season, ", ".join(said) or "no change")),
+        status_code=303)
 
 
 @app.get("/admin/rivals", response_class=HTMLResponse)
