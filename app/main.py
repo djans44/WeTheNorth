@@ -1366,6 +1366,28 @@ def season(request: Request, year: int):
             where ks.season_year = %s
             order by o.username, ks.cost_round
         """, (year,))
+
+        # The prose, where any has been written. Newest per target wins: the
+        # table is appended to rather than updated, so a regenerated summary
+        # is a new row and the one it replaced stays as the record of what
+        # was there. distinct on is why the index carries generated_at desc.
+        week_summaries = {r["week"]: r["body"] for r in query(conn, """
+            select distinct on (week) week, body
+            from summaries
+            where season_year = %s and kind = 'week'
+            order by week, generated_at desc
+        """, (year,))}
+        # A season shows at most one of these, and which one depends on where
+        # the year has got to: a preview before it starts, a summary after
+        # week 17. Newest of either kind, so the summary supersedes the
+        # preview the moment one is written.
+        rows = query(conn, """
+            select kind, body from summaries
+            where season_year = %s and kind in ('preview', 'season')
+            order by generated_at desc limit 1
+        """, (year,))
+        season_summary = rows[0] if rows else None
+
     weeks = []
     for g in games:
         if not weeks or weeks[-1]["week"] != g["week"]:
@@ -1408,6 +1430,7 @@ def season(request: Request, year: int):
         return templates.TemplateResponse(
             request=request, name="season.html",
             context={"s": head[0], "standings": standings, "weeks": weeks,
+                     "week_summaries": week_summaries, "season_summary": season_summary,
                      "records": records, "open_week": open_week,
                      "seeds": seeds, "seed_key": seed_key(seeds, standings),
                      "brackets": brackets, "titles": titles,

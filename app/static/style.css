@@ -2135,6 +2135,28 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .kept .term { display: block; margin: 0 0 0 1.9rem; }
 
 
+/* ---- generated prose ---- */
+
+/* Set in the reading face rather than the body one: this is the only writing
+   on the site that is prose rather than a label, a number or a rule, and it
+   should not look like the tables around it. */
+.summary p {
+  margin: 0 0 var(--s3);
+  font-family: var(--prose);
+  font-size: var(--t-md);
+  max-width: 62ch;
+  color: var(--ink);
+}
+.summary p:last-child { margin-bottom: 0; }
+/* Inside a week panel it is a paragraph between the scores and the crests,
+   not a section of its own, so it takes the room a paragraph takes. */
+.summary.inweek {
+  margin: var(--s4) 0 0;
+  padding-left: var(--s4);
+  border-left: 2px solid var(--panel-edge);
+}
+.summary.inweek p { font-size: var(--t-base); }
+
 /* ---- the bar that arrives after the header ---- */
 
 /* Replaces the condensing sticky header on the manager page. Fixed, so it is

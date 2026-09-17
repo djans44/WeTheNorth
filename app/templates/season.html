@@ -96,6 +96,23 @@
     <a class="to-top" href="#top">Top</a>
   </header>
 
+  {# The season's own prose, above the standings it is about.
+
+     One of two kinds and never both: a preview before week 1, a summary
+     after week 17. The route hands over whichever was written most recently,
+     so the summary supersedes the preview without either being deleted.
+
+     Absent until something writes one, which is the normal state of a season
+     that has just been created. #}
+  {% if season_summary %}
+  <section class="summary {{ season_summary.kind }}">
+    <h2>{% if season_summary.kind == "preview" %}The year ahead{% else %}How it went{% endif %}</h2>
+    {% for para in season_summary.body.split("\n\n") if para.strip() %}
+      <p>{{ para.strip() }}</p>
+    {% endfor %}
+  </section>
+  {% endif %}
+
   <section id="standings">
     <h2>{% if s.champion %}Final standings{% else %}Standings{% endif %}</h2>
 
@@ -283,6 +300,18 @@
           {% endfor %}
           </tbody>
         </table>
+
+        {# The read of the week, between the scores and what they settled.
+           After the table because it is about those games and you should
+           have seen them first; before the crests because those are the
+           footnote and a footnote goes last. #}
+        {% if week_summaries.get(w.week) %}
+          <div class="summary inweek">
+            {% for para in week_summaries[w.week].split("\n\n") if para.strip() %}
+              <p>{{ para.strip() }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
 
         {# What the week settled. The same card the honour roll and the
            manager page use, pulled tighter: a week's crests are a footnote
