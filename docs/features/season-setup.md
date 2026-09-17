@@ -1,12 +1,25 @@
 # Feature: Create-season checklist
 
-**Not designed yet.** This is a placeholder so the shape of the problem is
-written down while it is fresh, not a spec to build from.
+**Built, and rehearsed against a Neon branch.** `/admin/season-setup` walks
+through everything needed to stand up the next league year, in dependency
+order, showing what is done and what is standing in the way of what is not.
 
-An admin page that walks through everything needed to stand up the next league
-year, in dependency order, showing what is done and what is outstanding. Today
-those steps are scattered across four admin pages, two migrations and a handful
-of scripts, and knowing the right order is folklore.
+Steps 1 and 2 are forms on that page; the rest link out to the pages and
+scripts that already do the work. What used to be folklore -- the order, and
+which step is waiting on which -- the page now states.
+
+## Rehearsing it
+
+`scripts/reset_season.py` tears a year down, dry by default.
+`scripts/serve_rehearsal.py` runs the app against a Neon branch. Both go
+through `scripts/_rehearsal.py`, which refuses to do anything if the branch
+resolves to the same host as `.env`.
+
+2026 was torn down and rebuilt end to end on a branch: both forms, the ADP
+import, rivalries, schedule, lottery, twelve slot picks, the keeper windows,
+and resolving round 1, which wrote twelve submissions. The checklist tracked
+every step, including holding the keeper round at waiting until all twelve
+slots were chosen.
 
 ## The steps, in the order the code forces
 
@@ -15,8 +28,8 @@ of the one before it.
 
 | # | Step | Today |
 |---|---|---|
-| 1 | `seasons` row: `season_year`, `team_count`, `keeper_count`, `yahoo_league_key` | **no UI** — only ever created by migration `005` |
-| 2 | `teams` rows, one per owner for the season | **no UI** — only ever created by migration `009` |
+| 1 | `seasons` row: `season_year`, `team_count`, `keeper_count` | a form on `/admin/season-setup`, cloned from the previous year |
+| 2 | `teams` rows, one per owner for the season | a form on `/admin/season-setup`, carried forward from last season |
 | 3 | Import ADP for the season | `scripts/import_adp_text.py` — **needed before keeper phases resolve, not just before the draft** |
 | 4 | Rivalries | `/admin/rivals` |
 | 5 | Schedule | `/admin/schedule` — needs teams **and** rivalries, since week 10 is rivalry week |
@@ -30,7 +43,26 @@ step 2 is the keystone: nothing downstream can run without it.
 Step 6 comes before step 7 deliberately — slot choice happens before keeper
 selection, so an owner knows their pick position while deciding who to keep.
 
-Step 3 is easy to leave until draft day and get quietly wrong.
+**Step 3 can be silently partial, which is worse than missing.**
+`import_adp_text.py` matches on normalised name and skips anyone with no
+`players` row, reporting the skips and carrying on. So ADP imported before the
+players exist is not absent -- it is short, by however many the league had not
+seen yet.
+
+That is not hypothetical. 2026's ADP was imported with 197 of the file's
+players matched. Re-running the same file two weeks later matched 212: fifteen
+players had been added in between by the roster and transaction imports. None
+of the fifteen was keeper-eligible for 2026, so nothing was mispriced, and
+production has since been topped up to 212. In a year where one of them *is*
+on the previous season's roster, the fallback below applies to a player nobody
+knew was missing.
+
+Re-running the import is safe and is the fix: it is an upsert on
+`(season_year, player_id)` with no deletes, so it tops up what is short and
+rewrites the rest with the same values. It does not retro-price existing
+contracts either, because a signed contract stores its own `contract_round`.
+
+Step 3 is also easy to leave until draft day and get quietly wrong.
 `keeper_eligibility` left-joins `player_adp_rounds` on the upcoming season and
 falls back to `coalesce(a.contract_cost_round, 13)`. With no ADP imported, every
 3-year contract's later-years price silently becomes round 13 instead of
@@ -41,61 +73,63 @@ should treat missing ADP as blocking for step 7, not advisory.
 Step 5 already refuses to run without step 2 and step 4: `/admin/schedule`
 rejects an odd entrant count and rejects incomplete rivalries by name.
 
-## The gap this has to close
+## The gap this closed
 
-**Adding an owner to a season has no UI.** `/admin/owners` creates the person
+**Adding an owner to a season had no UI.** `/admin/owners` creates the person
 and deliberately stops there, because the rivalry and schedule generators both
 need an even number of entrants and writing a `teams` row from that page would
-quietly break them the next time either ran. The result is that the
-retire-one/add-one flow currently ends with a `teams` row that has to be
-inserted by hand.
+quietly break them the next time either ran. The retire-one/add-one flow ended
+with a `teams` row inserted by hand.
 
-**Do that here.** Assigning owners to a season belongs in this checklist at
-step 2, where the team-count invariant is visible and can be enforced against
-`seasons.team_count` rather than guessed at from another page. That is also the
-natural place to set each owner's team name for the new year, which
-`/admin/owners` can already edit once the row exists.
+It is step 2 on this page now, where the team-count invariant is visible and
+enforced against `seasons.team_count` rather than guessed at from elsewhere,
+and where each owner's team name for the new year is set at the same time.
+
+Removing an owner is deliberately not a delete. A `team_id` is referenced by
+matchups, rosters, draft picks, keeper selections and transactions, so an owner
+who already has results against their name that season is kept and reported by
+name rather than cascaded away.
 
 ## Open questions
 
-None of these are decided. They are written down here so the decisions get made
-once, when the page is designed, rather than being rediscovered halfway through
-building it.
+Struck through where settled, with what was decided and why. The rest are
+still open and are written down so the decision gets made once rather than
+rediscovered halfway through building something.
 
 **Where the season comes from**
 
-1. Does the page create the `seasons` row itself — year, `team_count`,
-   `keeper_count`, `yahoo_league_key` — or does that stay a migration?
-2. Is a new year created blank, or cloned from the previous one? `team_count`
-   has been 12 and `keeper_count` 3 for every season so far, so cloning is
-   almost always right.
+1. ~~Does the page create the `seasons` row itself?~~ **Settled: it does.**
+   A season row you cannot create is the reason step 1 was folklore.
+   `yahoo_league_key` is left alone for now; nothing reads it.
+2. ~~Blank or cloned?~~ **Settled: cloned** from the most recent earlier
+   season. An odd `team_count` is refused outright, because the rivalry and
+   schedule generators both pair the league up.
 3. If `seasons.team_count` and the actual number of `teams` rows disagree,
    which one wins? The league-size cap on `/admin/owners` already trusts
    `team_count`.
 
 **Filling the roster (step 2)**
 
-4. Does step 2 default to carrying last season's owners forward? In practice
-   the roster changes by at most a manager or two a year, so starting from
-   last year's twelve and editing is probably less work than starting empty.
+4. ~~Carry last season's owners forward?~~ **Settled: yes**, ticked, with
+   their team names prefilled. Retired managers are listed but never ticked,
+   so adding one back is a tick rather than a hunt. Note this carries the
+   *previous* year's team names: three of the twelve had changed for 2026, so
+   the names are a starting point to edit, not an answer.
 5. Does the checklist drive retiring a departing owner, or does that stay on
    `/admin/owners` with the checklist only reporting the count? The
    retire-one/add-one flow currently spans both.
-6. Team names for the new year: set here while assigning owners, carried
-   forward from last season, or left to `/admin/owners` afterwards? Carrying
-   forward matches what the data does — several managers keep a name for years.
+6. ~~Team names for the new year?~~ **Settled with 4:** carried forward from
+   last season and editable in the same form. `/admin/owners` can still change
+   one afterwards.
 
 **How strict the page is**
 
-7. Does the checklist *block* a step whose prerequisites are unmet, or only
-   show it as not-ready and let an admin proceed? The house style cuts both
-   ways: `/admin/schedule` already hard-refuses without teams and rivalries,
-   but admin keeper overrides deliberately allow a duplicate round. Pick one
-   and be consistent.
-8. Is it a checklist that *links out* to the existing admin pages, or one that
-   *embeds* each step? Linking out is far less code and keeps one
-   implementation of each step; embedding gives the single-sitting flow the
-   feature is really for.
+7. ~~Block, or show not-ready and allow?~~ **Settled: show and allow.**
+   `/admin/schedule` already hard-refuses without teams and rivalries, and a
+   softer gate in front of a hard one only moves the message.
+8. ~~Link out or embed?~~ **Settled: link out**, except steps 1 and 2 which
+   have nowhere to link to. Embedding would mean a second implementation of
+   the rivalry, schedule and keeper generators.
 
 **Re-running steps**
 
@@ -103,9 +137,11 @@ building it.
    the schedule bakes the pairings into `matchups` at generation time and
    never looks at `rivalries` again. Warn, block, or offer to regenerate the
    schedule too?
-10. Re-importing ADP after a 3-year contract has been signed. ADP is
-    **locked at signing** by design, so a late import must not retro-price
-    existing contracts.
+10. ~~Re-importing ADP after a 3-year contract has been signed?~~
+    **Settled: safe, and checked rather than assumed.** A signed contract
+    stores its own `contract_round`, so a later import does not reach it.
+    Topping 2026 up from 197 rows to 212 moved no keeper price: all 172
+    eligibility rows were compared before and after and none changed.
 
     Re-running the lottery was the other half of this question and is now
     settled: `/admin/draft-order/lottery` refuses to draw over an order that
