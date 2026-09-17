@@ -104,12 +104,25 @@
 
      Absent until something writes one, which is the normal state of a season
      that has just been created. #}
-  {% if season_summary %}
-  <section class="summary {{ season_summary.kind }}">
-    <h2>{% if season_summary.kind == "preview" %}The year ahead{% else %}How it went{% endif %}</h2>
-    {% for para in season_summary.body.split("\n\n") if para.strip() %}
-      <p>{{ para.strip() }}</p>
-    {% endfor %}
+  {% if banner %}
+  {% set portrait = portrait_url(banner.username) %}
+  <section class="banner">
+    {% if portrait %}
+      {# A preview shows last year's champion, who has something to defend;
+         a recap shows this year's. The caption says which, because a face
+         with no explanation is a decoration. #}
+      <figure class="banner-face">
+        <img src="{{ portrait }}" width="640" height="853" alt="{{ banner.username }}">
+        <figcaption class="tm">{{ banner.username }}
+          {%- if banner.champion_of %} &middot; champion of {{ banner.champion_of }}{% endif %}</figcaption>
+      </figure>
+    {% endif %}
+    <div class="banner-words summary">
+      <h2>{% if banner.kind == "preview" %}The year ahead{% else %}How it went{% endif %}</h2>
+      {% for para in banner.body.split("\n\n") if para.strip() %}
+        <p>{{ para.strip() }}</p>
+      {% endfor %}
+    </div>
   </section>
   {% endif %}
 

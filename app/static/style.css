@@ -2135,6 +2135,30 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .kept .term { display: block; margin: 0 0 0 1.9rem; }
 
 
+/* ---- the season banner: a face, and the prose beside it ---- */
+
+/* Portrait left, words right, on one row. The prose runs to about 2,900
+   characters for a preview, and full width that is a wall; beside a portrait
+   it reads as a column. */
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--s5);
+}
+.banner-face { flex: 0 0 15rem; margin: 0; }
+.banner-face img {
+  width: 100%;
+  height: auto;
+  border: var(--frame);
+  background: var(--panel-sink);
+}
+.banner-face figcaption { margin-top: var(--s2); text-align: center; }
+/* 20rem rather than a share: below that the two columns are both too narrow
+   to read, and wrapping to stacked is better than squeezing. */
+.banner-words { flex: 1 1 20rem; }
+.banner-words h2 { margin-top: 0; }
+
 /* ---- generated prose ---- */
 
 /* Set in the reading face rather than the body one: this is the only writing
@@ -2623,6 +2647,11 @@ button.seal[disabled]:hover {
      addressed further down this file. #playoffs table scores above the
      blanket .page table without needing a class of its own. */
   #playoffs table { display: table; white-space: normal; }
+
+  /* Stacked, and the portrait comes down: at 375px a 15rem face followed by
+     the prose is most of a screen before a word is read. */
+  .banner { gap: var(--s4); }
+  .banner-face { flex: 0 0 auto; width: 9rem; margin: 0 auto; }
 
   /* Champions: five columns need 628px and there are 319. Dropping columns
      cannot save it -- the season and the champion alone are 206px, and the

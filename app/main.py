@@ -1391,6 +1391,31 @@ def season(request: Request, year: int):
         """, (year,))
         season_summary = rows[0] if rows else None
 
+        # The banner: a portrait with the season's prose beside it.
+        #
+        # Who is pictured depends on which prose it is. A preview belongs to a
+        # season that has not started, so the face is last year's champion --
+        # the one with something to defend. A recap belongs to a season that
+        # has finished, so it is this year's.
+        #
+        # The week-driven states -- the leader during the regular season, the
+        # best seed still alive in the playoffs -- are not built yet and fall
+        # through to no banner rather than to a wrong face.
+        banner = None
+        if season_summary:
+            of_season = year - 1 if season_summary["kind"] == "preview" else year
+            champ = query(conn, """
+                select username, team_name from team_season_stats
+                where season_year = %s and final_rank = 1
+            """, (of_season,))
+            banner = {
+                "kind": season_summary["kind"],
+                "body": season_summary["body"],
+                "username": champ[0]["username"] if champ else None,
+                "team_name": champ[0]["team_name"] if champ else None,
+                "champion_of": of_season if champ else None,
+            }
+
     weeks = []
     for g in games:
         if not weeks or weeks[-1]["week"] != g["week"]:
@@ -1434,6 +1459,7 @@ def season(request: Request, year: int):
             request=request, name="season.html",
             context={"s": head[0], "standings": standings, "weeks": weeks,
                      "week_summaries": week_summaries, "season_summary": season_summary,
+                     "banner": banner,
                      "records": records, "open_week": open_week,
                      "seeds": seeds, "seed_key": seed_key(seeds, standings),
                      "brackets": brackets, "titles": titles,
