@@ -111,7 +111,11 @@
             <p>{{ para.strip() }}</p>
           {% endfor %}
         </div>
-        <p class="phase-act">
+        {# A div, not a p. A form is block-level, so the parser closes a <p>
+           the moment it meets one -- which left .phase-act an empty element
+           with the two forms as its siblings, and every rule written for it
+           landing on nothing. #}
+        <div class="phase-act">
           <form method="post" action="/admin/summaries/publish" class="inline">
             <input type="hidden" name="season" value="{{ season }}">
             <input type="hidden" name="summary_id" value="{{ d.summary_id }}">
@@ -120,11 +124,11 @@
           <form method="post" action="/admin/summaries/discard" class="inline">
             <input type="hidden" name="season" value="{{ season }}">
             <input type="hidden" name="summary_id" value="{{ d.summary_id }}">
-            <button type="submit" class="ghost"
+            <button type="submit" class="seal quiet"
                     data-confirm="Discard this draft? It is not on the season page and cannot be recovered.">
               Discard</button>
           </form>
-        </p>
+        </div>
       </article>
     {% endfor %}
   </section>

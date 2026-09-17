@@ -2188,7 +2188,17 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   border: 1px solid var(--rule);
   background: var(--panel-lift);
 }
-.draft .phase-act { display: flex; gap: var(--s3); margin-top: var(--s4); }
+/* Ranged right, at the end of the draft they act on, and to one width: the
+   two words are different lengths and the pair reads as a choice rather than
+   as two buttons when the boxes match. 10rem clears the longer of them with
+   the seal's own padding either side. */
+.draft .phase-act {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s3);
+  margin-top: var(--s4);
+}
+.draft .phase-act button { min-width: 10rem; }
 /* .inline exists so these two buttons sit on one line rather than each
    taking the margin a lone submit gets. */
 .draft form.inline { margin: 0; }
@@ -2478,6 +2488,21 @@ button.seal[disabled] {
 button.seal[disabled]:hover {
   background: transparent;
   color: var(--ink-muted);
+}
+
+/* A seal for the answer the page is not asking for. Discarding a draft and
+   publishing it are a pair, so they take the same box; only the paint says
+   which is which, and this one takes the ghost's. A modifier rather than a
+   second button class, so the two can never drift apart in size again. */
+button.seal.quiet {
+  color: var(--ink-soft);
+  border-color: var(--panel-edge);
+}
+button.seal.quiet:hover,
+button.seal.quiet:focus-visible {
+  background: var(--gold-ghost);
+  border-color: var(--ink);
+  color: var(--ink);
 }
 
 /* A seal that has set something long running off. Writing a summary is a
