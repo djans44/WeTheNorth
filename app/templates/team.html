@@ -72,7 +72,7 @@
   {# The name is the control that changes the manager, the same <details> the
      season page uses for its year. Ordinary links inside a disclosure, so it
      still opens and still works with the script off. #}
-  <header class="page-head stuck">
+  <header class="page-head">
     <details class="headpick">
       <summary>
         <h1 class="titled">
@@ -118,11 +118,30 @@
       <p class="pastrivals">No longer in the league.</p>
     {% endif %}
 
-    {# Only reachable once the header has condensed, which is to say once
-       there is somewhere to go back from. A plain anchor, so it works with
-       the script off and the browser does the scrolling. #}
-    <a class="to-top" href="#top">Top</a>
   </header>
+
+  {# The bar that replaces the condensing header.
+
+     The old model kept this header stuck at full height and shrank it the
+     moment it stuck: 248px to 118px in one frame, which does not move the
+     content underneath but uncovers 130px of it at once, and that reads as
+     the page lurching. Measured rather than guessed -- the content tracks
+     the scroll exactly through the whole transition, so nothing is moving;
+     what changes is how much of it the header is sitting on top of.
+
+     So the header scrolls away like anything else now, and this slides down
+     once it has gone. Nothing is ever covered and then uncovered, because
+     the bar arrives over a page that has already scrolled past the header.
+
+     Fixed rather than sticky, so it is out of the flow entirely and needs
+     none of the margin compensation the old one did. Off-screen by transform
+     rather than display, so it can be animated and so a class cannot beat
+     the browser's own [hidden] rule -- the trap CLAUDE.md records. With the
+     script off it simply never arrives, and the page reads as it always did. #}
+  <div class="topbar">
+    <span class="avatar-line">{{ avatar(owner.owner_id, 26) }}{{ owner.username }}</span>
+    <a class="to-top" href="#top">Top</a>
+  </div>
 
   {# The painted portrait, above everything the manager has done.
 

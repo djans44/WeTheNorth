@@ -2129,6 +2129,36 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .kept .term { display: block; margin: 0 0 0 1.9rem; }
 
 
+/* ---- the bar that arrives after the header ---- */
+
+/* Replaces the condensing sticky header on the manager page. Fixed, so it is
+   out of the flow and needs none of the margin compensation .page-head.stuck
+   does; and it slides in over a page that has already scrolled past the
+   header, so nothing is ever covered and then uncovered. */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s4);
+  padding: 0.35rem var(--pad-gutter);
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--rule);
+  /* Off-screen by transform rather than display: it can be animated, and a
+     class that sets display would beat the browser's own [hidden] rule. */
+  transform: translateY(-100%);
+  transition: transform 0.18s ease;
+}
+.topbar.up { transform: translateY(0); }
+.topbar .avatar-line { font-family: var(--display); letter-spacing: 0.04em; }
+/* .to-top is display:none until the old header condensed. This bar is the
+   only place it appears now, so it is shown whenever the bar is. */
+.topbar .to-top { display: inline; font-size: var(--t-sm); }
+
 /* ---- the painted portraits ---- */
 
 /* Sized by the panel rather than fixed, so it comes down with the page on a

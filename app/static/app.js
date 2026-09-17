@@ -170,6 +170,43 @@
     });
   }
 
+  // ---- the bar that arrives once the header has gone ----
+  // The other model, .page-head.stuck above, keeps a tall header pinned and
+  // shrinks it the moment it sticks. That does not move the content -- it
+  // uncovers 130px of it in one frame, which is what reads as a lurch. Here
+  // the header scrolls away like anything else and this slides in after it,
+  // so nothing is ever covered and then uncovered.
+  //
+  // Nothing to compensate for: the bar is fixed, so it never occupied a place
+  // in the flow to give back.
+  var bar = document.querySelector(".topbar");
+  if (bar) {
+    var barHead = document.querySelector(".page-head");
+    var showAt = 0;
+    var measureBar = function () {
+      // The foot of the header in document coordinates. Read at rest and on
+      // resize, never mid-scroll, so a reflow cannot creep into a scroll
+      // handler that runs on every frame.
+      showAt = barHead ? barHead.getBoundingClientRect().bottom + window.scrollY : 0;
+    };
+    var syncBar = function () {
+      bar.classList.toggle("up", window.scrollY >= showAt);
+    };
+    measureBar();
+    syncBar();
+    window.addEventListener("scroll", syncBar, { passive: true });
+    window.addEventListener("resize", function () {
+      measureBar();
+      syncBar();
+    });
+    // The portrait and the sigils settle after this runs, and the header's
+    // foot moves when they do. Re-measure once everything has loaded.
+    window.addEventListener("load", function () {
+      measureBar();
+      syncBar();
+    });
+  }
+
   // ---- a live draft reloads itself ----
   // Twelve people watch /draft-order during the one session a year where the
   // order is chosen, and nothing on it used to change until they reloaded.
