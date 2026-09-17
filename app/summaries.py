@@ -47,8 +47,9 @@ Rules:
 - The facts are notes, not prose. Say them in your own words. Never lift a
   line verbatim -- "finished rank 1" is a database field, "took the title"
   is writing.
-- Do not list everyone when a few will do. Twelve managers named in a row is
-  a table, and the reader already has the table.
+- Do not recite. Twelve managers named in a row with their numbers is a
+  table, and the reader already has the table. Work names into sentences that
+  say something about them.
 - Name managers by name. They know each other.
 - No headings, no bullet points, no markdown. Plain paragraphs separated by
   a blank line.
@@ -258,6 +259,30 @@ def preview_facts(q, season):
             order by cr.sort_order, cr.name
         """, (season,))]
 
+    # Every manager's record across every season they have played, as one
+    # line each. A preview that only knows last year cannot say that Curtis
+    # has climbed four years running or that Carter has finished in the
+    # bottom four every season since 2022, and those are the things a league
+    # this old actually talks about.
+    #
+    # One line per manager rather than a row per manager per season: forty-
+    # eight rows of the same three columns invites the model to recite them.
+    facts["every_finish_so_far"] = [
+        {"note": "%s has finished: %s (career %s-%s, best %s, %s titles)"
+                 % (r["username"], r["history"], r["wins"], r["losses"],
+                    r["best_finish"], r["titles"])}
+        for r in q("""
+            select a.username, a.wins, a.losses, a.best_finish, a.titles,
+                   (select string_agg(t.season_year || ': ' || t.final_rank, ', '
+                                      order by t.season_year)
+                    from team_season_stats t
+                    where t.owner_id = a.owner_id and t.final_rank is not null)
+                   as history
+            from owner_all_time_stats a
+            where a.owner_id in (select owner_id from teams where season_year = %s)
+            order by a.username
+        """, (season,))]
+
     # Superlatives, stated rather than left to be worked out. Given twelve
     # rows of points_for the model claimed the second-highest was the
     # highest -- a sorted list is not the same as being told who won it, and
@@ -272,6 +297,43 @@ def preview_facts(q, season):
             order by points_for desc limit 1
         """, (season,))]
     return facts
+
+
+def missing_managers(text, facts):
+    """Which managers the prose never names.
+
+    Asking the prompt for full coverage gets most of the way; checking is
+    what makes it true. The managers left out of a preview are the ones with
+    the least to report, which is exactly who notices being left out.
+    """
+    named = [t["manager"] for t in facts.get("teams", [])]
+    lowered = text.lower()
+    return [n for n in named if n.lower() not in lowered]
+
+
+def generate_preview(q, season):
+    """The preview, with one targeted second go if anyone was left out.
+
+    A retry that just says "try again" tends to produce the same omissions,
+    so the nudge names them. One extra attempt only: two is another thirty
+    seconds for a diminishing return, and the caller reports what is missing
+    either way.
+    """
+    facts = preview_facts(q, season)
+    prompt = preview_prompt(facts)
+    text = ask(prompt)
+
+    missed = missing_managers(text, facts)
+    if missed:
+        text = ask(prompt + """
+
+Your previous attempt never mentioned %s. Write it again, covering the same
+ground, and give each of them something to be there for.
+
+Previous attempt:
+%s
+""" % (", ".join(missed), text))
+    return text, missing_managers(text, facts)
 
 
 def as_text(facts):
@@ -298,10 +360,18 @@ def preview_prompt(facts):
 
 Write a season preview for %s: four or five paragraphs.
 
-Cover the shape of the year: who carries which titles into it, three or four
-keeper decisions worth remarking on rather than all twelve, roughly how the
-draft board falls, and a rivalry or two worth watching. Look forward -- but do
-not predict results as though they have already happened.
+Cover the shape of the year: who carries which titles into it, the keeper
+decisions worth remarking on, roughly how the draft board falls, and the
+rivalries worth watching. Look forward -- but do not predict results as though
+they have already happened.
+
+Every manager in the league must be named at least once. Not in a list: give
+each of them something, even a clause. The ones with nothing dramatic to
+report are the ones a lazy preview drops, and they read it too.
+
+Use the season-by-season finishes. A league four years old has shapes in it --
+someone climbing, someone stuck at the bottom, someone who won it once and has
+not been near since -- and that is more interesting than last year alone.
 
 Titles and crests are the league's own furniture and should feel like it. A
 title is held by one manager at a time and rings their sigil wherever it is
