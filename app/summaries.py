@@ -739,6 +739,30 @@ def week_facts(q, season, week):
     facts["titles_held_that_week"] = [
         {"note": "%s holds %s" % (r["username"], r["name"])} for r in held]
 
+    # Titles that moved this week. A week's snapshot says who wears each one;
+    # only the week before it says whether that is news. Without this a
+    # weekly account cannot report the one thing the league argues about most
+    # -- and week 1 has no week before it, so it reports nothing, which is
+    # correct rather than missing.
+    facts["titles_that_changed_hands_this_week"] = [
+        {"note": "%s took %s from %s this week"
+                 % (r["taken_by"], r["name"], r["lost_by"])}
+        for r in q("""
+            with held as (
+                select oc.week, cr.crest_id, cr.name, cr.sort_order, o.username
+                from owner_crests oc
+                join crests cr on cr.crest_id = oc.crest_id
+                join owners o on o.owner_id = oc.owner_id
+                where oc.season_year = %(y)s and cr.standing = 'held'
+                  and oc.week in (%(w)s, %(w)s - 1)
+            )
+            select n.name, n.username as taken_by, b.username as lost_by
+            from held n
+            join held b on b.crest_id = n.crest_id and b.week = %(w)s - 1
+            where n.week = %(w)s and n.username <> b.username
+            order by n.sort_order
+        """, {"y": season, "w": week})]
+
     # The week ahead, with enough beside each pairing to say something about
     # it: what each side has done so far, and what they have done to each
     # other across every season.
