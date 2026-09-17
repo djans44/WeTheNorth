@@ -223,6 +223,41 @@ def preview_facts(q, season):
         order by final_rank
     """, (season,))
 
+    # The titles as they stand going in. A title is held by one manager at a
+    # time and rings their sigil everywhere it is drawn, so who carries what
+    # into a season is the standing of the realm, and a preview that does not
+    # mention them is describing a different league.
+    #
+    # season_year is null for the live holder; the same crest also has a row
+    # per closed season saying who held it then, which is not what a preview
+    # about the year ahead wants.
+    facts["titles_held_going_in"] = [
+        {"note": "%s holds %s (%s)" % (r["username"], r["name"], r["detail"])
+                 if r["detail"] else "%s holds %s" % (r["username"], r["name"])}
+        for r in q("""
+            select cr.name, o.username, oc.detail
+            from owner_crests oc
+            join crests cr on cr.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where cr.standing = 'held' and oc.season_year is null
+            order by cr.sort_order, cr.name
+        """, ())]
+
+    # What last season handed out. Earned crests are kept for good, so these
+    # are the honours the year just gone is remembered by.
+    facts["crests_won_last_season"] = [
+        {"note": "%s won %s%s" % (r["username"], r["name"],
+                                  " -- %s" % r["detail"] if r["detail"] else "")}
+        for r in q("""
+            select cr.name, o.username, oc.detail
+            from owner_crests oc
+            join crests cr on cr.crest_id = oc.crest_id
+            join owners o on o.owner_id = oc.owner_id
+            where oc.season_year = %s - 1 and cr.standing = 'earned'
+              and oc.week is null
+            order by cr.sort_order, cr.name
+        """, (season,))]
+
     # Superlatives, stated rather than left to be worked out. Given twelve
     # rows of points_for the model claimed the second-highest was the
     # highest -- a sorted list is not the same as being told who won it, and
@@ -263,10 +298,16 @@ def preview_prompt(facts):
 
 Write a season preview for %s: four or five paragraphs.
 
-Cover the shape of the year: who is defending what, three or four keeper
-decisions worth remarking on rather than all twelve, roughly how the draft
-board falls, and a rivalry or two worth watching. Look forward -- but do not
-predict results as though they have already happened.
+Cover the shape of the year: who carries which titles into it, three or four
+keeper decisions worth remarking on rather than all twelve, roughly how the
+draft board falls, and a rivalry or two worth watching. Look forward -- but do
+not predict results as though they have already happened.
+
+Titles and crests are the league's own furniture and should feel like it. A
+title is held by one manager at a time and rings their sigil wherever it is
+drawn, so carrying one into a season means something; an earned crest is kept
+for good. Name them as the league names them -- Protector of the Realm, The
+Court Fool -- rather than describing them generically.
 
 The facts:
 %s
