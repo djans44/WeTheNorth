@@ -2883,6 +2883,23 @@ async def admin_keeper_windows(request: Request):
         url=f"/admin/keepers?season={season}&msg=Windows+saved", status_code=303)
 
 
+def refresh_keeper_crests(conn, season):
+    """Two crests are made of keeper data: Oathbreaker counts voids and Three
+    Oaths Sworn counts contracts held at once. Both were only ever recomputed
+    by score entry, which has nothing to do with either -- so cancelling a
+    void in the offseason left the badge standing until somebody entered a
+    week, which for a season that has not started is months.
+
+    Called from every route that writes keeper_voids or keeper_selections.
+    Swallowed the way the score-entry call is: a crest is a decoration, and
+    failing to redraw one must never fail the keeper action that prompted it.
+    """
+    try:
+        crestrules.recompute(conn, season)
+    except Exception:
+        log.exception("keeper crest refresh failed for %s", season)
+
+
 @app.post("/admin/keepers/resolve")
 async def admin_keeper_resolve(request: Request):
     if not request.session.get("is_admin"):
@@ -2894,6 +2911,10 @@ async def admin_keeper_resolve(request: Request):
 
     with get_db() as conn:
         actions, err = resolve_keeper_phase(conn, season, phase, apply=True)
+        if not err:
+            # Selections have just become real, so Three Oaths Sworn may have
+            # changed for whoever a contract landed on.
+            refresh_keeper_crests(conn, season)
 
     if err:
         return RedirectResponse(
@@ -4148,6 +4169,8 @@ async def submit_voids(request: Request):
                     """, (season, target))
                     n = cur.fetchone()["n"]
         conn.commit()
+        # Voids just became binding, so Oathbreaker may have been earned.
+        refresh_keeper_crests(conn, season)
 
     url = f"/keepers?season={season}&owner={target}"
     if err:
@@ -4272,6 +4295,10 @@ async def admin_keeper_void(request: Request):
                 """, (season, oid))
                 what = "Void added and confirmed. Their plans were cleared."
         conn.commit()
+        # The route that prompted all this: cancelling a void leaves
+        # Oathbreaker standing until something recomputes, and before this
+        # the only thing that did was entering a week's scores.
+        refresh_keeper_crests(conn, season)
 
     return RedirectResponse(
         url=f"/admin/keepers?season={season}&msg=" + quote(what), status_code=303)
