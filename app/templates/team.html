@@ -139,7 +139,25 @@
      the browser's own [hidden] rule -- the trap CLAUDE.md records. With the
      script off it simply never arrives, and the page reads as it always did. #}
   <div class="topbar">
-    <span class="avatar-line">{{ avatar(owner.owner_id, 26) }}{{ owner.username }}</span>
+    {# The same disclosure as the header, not a label of the name.
+
+       The old condensed header kept the h1, and the h1 is the control that
+       changes manager -- style.css has a rule whose whole job is stopping its
+       chevron overlapping the title in that state, which is what gave it
+       away. A bar carrying only the name would have quietly removed the way
+       to switch manager from anywhere below the first screen of a long page. #}
+    <details class="headpick">
+      <summary><h1 class="titled">{{ avatar(owner.owner_id, 26) }}{{ owner.username }}</h1></summary>
+      <ul>
+        {% for o in nav_owners() %}
+          <li>
+            <a href="/team/{{ o.username|lower }}"
+               {% if o.username == owner.username %}aria-current="page"{% endif %}>
+              {{ o.username }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
     <a class="to-top" href="#top">Top</a>
   </div>
 

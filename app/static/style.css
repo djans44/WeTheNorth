@@ -2140,7 +2140,10 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   top: 0;
   left: 0;
   right: 0;
-  z-index: 20;
+  /* Above .sectionnav, which is 30. The bar carries the manager picker and
+     its menu opens downward into the rail; at 20 the rail covered the first
+     two names and the list appeared to start at the third. */
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2154,7 +2157,21 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   transition: transform 0.18s ease;
 }
 .topbar.up { transform: translateY(0); }
-.topbar .avatar-line { font-family: var(--display); letter-spacing: 0.04em; }
+/* The bar carries the same picker the header does, sized for a bar. The
+   headpick rules are written for a page title, so the heading inside it has
+   to come down to something a 44px strip can hold. */
+.topbar .headpick > summary h1 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.35rem;
+  gap: var(--s2);
+}
+.topbar .headpick > summary h1 .avatar { --av-size: 26px; --av-font: 11px; }
+/* The negative margin that keeps a page title centred under its leaf has no
+   leaf to centre under here, so it takes its own width back -- the same
+   correction .page-head.stuck.condensed makes for the same reason. */
+.topbar .headpick > summary h1::after { margin-right: 0; }
+.topbar .headpick > ul { text-align: left; }
 /* .to-top is display:none until the old header condensed. This bar is the
    only place it appears now, so it is shown whenever the bar is. */
 .topbar .to-top { display: inline; font-size: var(--t-sm); }
