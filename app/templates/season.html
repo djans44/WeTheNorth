@@ -149,9 +149,10 @@
   {% endif %}
 
   {# ---- the read, and the face it belongs to ----
-     A preview before the season starts, a week's summary once it is under
-     way, the recap when it is over. Absent until something has been written
-     and published, which is the ordinary state of a new season. #}
+     A preview before the season starts, a week's account once it is under
+     way, the recap when it is over. The section is here either way: until
+     something is written it holds the face and a line saying what goes
+     there, so the page reads the same from one week to the next. #}
   {% if banner %}
   {% set portrait = portrait_url(banner.username) %}
   <section class="banner">
@@ -161,14 +162,18 @@
       <figure class="banner-face">
         <img src="{{ portrait }}" width="640" height="853" alt="{{ banner.username }}">
         <figcaption class="tm">{{ banner.username }}
-          {%- if banner.note %} &middot; {{ banner.note }}{% endif %}</figcaption>
+          {%- if banner.aside %} &middot; {{ banner.aside }}{% endif %}</figcaption>
       </figure>
     {% endif %}
     <div class="banner-words summary">
       <h2>{{ banner.title }}</h2>
-      {% for para in banner.body.split("\n\n") if para.strip() %}
-        <p>{{ para.strip() }}</p>
-      {% endfor %}
+      {% if banner.body %}
+        {% for para in banner.body.split("\n\n") if para.strip() %}
+          <p>{{ para.strip() }}</p>
+        {% endfor %}
+      {% else %}
+        <p class="awaited">{{ banner.waiting }}</p>
+      {% endif %}
     </div>
   </section>
   {% endif %}

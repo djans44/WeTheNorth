@@ -2172,6 +2172,13 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   color: var(--ink);
 }
 .summary p:last-child { margin-bottom: 0; }
+/* Standing in for writing that is not there yet. Same reading face, so the
+   section keeps its shape, but italic and quieter: it is a note about the
+   page, not a paragraph of it. */
+.summary .awaited {
+  font-style: italic;
+  color: var(--ink-muted);
+}
 /* A summary waiting to be read, on /admin/summaries. Panelled so several in
    a row stay separable, which a page of bare paragraphs would not. */
 .draft {

@@ -1558,6 +1558,12 @@ def season(request: Request, year: int, week: str | None = None):
 
         # The banner: a face, and the season's or the week's prose beside it.
         #
+        # The section is drawn whether or not anything has been written yet.
+        # A page whose shape depends on whether a summary exists is a page the
+        # league has to learn twice, and the place the writing goes should be
+        # visible before there is any writing in it. Standing in for the prose
+        # is a line saying what will appear there and when.
+        #
         # Who is pictured follows the prose. A preview belongs to a season
         # that has not started, so the face is last year's champion -- the one
         # with something to defend. A recap belongs to a season that has
@@ -1569,18 +1575,44 @@ def season(request: Request, year: int, week: str | None = None):
         # from its scores and cannot exist until the week is over. That leaves
         # the first week with no week to look back on, which is exactly what
         # the season preview is for.
-        banner = None
+        def leader(rows):
+            """Top of a table, or nobody if nobody has played yet.
+
+            Ordered by a record everyone shares at 0-0, the first row is
+            whichever team the sort happened to leave there. That is not a
+            leader, and it would put a face on the page that has earned
+            nothing.
+            """
+            if not rows:
+                return None
+            top = rows[0]
+            games_played = top["wins"] + top["losses"] + (top["ties"] or 0)
+            return top if games_played else None
+
         if state == "season":
-            if season_summary:
-                of_season = year if season_summary["kind"] == "season" else year - 1
-                who = champion_of(of_season)
-                banner = {
-                    "title": "How it went" if season_summary["kind"] == "season"
-                             else "The year ahead",
-                    "body": season_summary["body"],
-                    "username": who["username"] if who else None,
-                    "note": "champion of %d" % of_season if who else None,
-                }
+            # The recap, once it exists, is what the year is; until then the
+            # preview is. The face follows whichever it is, and in between --
+            # a season under way with no recap written -- it follows the table.
+            recap = bool(season_summary and season_summary["kind"] == "season")
+            if recap or finished:
+                who, aside = champion_of(year), "champion of %d" % year
+            elif played:
+                who, aside = leader(standings), "leads the league"
+            else:
+                who, aside = champion_of(year - 1), "champion of %d" % (year - 1)
+            banner = {
+                "title": "How it went" if (recap or finished) else "The year ahead",
+                "body": season_summary["body"] if season_summary else None,
+                # Said as a plain absence rather than as a promise about
+                # when: half these pages are seasons that finished years ago,
+                # and "once the last game is played" would be a lie on every
+                # one of them.
+                "waiting": "No account of the season has been set down yet."
+                           if (recap or finished) else
+                           "No word on the year ahead has been set down yet.",
+                "username": who["username"] if who else None,
+                "aside": aside if who else None,
+            }
         elif state == "preview":
             rows = query(conn, """
                 select body from summaries
@@ -1588,24 +1620,19 @@ def season(request: Request, year: int, week: str | None = None):
                   and published_at is not null
                 order by published_at desc limit 1
             """, (year,))
-            if rows:
-                who = champion_of(year - 1)
-                banner = {
-                    "title": "The year ahead", "body": rows[0]["body"],
-                    "username": who["username"] if who else None,
-                    "note": "champion of %d" % (year - 1) if who else None,
-                }
-        elif week_summaries.get(shown - 1):
-            body = week_summaries[shown - 1]
+            who = champion_of(year - 1)
+            banner = {
+                "title": "The year ahead",
+                "body": rows[0]["body"] if rows else None,
+                "waiting": "No word on the year ahead has been set down yet.",
+                "username": who["username"] if who else None,
+                "aside": "champion of %d" % (year - 1) if who else None,
+            }
+        else:
             if state == "regular":
                 # First in the table drawn underneath, so the face and the
                 # rows below it agree with each other.
-                lead = standings[0] if standings else None
-                banner = {
-                    "title": "Week %d" % (shown - 1), "body": body,
-                    "username": lead["username"] if lead else None,
-                    "note": "leads the league" if lead else None,
-                }
+                who, aside = leader(standings), "leads the league"
             else:
                 # The best regular-season finisher of those still in it. The
                 # regular table is the seeding, so it is read at the last week
@@ -1613,15 +1640,18 @@ def season(request: Request, year: int, week: str | None = None):
                 last_regular = max((n for n in numbers if n not in playoff_weeks),
                                    default=None)
                 alive = still_alive(games, shown)
-                lead = None
+                who, aside = None, "best seed still standing"
                 if last_regular and alive:
-                    lead = next((r for r in standings_after(conn, year, last_regular)
-                                 if r["username"] in alive), None)
-                banner = {
-                    "title": "Week %d" % (shown - 1), "body": body,
-                    "username": lead["username"] if lead else None,
-                    "note": "top seed still standing" if lead else None,
-                }
+                    who = next((r for r in standings_after(conn, year, last_regular)
+                                if r["username"] in alive), None)
+            banner = {
+                "title": "An account of week %d" % (shown - 1),
+                "body": week_summaries.get(shown - 1),
+                "waiting": "No account of week %d has been set down yet."
+                           % (shown - 1),
+                "username": who["username"] if who else None,
+                "aside": aside if who else None,
+            }
 
         brackets = playoff_brackets(games)
         titles, crest_groups = season_roll(crest_rows)
