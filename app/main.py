@@ -1375,7 +1375,8 @@ def season(request: Request, year: int):
             select distinct on (week) week, body
             from summaries
             where season_year = %s and kind = 'week'
-            order by week, generated_at desc
+              and published_at is not null
+            order by week, published_at desc
         """, (year,))}
         # A season shows at most one of these, and which one depends on where
         # the year has got to: a preview before it starts, a summary after
@@ -1384,7 +1385,8 @@ def season(request: Request, year: int):
         rows = query(conn, """
             select kind, body from summaries
             where season_year = %s and kind in ('preview', 'season')
-            order by generated_at desc limit 1
+              and published_at is not null
+            order by published_at desc limit 1
         """, (year,))
         season_summary = rows[0] if rows else None
 
