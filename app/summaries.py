@@ -235,6 +235,14 @@ def preview_facts(q, season):
         join players p on p.player_id = s.player_id
         where s.season_year = %s and s.status = 'approved'
         order by o.username, s.phase
+    """, (season,)) or q("""
+        select o.username as manager, p.full_name as player, ks.cost_round
+        from keeper_selections ks
+        join teams t on t.team_id = ks.team_id
+        join owners o on o.owner_id = t.owner_id
+        join players p on p.player_id = ks.player_id
+        where ks.season_year = %s
+        order by o.username, ks.cost_round
     """, (season,))
 
     # Forfeiting a keeper round means keeping nobody in it, and it is the
@@ -247,16 +255,42 @@ def preview_facts(q, season):
     # yields his pick in the third round", which is wrong twice over. The
     # facts have to be unambiguous to a careful reader, because that is all
     # the model is.
-    facts["keeper_rounds_nobody_was_kept_in"] = [
-        {"note": "%s kept nobody in %d of their 3 keeper rounds"
-                 % (r["manager"], r["n"])}
-        for r in q("""
-            select o.username as manager, count(*) as n
-            from keeper_submissions s
-            join owners o on o.owner_id = s.owner_id
-            where s.season_year = %s and s.origin = 'forfeit'
-            group by o.username order by 2 desc, 1
-        """, (season,))]
+    # Nobody kept anyone at all: the league's first season, when there was no
+    # previous roster to keep from. Left as a fact in its own words, because
+    # the forfeit count would otherwise read as twelve managers each choosing
+    # to keep nobody three times over.
+    if not facts["keepers"]:
+        facts["keeper_rounds_nobody_was_kept_in"] = []
+        facts["no_keepers_this_season"] = [
+            {"note": "nobody kept anyone: there was no previous season to "
+                     "keep from"}]
+        facts["draft_slots"] = q("""
+            select o.username as manager, d.slot
+            from draft_order d join owners o on o.owner_id = d.owner_id
+            where d.season_year = %s and d.slot is not null
+            order by d.slot
+        """, (season,))
+    else:
+        facts["keeper_rounds_nobody_was_kept_in"] = [
+            {"note": "%s kept nobody in %d of their 3 keeper rounds"
+                     % (r["manager"], r["n"])}
+            for r in q("""
+                select o.username as manager, count(*) as n
+                from keeper_submissions s
+                join owners o on o.owner_id = s.owner_id
+                where s.season_year = %s and s.origin = 'forfeit'
+                group by o.username order by 2 desc, 1
+            """, (season,)) or q("""
+                select o.username as manager, 3 - count(ks.player_id) as n
+                from teams t
+                join owners o on o.owner_id = t.owner_id
+                left join keeper_selections ks
+                  on ks.team_id = t.team_id and ks.season_year = t.season_year
+                where t.season_year = %s
+                group by o.username
+                having 3 - count(ks.player_id) > 0
+                order by 2 desc, 1
+            """, (season,))]
 
     facts["draft_slots"] = q("""
         select o.username as manager, d.slot
@@ -638,16 +672,29 @@ def week_facts(q, season, week):
             order by cr.sort_order
         """, {"y": season, "w": week})]
 
-    facts["titles_held_now"] = [
-        {"note": "%s holds %s" % (r["username"], r["name"])}
-        for r in q("""
-            select cr.name, o.username
-            from owner_crests oc
-            join crests cr on cr.crest_id = oc.crest_id
-            join owners o on o.owner_id = oc.owner_id
-            where cr.standing = 'held' and oc.season_year is null
-            order by cr.sort_order
-        """, {})]
+    # Who wore each title in this week, which is not the same as who wears it
+    # now. The crest recompute writes a held snapshot for every week it
+    # touches, so the answer is on record rather than inferred -- and without
+    # reading it, an account of week 7 of 2023 would hand every title to
+    # whoever holds it today. The live rows are the fallback for a week whose
+    # snapshot never got written.
+    held = q("""
+        select cr.name, o.username
+        from owner_crests oc
+        join crests cr on cr.crest_id = oc.crest_id
+        join owners o on o.owner_id = oc.owner_id
+        where cr.standing = 'held' and oc.season_year = %(y)s and oc.week = %(w)s
+        order by cr.sort_order
+    """, {"y": season, "w": week}) or q("""
+        select cr.name, o.username
+        from owner_crests oc
+        join crests cr on cr.crest_id = oc.crest_id
+        join owners o on o.owner_id = oc.owner_id
+        where cr.standing = 'held' and oc.season_year is null
+        order by cr.sort_order
+    """, {})
+    facts["titles_held_that_week"] = [
+        {"note": "%s holds %s" % (r["username"], r["name"])} for r in held]
 
     # The week ahead, with enough beside each pairing to say something about
     # it: what each side has done so far, and what they have done to each
