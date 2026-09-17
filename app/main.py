@@ -1265,8 +1265,102 @@ def current_season():
     return RedirectResponse(url=f"/season/{rows[0]['y']}", status_code=307)
 
 
+# The rounds that lead to the trophy. The consolation side is a separate
+# ladder: losing a quarterfinal ends your championship whatever you win
+# afterwards, so those rows are not part of being "still alive".
+CHAMP_ROUNDS = ("quarterfinal", "semifinal", "championship")
+
+
+def still_alive(games, week):
+    """Managers who can still win the championship going into `week`.
+
+    Read off the bracket rows rather than worked out from a seed. A bye is a
+    row with no opponent, so the two managers who sit out week 15 are present
+    and are not mistaken for eliminated -- which is the trap in reading this
+    from the fixtures alone. Anyone beaten on the championship side in an
+    earlier week is dropped even if a later row still names them; nothing in
+    the schedule does that today, but the set should not depend on it.
+    """
+    seen, lost = set(), set()
+    for g in games:
+        if g["game_type"] not in CHAMP_ROUNDS:
+            continue
+        if g["week"] >= week:
+            seen.add(g["owner_a"])
+            if g["owner_b"]:
+                seen.add(g["owner_b"])
+        elif g["points_a"] is not None and g["points_b"] is not None:
+            lost.add(g["owner_b"] if g["points_a"] > g["points_b"]
+                     else g["owner_a"])
+    return seen - lost
+
+
+def standings_after(conn, year, week):
+    """The league table as it stood at the end of a given week.
+
+    team_season_stats covers a whole season, so it cannot answer "who led
+    after week five" -- on a finished season it would always name the
+    champion. Counted from the scores instead, regular games only, so an
+    unplayed week contributes nothing and the table simply stops where the
+    season has got to.
+
+    final_rank comes back as a null and points_against as a sum, so these
+    rows have the same shape as the season-wide ones and one template block
+    can draw either. The missing rank is deliberate: a position mid-season is
+    the row's place in this order, not a settled finish.
+    """
+    return query(conn, """
+        with sides as (
+            select m.team_a_id as team_id, m.team_a_points as pf,
+                   m.team_b_points as pa
+            from matchups m
+            where m.season_year = %(y)s and m.game_type = 'regular'
+              and m.week <= %(w)s
+              and m.team_a_points is not null and m.team_b_points is not null
+            union all
+            select m.team_b_id, m.team_b_points, m.team_a_points
+            from matchups m
+            where m.season_year = %(y)s and m.game_type = 'regular'
+              and m.week <= %(w)s and m.team_b_id is not null
+              and m.team_a_points is not null and m.team_b_points is not null
+        )
+        select t.team_id, t.team_name, o.username,
+               null::int as final_rank,
+               count(s.team_id) filter (where s.pf > s.pa)  as wins,
+               count(s.team_id) filter (where s.pf < s.pa)  as losses,
+               count(s.team_id) filter (where s.pf = s.pa)  as ties,
+               coalesce(sum(s.pf), 0) as points_for,
+               coalesce(sum(s.pa), 0) as points_against
+        from teams t
+        join owners o on o.owner_id = t.owner_id
+        left join sides s on s.team_id = t.team_id
+        where t.season_year = %(y)s
+        group by t.team_id, t.team_name, o.username
+        order by count(s.team_id) filter (where s.pf > s.pa)
+                 + 0.5 * count(s.team_id) filter (where s.pf = s.pa) desc,
+                 coalesce(sum(s.pf), 0) desc
+    """, {"y": year, "w": week})
+
+
 @app.get("/season/{year}", response_class=HTMLResponse)
-def season(request: Request, year: int):
+def season(request: Request, year: int, week: str | None = None):
+    """A season, shown a week at a time.
+
+    The selector at the top is the page's main control, and what it chooses
+    decides the whole shape rather than only which scores are on screen:
+
+      season    the year as a whole -- the table, the honour roll, the
+                records, the keepers. Where a finished season opens.
+      preview   the first week. Keeps the season preview above it forever,
+                because the preview is about that week whether or not it has
+                since been played.
+      regular   any other week before the playoffs.
+      playoffs  a week with bracket rows in it. No league table: by then the
+                table has stopped deciding anything.
+
+    Each of the three week states leads with a face and prose -- the read of
+    the week just gone, beside whoever the week belongs to.
+    """
     with get_db() as conn:
         head = query(conn, """
             select s.*, sr.champion, sr.champion_team, sr.runner_up,
@@ -1379,8 +1473,8 @@ def season(request: Request, year: int):
               and published_at is not null
             order by week, published_at desc
         """, (year,))}
-        # A season shows at most one of these, and which one depends on where
-        # the year has got to: a preview before it starts, a summary after
+        # The year as a whole gets at most one of these, and which one depends
+        # on where it has got to: a preview before it starts, a summary after
         # week 17. Newest of either kind, so the summary supersedes the
         # preview the moment one is written.
         rows = query(conn, """
@@ -1391,59 +1485,146 @@ def season(request: Request, year: int):
         """, (year,))
         season_summary = rows[0] if rows else None
 
-        # The banner: a portrait with the season's prose beside it.
-        #
-        # Who is pictured depends on which prose it is. A preview belongs to a
-        # season that has not started, so the face is last year's champion --
-        # the one with something to defend. A recap belongs to a season that
-        # has finished, so it is this year's.
-        #
-        # The week-driven states -- the leader during the regular season, the
-        # best seed still alive in the playoffs -- are not built yet and fall
-        # through to no banner rather than to a wrong face.
-        banner = None
-        if season_summary:
-            of_season = year - 1 if season_summary["kind"] == "preview" else year
-            champ = query(conn, """
+        weeks = []
+        for g in games:
+            if not weeks or weeks[-1]["week"] != g["week"]:
+                weeks.append({"week": g["week"], "games": [], "played": False})
+            g["rival"] = (g["owner_a"], g["owner_b"]) in rival_pairs
+            weeks[-1]["games"].append(g)
+            if g["points_a"] is not None:
+                weeks[-1]["played"] = True
+
+        # Rivalry week is the week where every game is a rival meeting, which
+        # is read off the fixtures rather than pinned to a number. The
+        # schedule generator puts it in week 10, but a week that merely
+        # happens to be numbered 10 is not rivalry week: the pre-2026
+        # schedules came from Yahoo and know nothing about rivalries. Across
+        # all five seasons this is true of exactly one week -- 2026's tenth --
+        # and of no other. A lone rival meeting elsewhere, of which there are
+        # several, does not qualify.
+        for w in weeks:
+            w["rivalry"] = len(w["games"]) > 1 and all(g["rival"] for g in w["games"])
+
+        # Which weeks are playoff weeks comes from the rows, not from 15-17:
+        # a season whose bracket has not been drawn yet has none, and its
+        # last week is an ordinary one.
+        numbers = [w["week"] for w in weeks]
+        playoff_weeks = {g["week"] for g in games if g["game_type"] != "regular"}
+        played = [w["week"] for w in weeks if w["played"]]
+        finished = bool(head[0]["champion"])
+
+        # What the selector is pointing at. `week=season` is the year as a
+        # whole; anything unrecognised falls back to the default rather than
+        # answering 404, because a stale link should still land somewhere.
+        want = (week or "").strip().lower()
+        if want.isdigit() and int(want) in numbers:
+            shown = int(want)
+        elif want == "season" or finished or not numbers:
+            # A finished season opens on itself: the last week of the year is
+            # the week just gone, and the year is the more interesting read.
+            shown = None
+        else:
+            # Mid-season, open on what just happened rather than on week 1.
+            shown = played[-1] if played else numbers[0]
+
+        if shown is None:
+            state = "season"
+        elif shown in playoff_weeks:
+            state = "playoffs"
+        elif shown == numbers[0]:
+            state = "preview"
+        else:
+            state = "regular"
+
+        this_week = next((w for w in weeks if w["week"] == shown), None)
+
+        # The league table under a week is that week's table, not the
+        # season's: on a finished year the season-wide one would show the
+        # final order underneath week three. Seed marks go with it -- they
+        # describe a race that is still being run, and are computed from the
+        # season-wide table, so they belong only to the year as a whole.
+        if state in ("preview", "regular"):
+            standings = standings_after(conn, year, shown)
+            seeds = {}
+        else:
+            seeds = playoff_labels(standings, remaining)
+
+        def champion_of(y):
+            rows = query(conn, """
                 select username, team_name from team_season_stats
                 where season_year = %s and final_rank = 1
-            """, (of_season,))
-            banner = {
-                "kind": season_summary["kind"],
-                "body": season_summary["body"],
-                "username": champ[0]["username"] if champ else None,
-                "team_name": champ[0]["team_name"] if champ else None,
-                "champion_of": of_season if champ else None,
-            }
+            """, (y,))
+            return rows[0] if rows else None
 
-    weeks = []
-    for g in games:
-        if not weeks or weeks[-1]["week"] != g["week"]:
-            weeks.append({"week": g["week"], "games": [], "played": False})
-        g["rival"] = (g["owner_a"], g["owner_b"]) in rival_pairs
-        weeks[-1]["games"].append(g)
-        if g["points_a"] is not None:
-            weeks[-1]["played"] = True
+        # The banner: a face, and the season's or the week's prose beside it.
+        #
+        # Who is pictured follows the prose. A preview belongs to a season
+        # that has not started, so the face is last year's champion -- the one
+        # with something to defend. A recap belongs to a season that has
+        # finished, so it is this year's. A week belongs to whoever is winning
+        # the thing that week is part of: the league table during the regular
+        # season, the bracket once the bracket is what matters.
+        #
+        # Week N carries week N-1's read, because a week's summary is written
+        # from its scores and cannot exist until the week is over. That leaves
+        # the first week with no week to look back on, which is exactly what
+        # the season preview is for.
+        banner = None
+        if state == "season":
+            if season_summary:
+                of_season = year if season_summary["kind"] == "season" else year - 1
+                who = champion_of(of_season)
+                banner = {
+                    "title": "How it went" if season_summary["kind"] == "season"
+                             else "The year ahead",
+                    "body": season_summary["body"],
+                    "username": who["username"] if who else None,
+                    "note": "champion of %d" % of_season if who else None,
+                }
+        elif state == "preview":
+            rows = query(conn, """
+                select body from summaries
+                where season_year = %s and kind = 'preview'
+                  and published_at is not null
+                order by published_at desc limit 1
+            """, (year,))
+            if rows:
+                who = champion_of(year - 1)
+                banner = {
+                    "title": "The year ahead", "body": rows[0]["body"],
+                    "username": who["username"] if who else None,
+                    "note": "champion of %d" % (year - 1) if who else None,
+                }
+        elif week_summaries.get(shown - 1):
+            body = week_summaries[shown - 1]
+            if state == "regular":
+                # First in the table drawn underneath, so the face and the
+                # rows below it agree with each other.
+                lead = standings[0] if standings else None
+                banner = {
+                    "title": "Week %d" % (shown - 1), "body": body,
+                    "username": lead["username"] if lead else None,
+                    "note": "leads the league" if lead else None,
+                }
+            else:
+                # The best regular-season finisher of those still in it. The
+                # regular table is the seeding, so it is read at the last week
+                # before the bracket rather than from the season as a whole.
+                last_regular = max((n for n in numbers if n not in playoff_weeks),
+                                   default=None)
+                alive = still_alive(games, shown)
+                lead = None
+                if last_regular and alive:
+                    lead = next((r for r in standings_after(conn, year, last_regular)
+                                 if r["username"] in alive), None)
+                banner = {
+                    "title": "Week %d" % (shown - 1), "body": body,
+                    "username": lead["username"] if lead else None,
+                    "note": "top seed still standing" if lead else None,
+                }
 
-    # Rivalry week is the week where every game is a rival meeting, which is
-    # read off the fixtures rather than pinned to a number. The schedule
-    # generator puts it in week 10, but a week that merely happens to be
-    # numbered 10 is not rivalry week: the pre-2026 schedules came from Yahoo
-    # and know nothing about rivalries. Across all five seasons this is true
-    # of exactly one week -- 2026's tenth -- and of no other. A lone rival
-    # meeting elsewhere, of which there are several, does not qualify.
-    for w in weeks:
-        w["rivalry"] = len(w["games"]) > 1 and all(g["rival"] for g in w["games"])
-
-    # Open on the last week that has scores, so a season in progress lands on
-    # what just happened rather than on week 1. Before a ball is kicked, and
-    # once the season is over, that is the first and last week respectively.
-    played = [w["week"] for w in weeks if w["played"]]
-    open_week = played[-1] if played else (weeks[0]["week"] if weeks else None)
-
-    seeds = playoff_labels(standings, remaining)
-    brackets = playoff_brackets(games)
-    titles, crest_groups = season_roll(crest_rows)
+        brackets = playoff_brackets(games)
+        titles, crest_groups = season_roll(crest_rows)
 
     # Every sigil on the page wears the title its manager held when this
     # season closed. `titles` is already in sort_order, so setdefault keeps
@@ -1458,9 +1639,8 @@ def season(request: Request, year: int):
         return templates.TemplateResponse(
             request=request, name="season.html",
             context={"s": head[0], "standings": standings, "weeks": weeks,
-                     "week_summaries": week_summaries, "season_summary": season_summary,
-                     "banner": banner,
-                     "records": records, "open_week": open_week,
+                     "state": state, "shown": shown, "this_week": this_week,
+                     "banner": banner, "records": records,
                      "seeds": seeds, "seed_key": seed_key(seeds, standings),
                      "brackets": brackets, "titles": titles,
                      "crest_groups": crest_groups, "week_crests": week_crests,

@@ -1152,6 +1152,19 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   background: var(--accent);
   border-color: var(--accent);
 }
+/* The band the week selector sits in. A section, so it lines up with the
+   headings below it rather than running out to the panel edge, but shallower
+   than a section of content: it holds one row of controls, and the margins
+   the strip and the dropdown already carry are the only room it needs. */
+.weekbar { padding: var(--s3) var(--pad-section) 0; }
+.weekbar .pickstrip { margin-top: 0; }
+.weekbar .week-picker { margin-bottom: var(--s3); }
+
+/* The one entry that is not a number: the year as a whole. It comes after
+   the weeks, and is set apart from them so the strip reads as a choice
+   between a week and the season rather than as nineteen of the same thing. */
+.pickstrip a.wide { margin-left: var(--s3); }
+
 /* Scheduled but not played: still selectable, just quieter. */
 .pickstrip a.unplayed { color: #a49c8c; border-style: dashed; }
 .pickstrip a.unplayed.on { color: var(--panel-bg); border-style: solid; }
@@ -1197,8 +1210,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 /* The swords carry the meaning in the row, so they are set larger than the
    "vs" they replace -- at the body size the glyph shrinks to a smudge. */
 .scores.rivalry .vs { color: var(--gold-deep); font-size: 1.25rem; line-height: 1; }
-
-.week h3 { margin-top: 0; }
 
 /* Weekly results. */
 .scores { margin-bottom: var(--s4); }
@@ -2033,17 +2044,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   gap: var(--s2) var(--s4);
   margin: var(--s3) 0 var(--s4);
 }
-/* The same grid inside a week panel, pulled tight and ruled off from the
-   scores above it. A modifier rather than a second .crest-grid: one
-   definition per selector, and the only differences are the spacing and
-   the line. */
-.crest-grid.inweek {
-  gap: var(--s2) var(--s4);
-  margin: 0;
-  padding-top: var(--s3);
-  border-top: 1px solid var(--rule);
-}
-
 .crest > summary {
   list-style: none;
   cursor: pointer;
@@ -2172,15 +2172,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   color: var(--ink);
 }
 .summary p:last-child { margin-bottom: 0; }
-/* Inside a week panel it is a paragraph between the scores and the crests,
-   not a section of its own, so it takes the room a paragraph takes. */
-.summary.inweek {
-  margin: var(--s4) 0 0;
-  padding-left: var(--s4);
-  border-left: 2px solid var(--panel-edge);
-}
-.summary.inweek p { font-size: var(--t-base); }
-
 /* A summary waiting to be read, on /admin/summaries. Panelled so several in
    a row stay separable, which a page of bare paragraphs would not. */
 .draft {
@@ -2799,8 +2790,9 @@ button.seal[disabled]:hover {
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }
 
-  /* Seventeen buttons ran to three rows here, so the week strip gives way
-     to the dropdown, which is one line. Same control, same JS. By id, not by
+  /* Eighteen links ran to three rows here, so the week strip gives way to
+     the dropdown, which is one line. Same choice either way: the strip's
+     links and the dropdown's form both land on the same page. By id, not by
      class, from when the keeper years were a strip too and fitted. They are
      a dropdown now and .pickstrip has one user left, but the id still says
      which strip this is about. */

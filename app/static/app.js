@@ -390,12 +390,10 @@
   // they all stay visible and the strip's links simply jump to them, so the
   // page still works.
   //
-  // A season's weeks have two controls -- a strip of seventeen on wide
-  // screens, a select on narrow ones -- and CSS shows one at a time. Both are
-  // updated on every change rather than only the visible one, so resizing or
-  // rotating never reveals a control pointing at a different panel. A
-  // manager's keeper seasons have the strip alone; three buttons need no
-  // dropdown.
+  // A manager's keeper seasons are chosen this way, and so are a season's
+  // titles. A season's weeks are not: the week selector there changes the
+  // whole shape of the page, not just which scores are on it, so it is
+  // ordinary links and the server draws the week.
   var strips = function (stripSel, panelSel, attr, selectId) {
     var nav = stripSel ? document.querySelector(stripSel) : null;
     var pick = selectId ? document.getElementById(selectId) : null;
@@ -434,7 +432,6 @@
     }
   };
 
-  strips("#weekstrip", ".week", "data-week", "weekpick");
   strips(null, ".keeper-season", "data-season", "keeperpick");
 
   // ---- a picker that loads when you choose ----

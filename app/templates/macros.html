@@ -264,3 +264,47 @@
   </div>
   {% endif %}
 {%- endmacro %}
+
+
+{# The league table, in either of its two readings: the season's, which
+   carries a settled position and the seed marks, and a single week's, which
+   carries neither. The difference is entirely in the rows handed in, so the
+   markup is written once. #}
+{% macro standingstable(rows, seeds, key) -%}
+  <table data-panel="table">
+    <thead>
+      <tr><th>Pos</th><th class="name">Owner</th><th class="name">Team</th>
+          <th>W</th><th>L</th><th>PF</th><th>PA</th></tr>
+    </thead>
+    <tbody>
+    {% for t in rows %}
+      <tr>
+        <td class="{% if t.final_rank == 1 %}win{% endif %}">{{ ordinal(t.final_rank) or loop.index }}</td>
+        {# The mark sits inside the name line rather than on a line of its
+           own: as a written label it added 21px to every row. The legend
+           under the table carries the words. #}
+        <td class="name">
+          <span class="avatar-line">
+            {{ avatar(t.username, 30) }}
+            <a href="/team/{{ t.username|lower }}">{{ t.username }}</a>
+            {% set seed = seeds.get(t.team_id) %}
+            {% if seed %}{{ seedmark(seed) }}{% endif %}
+          </span>
+        </td>
+        <td class="name">{{ t.team_name }}</td>
+        <td>{{ t.wins }}</td>
+        <td>{{ t.losses }}</td>
+        <td>{{ "%.1f"|format(t.points_for) }}</td>
+        <td>{{ "%.1f"|format(t.points_against) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if key %}
+    <p class="seedkey" data-panel="table">
+      {% for seed in key %}
+        <span>{{ seedmark(seed, named=false) }}{{ seed.text }}</span>
+      {% endfor %}
+    </p>
+  {% endif %}
+{%- endmacro %}
