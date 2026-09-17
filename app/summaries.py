@@ -974,6 +974,79 @@ def season_facts(q, season):
             order by t.final_rank
         """, {"y": season})]
 
+    # How the rivalries actually went. The pairings are in the preview facts
+    # as names set against each other; a recap wants the result, because a
+    # rivalry nobody won is a different story from one somebody swept.
+    rivals = []
+    for r in q("""
+        with pairs as (
+            select distinct least(r.owner_id, r.rival_owner_id) as a_id,
+                            greatest(r.owner_id, r.rival_owner_id) as b_id
+            from rivalries r where r.season_year = %(y)s
+        )
+        select oa.username as a, ob.username as b,
+               count(g.matchup_id) as games,
+               count(*) filter (where g.result = 'W') as a_wins,
+               string_agg(g.game_type, ', ' order by g.week) as types
+        from pairs p
+        join owners oa on oa.owner_id = p.a_id
+        join owners ob on ob.owner_id = p.b_id
+        left join game_log g on g.season_year = %(y)s
+             and g.owner_id = p.a_id and g.opponent_owner_id = p.b_id
+        group by oa.username, ob.username
+        order by oa.username
+    """, {"y": season}):
+        if not r["games"]:
+            rivals.append({"note": "%s and %s were rivals and never met"
+                                   % (r["a"], r["b"])})
+            continue
+        a_won, played = r["a_wins"], r["games"]
+        every = {1: "it", 2: "both"}.get(played, "all %d" % played)
+        if a_won == played:
+            how = "%s won %s" % (r["a"], every)
+        elif a_won == 0:
+            how = "%s won %s" % (r["b"], every)
+        else:
+            how = "they split it %d-%d" % (a_won, played - a_won)
+        extra = ""
+        kinds = [t for t in (r["types"] or "").split(", ") if t != "regular"]
+        if kinds:
+            extra = ", one of them a %s" % kinds[0].replace("_", " ")
+        rivals.append({"note": "%s and %s were rivals and met %s; %s%s"
+                               % (r["a"], r["b"],
+                                  {1: "once", 2: "twice"}.get(played,
+                                                             "%d times" % played),
+                                  how, extra)})
+    facts["how_the_rivalries_went"] = rivals
+
+    # Which titles changed hands over the year. A title is held by one
+    # manager at a time and rings their sigil wherever it is drawn, so
+    # losing one is a thing that happened to somebody. Read by comparing this
+    # season's closing snapshot with the one before it; a title with no row
+    # last year is one nobody had yet.
+    facts["titles_that_changed_hands"] = [
+        {"note": "%s took %s from %s" % (r["taken_by"], r["name"], r["lost_by"])
+                 if r["lost_by"] else
+                 "%s is the first to hold %s" % (r["taken_by"], r["name"])}
+        for r in q("""
+            with held as (
+                select oc.season_year, cr.crest_id, cr.name, cr.sort_order,
+                       o.username
+                from owner_crests oc
+                join crests cr on cr.crest_id = oc.crest_id
+                join owners o on o.owner_id = oc.owner_id
+                where oc.week is null and cr.standing = 'held'
+                  and oc.season_year in (%(y)s, %(y)s - 1)
+            )
+            select n.name, n.username as taken_by, b.username as lost_by
+            from held n
+            left join held b on b.crest_id = n.crest_id
+                            and b.season_year = %(y)s - 1
+            where n.season_year = %(y)s
+              and n.username is distinct from b.username
+            order by n.sort_order
+        """, {"y": season})]
+
     # One line per manager, not one per player. Thirty-five rows of manager,
     # player, round is a table, and a table in the facts comes back as a
     # table in the prose.
