@@ -1444,13 +1444,15 @@ def season(request: Request, year: int, week: str | None = None):
               and published_at is not null
             order by week, published_at desc
         """, (year,))}
-        # The year as a whole gets at most one of these, and which one depends
-        # on where it has got to: a preview before it starts, a summary after
-        # week 17. Newest of either kind, so the summary supersedes the
-        # preview the moment one is written.
+        # The recap, and only the recap. The year as a whole once took
+        # whichever of the preview or the recap was published later, which
+        # put a finished season's own preview in the place its recap goes --
+        # a page that reads as though nobody ever wrote the recap. The
+        # preview is about the year ahead and belongs to week 1, where the
+        # preview state fetches it for itself.
         rows = query(conn, """
-            select kind, body from summaries
-            where season_year = %s and kind in ('preview', 'season')
+            select body from summaries
+            where season_year = %s and kind = 'season'
               and published_at is not null
             order by published_at desc limit 1
         """, (year,))
@@ -1580,11 +1582,10 @@ def season(request: Request, year: int, week: str | None = None):
             return top if games_played else None
 
         if state == "season":
-            # The recap, once it exists, is what the year is; until then the
-            # preview is. The face follows whichever it is, and in between --
-            # a season under way with no recap written -- it follows the table.
-            recap = bool(season_summary and season_summary["kind"] == "season")
-            if recap or finished:
+            # The face is whoever is on top of the thing this page is about:
+            # the champion once there is one, the table while there is not,
+            # and the defending champion before a ball has been thrown.
+            if finished:
                 who = champion_of(year)
                 aside = who["title"] if who else None
             elif played:
@@ -1593,15 +1594,15 @@ def season(request: Request, year: int, week: str | None = None):
                 who = champion_of(year - 1)
                 aside = who["title"] if who else None
             banner = {
-                "title": "How it went" if (recap or finished) else "The year ahead",
+                "title": "How it went",
                 "body": season_summary["body"] if season_summary else None,
-                # Said as a plain absence rather than as a promise about
-                # when: half these pages are seasons that finished years ago,
-                # and "once the last game is played" would be a lie on every
-                # one of them.
+                # A finished season says the account is missing; one still
+                # being played says when it arrives. "Once the last game is
+                # played" would be a lie on every season that ended years ago.
                 "waiting": "No account of the season has been set down yet."
-                           if (recap or finished) else
-                           "No word on the year ahead has been set down yet.",
+                           if finished else
+                           "The account of the season is written once the "
+                           "year is done.",
                 "username": who["username"] if who else None,
                 "aside": aside if who else None,
             }
