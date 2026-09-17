@@ -18,6 +18,7 @@ from psycopg_pool import ConnectionPool
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import crests as crestrules
+from app import summaries
 from app.keeperrules import next_free_round
 
 load_dotenv()
@@ -4561,6 +4562,158 @@ def season_setup_steps(conn, year):
         eight_block))
 
     return steps, n
+
+
+def write_summary(conn, season, kind, body, model, week=None, matchup_id=None):
+    """Store a generated summary, unpublished. Returns its id.
+
+    Never updates. A regeneration is a new row that sits beside the one it
+    hopes to replace until somebody prefers it, which is what makes
+    "generate again and see" a safe thing to do on a page the league reads.
+    """
+    with conn.cursor() as cur:
+        cur.execute("""
+            insert into summaries (season_year, kind, week, matchup_id, body, model)
+            values (%s, %s, %s, %s, %s, %s)
+            returning summary_id
+        """, (season, kind, week, matchup_id, body, model))
+        new_id = cur.fetchone()["summary_id"]
+    conn.commit()
+    return new_id
+
+
+@app.get("/admin/summaries", response_class=HTMLResponse)
+def admin_summaries(request: Request, season: int = 0,
+                    msg: str = "", error: str = ""):
+    """Everything written about a season, published or not.
+
+    Drafts first: an unpublished summary is the only thing on this page that
+    wants doing, and the published ones are here to be re-read rather than
+    acted on.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        years = [r["season_year"] for r in query(conn, """
+            select season_year from seasons order by season_year desc
+        """)]
+        if not season:
+            season = years[0] if years else 0
+        rows = query(conn, """
+            select summary_id, kind, week, body, model,
+                   generated_at, published_at
+            from summaries where season_year = %s
+            order by (published_at is not null), generated_at desc
+        """, (season,))
+
+    drafts = [r for r in rows if not r["published_at"]]
+    published = [r for r in rows if r["published_at"]]
+    return templates.TemplateResponse(
+        request=request, name="admin_summaries.html",
+        context={"years": years, "season": season,
+                 "drafts": drafts, "published": published,
+                 "have_key": summaries.available(), "model": summaries.MODEL,
+                 "msg": msg, "error": error})
+
+
+@app.post("/admin/summaries/generate")
+async def admin_summary_generate(request: Request):
+    """Write one, unpublished. Slow on purpose: the call takes twenty seconds
+    or so and the admin is standing here waiting for it, which is the whole
+    reason the weekly ones are fired by score entry instead."""
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    kind = form.get("kind") or "preview"
+    back = "/admin/summaries?season=%d" % season
+
+    if kind != "preview":
+        return RedirectResponse(
+            url=back + "&error=" + quote("Only the preview can be written by "
+                                         "hand so far."), status_code=303)
+
+    with get_db() as conn:
+        def q(sql, params):
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                return [dict(r) for r in cur.fetchall()]
+        try:
+            body, missed = summaries.generate_preview(q, season)
+        except summaries.SummaryError as e:
+            return RedirectResponse(url=back + "&error=" + quote(str(e)),
+                                    status_code=303)
+        write_summary(conn, season, "preview", body, summaries.MODEL)
+
+    note = "Preview written for %s. Read it before publishing." % season
+    if missed:
+        # Reported rather than hidden: the retry already had its go, and an
+        # admin deciding whether to publish should know who was left out.
+        note += " Not mentioned: %s." % ", ".join(missed)
+    return RedirectResponse(url=back + "&msg=" + quote(note), status_code=303)
+
+
+@app.post("/admin/summaries/publish")
+async def admin_summary_publish(request: Request):
+    """Make one visible. The season page reads published rows only, so this
+    is the moment a summary becomes something the league can see."""
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    sid = int(form["summary_id"])
+    back = "/admin/summaries?season=%d" % season
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                update summaries set published_at = now()
+                where summary_id = %s and published_at is null
+                returning kind, week
+            """, (sid,))
+            row = cur.fetchone()
+        conn.commit()
+
+    if not row:
+        return RedirectResponse(
+            url=back + "&error=" + quote("That summary is already published."),
+            status_code=303)
+    what = ("Keeper week %s" % row["week"]) if row["week"] else row["kind"]
+    return RedirectResponse(
+        url=back + "&msg=" + quote("Published the %s summary." % what),
+        status_code=303)
+
+
+@app.post("/admin/summaries/discard")
+async def admin_summary_discard(request: Request):
+    """Throw a draft away. Only a draft: a published summary has been read by
+    the league and deleting it silently would change what they remember."""
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    sid = int(form["summary_id"])
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                delete from summaries
+                where summary_id = %s and published_at is null
+            """, (sid,))
+            gone = cur.rowcount
+        conn.commit()
+
+    back = "/admin/summaries?season=%d" % season
+    if not gone:
+        return RedirectResponse(
+            url=back + "&error=" + quote("Nothing discarded: a published "
+                                         "summary cannot be deleted here."),
+            status_code=303)
+    return RedirectResponse(url=back + "&msg=" + quote("Draft discarded."),
+                            status_code=303)
 
 
 @app.get("/admin/season-setup", response_class=HTMLResponse)

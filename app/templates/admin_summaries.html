@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Summaries | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <h1>Summaries</h1>
+    <p class="lede">Everything written about a season. Nothing here is on the
+      season page until it is published, so a draft can be read, regenerated
+      or thrown away without the league seeing any of it.</p>
+  </header>
+
+  <section>
+    <div class="pickhead">
+      <p class="draftstate {% if drafts %}live{% elif published %}set{% else %}none{% endif %}">
+        <span>{% if drafts %}{{ drafts|length }} to read{% else %}Nothing waiting{% endif %}</span>
+        <span class="sub">{{ published|length }} published</span>
+      </p>
+      <form method="get" action="/admin/summaries" class="picker loadonpick">
+        <label for="season">Season</label>
+        <select id="season" name="season">
+          {% for y in years %}
+            <option value="{{ y }}" {% if y == season %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="seal">Load</button>
+      </form>
+    </div>
+
+    {# Said once, here, rather than left for a failed generation to explain.
+       Without a key nothing on this page can write anything. #}
+    {% if not have_key %}
+      <p class="note">No <b>GEMINI_API_KEY</b> is set in this environment, so
+        nothing can be written here. The season page is unaffected: it shows
+        published summaries and there simply are none.</p>
+    {% endif %}
+
+    <form method="post" action="/admin/summaries/generate" class="season-form">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="kind" value="preview">
+      <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>
+        Write a {{ season }} preview</button>
+      <span class="tm">Takes around half a minute. Written by {{ model }},
+        and stored unpublished.</span>
+    </form>
+  </section>
+
+  {% if drafts %}
+  <section>
+    <h2>Waiting to be read</h2>
+    {% for d in drafts %}
+      <article class="draft">
+        <p class="setup-head">
+          <b>{% if d.week %}Week {{ d.week }}{% else %}{{ d.kind|capitalize }}{% endif %}</b>
+          <span class="pill">Draft</span>
+          <span class="tm">{{ d.model }} &middot; {% if d.generated_at %}{{ d.generated_at.day }} {{ d.generated_at.strftime("%b, %H:%M") }}{% endif %}</span>
+        </p>
+        <div class="summary">
+          {% for para in d.body.split("\n\n") if para.strip() %}
+            <p>{{ para.strip() }}</p>
+          {% endfor %}
+        </div>
+        <p class="phase-act">
+          <form method="post" action="/admin/summaries/publish" class="inline">
+            <input type="hidden" name="season" value="{{ season }}">
+            <input type="hidden" name="summary_id" value="{{ d.summary_id }}">
+            <button type="submit" class="seal">Publish</button>
+          </form>
+          <form method="post" action="/admin/summaries/discard" class="inline">
+            <input type="hidden" name="season" value="{{ season }}">
+            <input type="hidden" name="summary_id" value="{{ d.summary_id }}">
+            <button type="submit" class="ghost"
+                    data-confirm="Discard this draft? It is not on the season page and cannot be recovered.">
+              Discard</button>
+          </form>
+        </p>
+      </article>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Published</h2>
+    {% if not published %}
+      <p class="note">Nothing published for {{ season }} yet. Write a preview
+        above, read it, and it will appear on the season page.</p>
+    {% endif %}
+    {% for p in published %}
+      <article class="draft">
+        <p class="setup-head">
+          <b>{% if p.week %}Week {{ p.week }}{% else %}{{ p.kind|capitalize }}{% endif %}</b>
+          <span class="pill live">Published</span>
+          <span class="tm">{{ p.model }} &middot; {% if p.published_at %}{{ p.published_at.day }} {{ p.published_at.strftime("%b, %H:%M") }}{% endif %}</span>
+        </p>
+        <div class="summary">
+          {% for para in p.body.split("\n\n") if para.strip() %}
+            <p>{{ para.strip() }}</p>
+          {% endfor %}
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

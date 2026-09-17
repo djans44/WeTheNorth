@@ -30,6 +30,11 @@ def main():
     os.environ["DATABASE_URL_DIRECT"] = direct
     if reh.get("SECRET_KEY"):
         os.environ["SECRET_KEY"] = reh["SECRET_KEY"]
+    # The summary generator needs this and it is not a database setting, so
+    # it comes from the ordinary .env rather than the branch file.
+    live = dotenv_values(os.path.join(ROOT, ".env"))
+    if live.get("GEMINI_API_KEY"):
+        os.environ["GEMINI_API_KEY"] = live["GEMINI_API_KEY"]
 
     print("serving the REHEARSAL branch")
     print("  host  %s" % describe(direct))

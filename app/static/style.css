@@ -2157,6 +2157,19 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 }
 .summary.inweek p { font-size: var(--t-base); }
 
+/* A summary waiting to be read, on /admin/summaries. Panelled so several in
+   a row stay separable, which a page of bare paragraphs would not. */
+.draft {
+  margin: var(--s4) 0 0;
+  padding: var(--s4);
+  border: 1px solid var(--rule);
+  background: var(--panel-lift);
+}
+.draft .phase-act { display: flex; gap: var(--s3); margin-top: var(--s4); }
+/* .inline exists so these two buttons sit on one line rather than each
+   taking the margin a lone submit gets. */
+.draft form.inline { margin: 0; }
+
 /* ---- the bar that arrives after the header ---- */
 
 /* Replaces the condensing sticky header on the manager page. Fixed, so it is
