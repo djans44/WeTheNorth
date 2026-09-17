@@ -232,7 +232,11 @@ section:last-child { border-bottom: 0; }
 #top { position: absolute; top: 0; left: 0; width: 0; height: 0; }
 
 .to-top { display: none; }
-.page-head.stuck.condensed .to-top {
+/* Two headers show this now -- the condensing one and the manager page's
+   fixed bar -- and it has to read the same in both, chevron included. One
+   definition, two hosts, rather than the bar growing its own. */
+.page-head.stuck.condensed .to-top,
+.topbar .to-top {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -241,7 +245,8 @@ section:last-child { border-bottom: 0; }
   text-decoration: none;
   color: var(--ink-muted);
 }
-.page-head.stuck.condensed .to-top::before {
+.page-head.stuck.condensed .to-top::before,
+.topbar .to-top::before {
   content: "";
   width: 0.4em;
   height: 0.4em;
@@ -250,7 +255,8 @@ section:last-child { border-bottom: 0; }
   border-top: 1.5px solid currentColor;
   transform: rotate(45deg);
 }
-.page-head.stuck.condensed .to-top:hover { color: var(--accent); }
+.page-head.stuck.condensed .to-top:hover,
+.topbar .to-top:hover { color: var(--accent); }
 
 /* A header carrying only a title does not need the room one with a lede
    below it does. */
@@ -2161,6 +2167,12 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    headpick rules are written for a page title, so the heading inside it has
    to come down to something a 44px strip can hold. */
 .topbar .headpick > summary h1 {
+  /* h1.titled gets its flex from .page-head, and this one is not in a
+     .page-head. Without it the gap below does nothing and the sigil sits on
+     the text baseline rather than centred against the name. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin: 0;
   padding: 0;
   font-size: 1.35rem;
@@ -2172,10 +2184,6 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    correction .page-head.stuck.condensed makes for the same reason. */
 .topbar .headpick > summary h1::after { margin-right: 0; }
 .topbar .headpick > ul { text-align: left; }
-/* .to-top is display:none until the old header condensed. This bar is the
-   only place it appears now, so it is shown whenever the bar is. */
-.topbar .to-top { display: inline; font-size: var(--t-sm); }
-
 /* ---- the painted portraits ---- */
 
 /* Sized by the panel rather than fixed, so it comes down with the page on a
