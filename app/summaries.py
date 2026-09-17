@@ -324,9 +324,13 @@ def preview_facts(q, season):
     # into a season is the standing of the realm, and a preview that does not
     # mention them is describing a different league.
     #
-    # season_year is null for the live holder; the same crest also has a row
-    # per closed season saying who held it then, which is not what a preview
-    # about the year ahead wants.
+    # Taken from the close of the season before, not from the rows with no
+    # season on them. Those are who holds each title today, which is the
+    # right answer for the season being played and nonsense for any other:
+    # a preview of 2022 was being told that David wears Protector of the
+    # Realm as champion of 2025, three years before it happened. The league's
+    # first season has no year before it and so carries no titles in, which
+    # is also true.
     facts["titles_held_going_in"] = [
         {"note": "%s holds %s (%s)" % (r["username"], r["name"], r["detail"])
                  if r["detail"] else "%s holds %s" % (r["username"], r["name"])}
@@ -335,9 +339,10 @@ def preview_facts(q, season):
             from owner_crests oc
             join crests cr on cr.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
-            where cr.standing = 'held' and oc.season_year is null
+            where cr.standing = 'held' and oc.season_year = %s - 1
+              and oc.week is null
             order by cr.sort_order, cr.name
-        """, ())]
+        """, (season,))]
 
     # What last season handed out. Earned crests are kept for good, so these
     # are the honours the year just gone is remembered by.
@@ -362,21 +367,35 @@ def preview_facts(q, season):
     #
     # One line per manager rather than a row per manager per season: forty-
     # eight rows of the same three columns invites the model to recite them.
+    #
+    # Everything is counted up to the season being previewed and no further.
+    # owner_all_time_stats is all time as of now, so a preview of 2023 was
+    # being handed 2024 and 2025 -- results the preview cannot know and a
+    # reader would spot instantly. A manager with nothing behind them says
+    # so rather than being dropped: Niall arriving in 2024 is worth a
+    # sentence.
     facts["every_finish_so_far"] = [
-        {"note": "%s has finished: %s (career %s-%s, best %s, %s titles)"
+        {"note": "%s has finished: %s (record so far %s-%s, best %s, %s titles)"
                  % (r["username"], r["history"], r["wins"], r["losses"],
-                    r["best_finish"], r["titles"])}
+                    r["best_finish"], r["titles"])
+                 if r["history"] else
+                 "%s has not played a season in this league before"
+                 % r["username"]}
         for r in q("""
-            select a.username, a.wins, a.losses, a.best_finish, a.titles,
-                   (select string_agg(t.season_year || ': ' || t.final_rank, ', '
-                                      order by t.season_year)
-                    from team_season_stats t
-                    where t.owner_id = a.owner_id and t.final_rank is not null)
-                   as history
-            from owner_all_time_stats a
-            where a.owner_id in (select owner_id from teams where season_year = %s)
-            order by a.username
-        """, (season,))]
+            select o.username,
+                   string_agg(t.season_year || ': ' || t.final_rank, ', '
+                              order by t.season_year) as history,
+                   sum(t.wins) as wins, sum(t.losses) as losses,
+                   min(t.final_rank) as best_finish,
+                   count(*) filter (where t.final_rank = 1) as titles
+            from owners o
+            left join team_season_stats t
+              on t.owner_id = o.owner_id and t.final_rank is not null
+             and t.season_year < %s
+            where o.owner_id in (select owner_id from teams where season_year = %s)
+            group by o.username
+            order by o.username
+        """, (season, season))]
 
     # Superlatives, stated rather than left to be worked out. Given twelve
     # rows of points_for the model claimed the second-highest was the
