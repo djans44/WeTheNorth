@@ -4,19 +4,15 @@ import sys
 import psycopg
 from dotenv import load_dotenv
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.keeperrules import next_free_round  # noqa: E402
+
 load_dotenv()
 
 season = int(sys.argv[1])
 phase = int(sys.argv[2])
 dry = "--apply" not in sys.argv
 url = os.environ.get("DATABASE_URL_DIRECT") or os.environ["DATABASE_URL"]
-
-
-def first_free(want, taken):
-    for r in range(want, 0, -1):
-        if r not in taken:
-            return r
-    return None
 
 
 with psycopg.connect(url) as conn:
@@ -93,7 +89,7 @@ with psycopg.connect(url) as conn:
         if entry:
             pid, cid, want = entry
             held = taken.get(oid, set())
-            rd = first_free(want, held)
+            rd = next_free_round(want, held)
             if rd is None:
                 actions.append((oid, "error", pid, cid, None, None,
                                 f"contract wants R{want} but no free round remains"))
@@ -113,7 +109,7 @@ with psycopg.connect(url) as conn:
                                 "planned player is not eligible"))
                 continue
             held = taken.get(oid, set())
-            rd = first_free(want, held)
+            rd = next_free_round(want, held)
             if rd is None:
                 actions.append((oid, "error", pid, None, None, None,
                                 f"planned player wants R{want}, no free round"))

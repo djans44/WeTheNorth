@@ -18,6 +18,7 @@ from psycopg_pool import ConnectionPool
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import crests as crestrules
+from app.keeperrules import next_free_round
 
 load_dotenv()
 
@@ -2592,30 +2593,6 @@ def health():
     return {"status": "ok", "database": "connected"}
 
 
-def next_free_round(want, taken):
-    """The round a keeper actually costs when its own is spoken for.
-
-    From /rules: no two of your keepers may cost the same round, and the one
-    who arrived later moves **up** to the next free, more expensive round.
-    Up the board is down the number, and there is nothing above round one --
-    which is why two round-one keepers are impossible. None says there was
-    nowhere left to go.
-
-    This is the only copy of the rule on the server. It was four: this, a
-    _first_free that took the same two arguments the other way round, and two
-    generator expressions inlined where they were needed. All four agreed,
-    which is the kind of luck that does not survive an edit to one of them.
-
-    firstFree() in static/keepers.js is the fifth and has to stay: the card
-    redraws as an owner clicks and cannot ask the server between clicks. It
-    takes its arguments in this order so the two read alike. This one decides.
-    Nothing is written without it, so a divergence shows up as a preview that
-    lied rather than as a keeper in the wrong round.
-    """
-    for r in range(want, 0, -1):
-        if r not in taken:
-            return r
-    return None
 
 
 def resolve_keeper_phase(conn, season, phase, apply=False):
