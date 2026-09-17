@@ -35,7 +35,11 @@
         published summaries and there simply are none.</p>
     {% endif %}
 
-    <form method="post" action="/admin/summaries/generate" class="season-form">
+    {# The press is the last thing that happens for the best part of a
+       minute, so the button takes over saying so -- see data-working in
+       app.js. It also stops a second press starting a second generation. #}
+    <form method="post" action="/admin/summaries/generate" class="season-form"
+          data-working="Writing">
       <input type="hidden" name="season" value="{{ season }}">
       <input type="hidden" name="kind" value="preview">
       <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>

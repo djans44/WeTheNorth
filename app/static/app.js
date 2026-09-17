@@ -434,6 +434,32 @@
 
   strips(null, ".keeper-season", "data-season", "keeperpick");
 
+  // ---- a button that says it is working ----
+  // Some posts take most of a minute -- writing a summary is a call out to a
+  // model. The form posts normally and the answer is the next page, so there
+  // is nothing to poll; what was missing was any sign that the press had
+  // landed, and a second press would start a second generation. Opt in with
+  // data-working on the form, whose value is what the button should say
+  // while it waits.
+  var slow = document.querySelectorAll("form[data-working]");
+  for (var w = 0; w < slow.length; w++) {
+    (function (form) {
+      form.addEventListener("submit", function () {
+        var btn = form.querySelector("button[type=submit]");
+        if (!btn || btn.className.indexOf("working") !== -1) { return; }
+        // Pinned before the label is swapped: "Writing" is half the width of
+        // "Write a 2026 preview", and a button that shrinks under the cursor
+        // reads as a mis-click rather than as progress.
+        btn.style.minWidth = btn.offsetWidth + "px";
+        btn.className += " working";
+        btn.textContent = form.getAttribute("data-working");
+        // Disabled after the event rather than inside it: a control disabled
+        // during its own submit handler is not always sent with the form.
+        window.setTimeout(function () { btn.disabled = true; }, 0);
+      });
+    }(slow[w]));
+  }
+
   // ---- a picker that loads when you choose ----
   // Opt in with class="loadonpick". The Load button stays in the markup and
   // is hidden here, so the form still works with the script off -- the same

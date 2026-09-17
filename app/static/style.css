@@ -2455,6 +2455,29 @@ button.seal[disabled]:hover {
   color: var(--ink-muted);
 }
 
+/* A seal that has set something long running off. Writing a summary is a
+   call out to a model and takes most of a minute; the form posts normally
+   and the answer is the next page, so there is nothing to poll and nothing
+   to show except that the press landed. The button keeps the disabled
+   colours -- it is disabled -- and gains a turning ring.
+
+   The ring is drawn in the border rather than as a glyph so it inherits
+   whatever colour the button ends up with, and sized in em so it tracks the
+   button's own type rather than a fixed pixel. */
+button.seal.working::before {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.6em;
+  vertical-align: -0.08em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: turning 0.9s linear infinite;
+}
+@keyframes turning { to { transform: rotate(360deg); } }
+
 .gate-error {
   margin: 14px 0 0;
   font-size: 14px;
