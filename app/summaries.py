@@ -158,13 +158,27 @@ def _ask_once(prompt, temperature):
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             data = json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        detail = ""
+        detail, daily = "", False
         try:
-            detail = json.loads(e.read().decode("utf-8"))["error"]["message"]
+            payload = json.loads(e.read().decode("utf-8"))["error"]
+            detail = payload.get("message", "")
+            # A 429 is two different failures wearing one code. Too many
+            # requests this minute clears itself; the free tier's twenty a day
+            # does not, and the RetryInfo on it still says two seconds. Only
+            # the quota id tells them apart, so it is what is read.
+            for det in payload.get("details", []):
+                for v in det.get("violations", []):
+                    if "PerDay" in (v.get("quotaId") or ""):
+                        daily = True
+                        detail = ("The free tier allows %s requests a day for "
+                                  "%s and today's are gone. It resets at "
+                                  "midnight Pacific."
+                                  % (v.get("quotaValue", "a limited number"),
+                                     MODEL))
         except Exception:
             pass
         err = SummaryError("Gemini returned %s. %s" % (e.code, detail[:200]))
-        err.retryable = e.code in RETRY_ON
+        err.retryable = e.code in RETRY_ON and not daily
         raise err
     except Exception as e:
         # A timeout or a dropped connection is worth one more go.
