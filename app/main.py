@@ -18,6 +18,7 @@ from psycopg_pool import ConnectionPool
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import crests as crestrules
+from app import standings
 from app import summaries
 from app.keeperrules import next_free_round
 
@@ -1306,48 +1307,10 @@ def still_alive(games, week):
 def standings_after(conn, year, week):
     """The league table as it stood at the end of a given week.
 
-    team_season_stats covers a whole season, so it cannot answer "who led
-    after week five" -- on a finished season it would always name the
-    champion. Counted from the scores instead, regular games only, so an
-    unplayed week contributes nothing and the table simply stops where the
-    season has got to.
-
-    final_rank comes back as a null and points_against as a sum, so these
-    rows have the same shape as the season-wide ones and one template block
-    can draw either. The missing rank is deliberate: a position mid-season is
-    the row's place in this order, not a settled finish.
+    The query is in app/standings.py: a weekly summary is written from the
+    same table, and two copies of it would drift.
     """
-    return query(conn, """
-        with sides as (
-            select m.team_a_id as team_id, m.team_a_points as pf,
-                   m.team_b_points as pa
-            from matchups m
-            where m.season_year = %(y)s and m.game_type = 'regular'
-              and m.week <= %(w)s
-              and m.team_a_points is not null and m.team_b_points is not null
-            union all
-            select m.team_b_id, m.team_b_points, m.team_a_points
-            from matchups m
-            where m.season_year = %(y)s and m.game_type = 'regular'
-              and m.week <= %(w)s and m.team_b_id is not null
-              and m.team_a_points is not null and m.team_b_points is not null
-        )
-        select t.team_id, t.team_name, o.username,
-               null::int as final_rank,
-               count(s.team_id) filter (where s.pf > s.pa)  as wins,
-               count(s.team_id) filter (where s.pf < s.pa)  as losses,
-               count(s.team_id) filter (where s.pf = s.pa)  as ties,
-               coalesce(sum(s.pf), 0) as points_for,
-               coalesce(sum(s.pa), 0) as points_against
-        from teams t
-        join owners o on o.owner_id = t.owner_id
-        left join sides s on s.team_id = t.team_id
-        where t.season_year = %(y)s
-        group by t.team_id, t.team_name, o.username
-        order by count(s.team_id) filter (where s.pf > s.pa)
-                 + 0.5 * count(s.team_id) filter (where s.pf = s.pa) desc,
-                 coalesce(sum(s.pf), 0) desc
-    """, {"y": year, "w": week})
+    return query(conn, standings.TABLE_AFTER_WEEK, {"y": year, "w": week})
 
 
 @app.get("/season/{year}", response_class=HTMLResponse)
