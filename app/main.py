@@ -2615,6 +2615,10 @@ def admin_scores(request: Request, season: int = 0, week: int = 0,
             select week from matchups where season_year = %s
             group by week order by week
         """, (season,))
+        # What has been written about this week, so approving it happens
+        # where the scores that produced it were entered rather than on a
+        # page the admin has to remember to visit.
+        account = week_summary_state(conn, season, week) if week else None
     requested = mode if mode in LAYOUTS else ""
     if requested:
         mode = requested
@@ -2628,7 +2632,7 @@ def admin_scores(request: Request, season: int = 0, week: int = 0,
                  "requested": requested, "week_modes": WEEK_MODES,
                  "teams": teams_list, "rows": build_rows(mode, existing),
                  "filled": filled, "saved": saved, "crests": crests,
-                 "errors": [],
+                 "account": account, "errors": [],
                  "labels": MODE_LABELS})
 
 
@@ -2689,7 +2693,8 @@ async def admin_scores_save(request: Request):
             context={"years": years, "season": season, "week": week, "mode": mode,
                      "requested": mode, "week_modes": WEEK_MODES,
                      "teams": teams_list, "rows": rows, "filled": filled,
-                     "saved": 0, "errors": errors, "labels": MODE_LABELS})
+                     "saved": 0, "account": None, "errors": errors,
+                     "labels": MODE_LABELS})
 
     prepared = []
     for row in rows:
@@ -2742,14 +2747,16 @@ async def admin_scores_save(request: Request):
     # off the request thread and is allowed to fail quietly -- see
     # queue_week_summary. Nothing here can lose the scores, which are
     # committed above.
+    started = False
     try:
-        queue_week_summary(season, week)
+        started = queue_week_summary(season, week)
     except Exception:
         log.exception("could not start the week %s summary for %s", week, season)
 
     return RedirectResponse(
         url=f"/admin/scores?season={season}&week={week}&mode={mode}"
-            f"&saved={len(prepared)}&crests={crested}",
+            f"&saved={len(prepared)}&crests={crested}"
+            + ("#account" if started else ""),
         status_code=303)
 
 
@@ -4869,7 +4876,42 @@ def week_is_complete(conn, season, week):
                 rows[0]["games"] == rows[0]["scored"])
 
 
-def queue_week_summary(season, week):
+# Which weeks are being written at this moment. Process-local on purpose: it
+# exists so the admin who just saved a week is told something is happening
+# rather than that nothing was written, and if the process is restarted
+# mid-sentence then nothing was written, which is what an empty set says.
+_writing = set()
+_writing_lock = threading.Lock()
+
+
+def week_summary_state(conn, season, week):
+    """What there is to say about a week's account, for the scores page.
+
+    One of four: it is being written, there is a draft to read, one has been
+    published, or there is nothing -- and in that last case whether the week
+    is finished decides between "not yet" and "not going to happen on its
+    own".
+    """
+    rows = query(conn, """
+        select summary_id, body, model, generated_at, published_at
+        from summaries
+        where season_year = %s and kind = 'week' and week = %s
+        order by (published_at is not null) desc, generated_at desc
+        limit 1
+    """, (season, week))
+    with _writing_lock:
+        busy = (season, week) in _writing
+    row = rows[0] if rows else None
+    if row:
+        state = "published" if row["published_at"] else "draft"
+    else:
+        state = "writing" if busy else "none"
+    return {"state": state, "row": row, "writing": busy,
+            "complete": week_is_complete(conn, season, week),
+            "have_key": summaries.available()}
+
+
+def queue_week_summary(season, week, force=False):
     """Write a week's account off the back of the scores that finished it.
 
     Entering scores is the moment a week becomes something there is anything
@@ -4898,12 +4940,18 @@ def queue_week_summary(season, week):
     with get_db() as conn:
         if not week_is_complete(conn, season, week):
             return False
-        existing = query(conn, """
-            select 1 from summaries
-            where season_year = %s and kind = 'week' and week = %s limit 1
-        """, (season, week))
-        if existing:
+        if not force:
+            existing = query(conn, """
+                select 1 from summaries
+                where season_year = %s and kind = 'week' and week = %s limit 1
+            """, (season, week))
+            if existing:
+                return False
+
+    with _writing_lock:
+        if (season, week) in _writing:
             return False
+        _writing.add((season, week))
 
     def run():
         try:
@@ -4913,6 +4961,9 @@ def queue_week_summary(season, week):
         except Exception:
             log.exception("could not write the week %s summary for %s",
                           week, season)
+        finally:
+            with _writing_lock:
+                _writing.discard((season, week))
 
     threading.Thread(target=run, name="summary-%s-w%s" % (season, week),
                      daemon=True).start()
@@ -5008,6 +5059,59 @@ async def admin_summary_generate(request: Request):
     return RedirectResponse(url=back + "&msg=" + quote(note), status_code=303)
 
 
+def _scores_url(season, week, mode="", msg="", error=""):
+    """Back to the week that was being worked on, at the account.
+
+    Built here rather than passed through a form field: a redirect target
+    taken from a request is a redirect somebody else can aim.
+    """
+    from urllib.parse import quote
+    url = "/admin/scores?season=%d&week=%d" % (season, week)
+    if mode:
+        url += "&mode=%s" % quote(mode)
+    if msg:
+        url += "&msg=" + quote(msg)
+    if error:
+        url += "&error=" + quote(error)
+    return url + "#account"
+
+
+@app.post("/admin/scores/summary")
+async def admin_scores_summary(request: Request):
+    """Write the week's account again, from the page the scores were entered on.
+
+    Deliberately not the same thing as the automatic one: this skips the
+    guard that stops a corrected week writing itself twice, because asking
+    for it again is the whole point. It still runs off the request thread,
+    so the answer is the page reloading rather than a minute of nothing.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    form = await request.form()
+    season, week = int(form["season"]), int(form["week"])
+    mode = form.get("mode") or ""
+
+    if not summaries.available():
+        return RedirectResponse(
+            url=_scores_url(season, week, mode,
+                            error="No GEMINI_API_KEY is set, so nothing can "
+                                  "be written."), status_code=303)
+    started = queue_week_summary(season, week, force=True)
+    if not started:
+        with get_db() as conn:
+            done = week_is_complete(conn, season, week)
+        return RedirectResponse(
+            url=_scores_url(season, week, mode,
+                            error="Already being written, give it a moment."
+                            if done else
+                            "Week %d is not finished, so there is nothing to "
+                            "write about yet." % week), status_code=303)
+    return RedirectResponse(
+        url=_scores_url(season, week, mode,
+                        msg="Writing the week %d account. It takes about half "
+                            "a minute." % week), status_code=303)
+
+
 @app.post("/admin/summaries/publish")
 async def admin_summary_publish(request: Request):
     """Make one visible. The season page reads published rows only, so this
@@ -5018,6 +5122,11 @@ async def admin_summary_publish(request: Request):
     form = await request.form()
     season = int(form["season"])
     sid = int(form["summary_id"])
+    # "scores" is the only other page these can be pressed from, and it is
+    # matched rather than followed: a redirect target read out of a form is a
+    # redirect somebody else can aim.
+    from_scores = form.get("back") == "scores"
+    week_back = int(form.get("week") or 0)
     back = "/admin/summaries?season=%d" % season
 
     with get_db() as conn:
@@ -5031,10 +5140,20 @@ async def admin_summary_publish(request: Request):
         conn.commit()
 
     if not row:
+        if from_scores:
+            return RedirectResponse(
+                url=_scores_url(season, week_back,
+                                error="That account is already published."),
+                status_code=303)
         return RedirectResponse(
             url=back + "&error=" + quote("That summary is already published."),
             status_code=303)
-    what = ("Keeper week %s" % row["week"]) if row["week"] else row["kind"]
+    what = ("week %s" % row["week"]) if row["week"] else row["kind"]
+    if from_scores:
+        return RedirectResponse(
+            url=_scores_url(season, week_back,
+                            msg="Published the %s account. The league can see "
+                                "it now." % what), status_code=303)
     return RedirectResponse(
         url=back + "&msg=" + quote("Published the %s summary." % what),
         status_code=303)
@@ -5050,6 +5169,8 @@ async def admin_summary_discard(request: Request):
     form = await request.form()
     season = int(form["season"])
     sid = int(form["summary_id"])
+    from_scores = form.get("back") == "scores"
+    week_back = int(form.get("week") or 0)
 
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -5062,9 +5183,19 @@ async def admin_summary_discard(request: Request):
 
     back = "/admin/summaries?season=%d" % season
     if not gone:
+        if from_scores:
+            return RedirectResponse(
+                url=_scores_url(season, week_back,
+                                error="Nothing discarded: a published account "
+                                      "cannot be deleted here."),
+                status_code=303)
         return RedirectResponse(
             url=back + "&error=" + quote("Nothing discarded: a published "
                                          "summary cannot be deleted here."),
+            status_code=303)
+    if from_scores:
+        return RedirectResponse(
+            url=_scores_url(season, week_back, msg="Draft discarded."),
             status_code=303)
     return RedirectResponse(url=back + "&msg=" + quote("Draft discarded."),
                             status_code=303)

@@ -123,5 +123,89 @@
     </form>
   </section>
   {% endif %}
+
+  {# ---- what was written about the week ----
+     Saving a week recomputes its crests and then sets the account writing,
+     so approving it belongs here, where the scores that produced it were
+     entered, rather than on a page the admin has to remember to visit.
+     Saving jumps to this section by anchor. #}
+  {% if week and account %}
+  <section id="account">
+    <h2>The week {{ week }} account</h2>
+
+    {% if account.state == "writing" %}
+      <p class="note">Being written now. It takes about half a minute &mdash;
+        <a href="/admin/scores?season={{ season }}&week={{ week }}&mode={{ mode }}#account">look
+        again</a>.</p>
+
+    {% elif account.state in ("draft", "published") %}
+      <article class="draft">
+        <p class="setup-head">
+          <b>Week {{ week }}</b>
+          <span class="pill {% if account.state == 'published' %}live{% endif %}">
+            {{ "Published" if account.state == "published" else "Draft" }}</span>
+          <span class="tm">{{ account.row.model }}
+            {%- set when = account.row.published_at or account.row.generated_at %}
+            {%- if when %} &middot; {{ when.day }} {{ when.strftime("%b, %H:%M") }}{% endif %}</span>
+        </p>
+        <div class="summary">
+          {% for para in account.row.body.split("\n\n") if para.strip() %}
+            <p>{{ para.strip() }}</p>
+          {% endfor %}
+        </div>
+        {# A div, not a p: a form is block-level and closes a paragraph. #}
+        <div class="phase-act">
+          {% if account.state == "draft" %}
+            <form method="post" action="/admin/summaries/publish" class="inline">
+              <input type="hidden" name="season" value="{{ season }}">
+              <input type="hidden" name="week" value="{{ week }}">
+              <input type="hidden" name="back" value="scores">
+              <input type="hidden" name="summary_id" value="{{ account.row.summary_id }}">
+              <button type="submit" class="seal">Publish</button>
+            </form>
+            <form method="post" action="/admin/summaries/discard" class="inline">
+              <input type="hidden" name="season" value="{{ season }}">
+              <input type="hidden" name="week" value="{{ week }}">
+              <input type="hidden" name="back" value="scores">
+              <input type="hidden" name="summary_id" value="{{ account.row.summary_id }}">
+              <button type="submit" class="seal quiet"
+                      data-confirm="Discard this draft? It is not on the season page and cannot be recovered.">
+                Discard</button>
+            </form>
+          {% endif %}
+          {# Writing again never replaces what is there: the new one is a row
+             beside the old, and whichever is published is the one the league
+             reads. #}
+          <form method="post" action="/admin/scores/summary" class="inline">
+            <input type="hidden" name="season" value="{{ season }}">
+            <input type="hidden" name="week" value="{{ week }}">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <button type="submit" class="seal quiet"
+                    {% if not account.have_key %}disabled{% endif %}>
+              Write it again</button>
+          </form>
+        </div>
+      </article>
+
+    {% elif not account.complete %}
+      <p class="note">Week {{ week }} is not finished. The account writes
+        itself when the last score is in.</p>
+
+    {% elif not account.have_key %}
+      <p class="note">No <b>GEMINI_API_KEY</b> is set in this environment, so
+        nothing can be written.</p>
+
+    {% else %}
+      <form method="post" action="/admin/scores/summary" class="writer">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="week" value="{{ week }}">
+        <input type="hidden" name="mode" value="{{ mode }}">
+        <button type="submit" class="seal">Write the week {{ week }} account</button>
+        <span class="tm">Nothing has been written about this week. It normally
+          happens on its own when the last score is saved.</span>
+      </form>
+    {% endif %}
+  </section>
+  {% endif %}
 </div>
 {% endblock %}
