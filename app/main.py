@@ -140,7 +140,21 @@ def ordinal(n):
     return f"{n}{suffix}"
 
 
+def portrait_url(username):
+    """The manager's painted portrait, or None if they have not been painted.
+
+    Theo is retired and has none, so this has to answer honestly rather than
+    return a path to a 404. Built by scripts/make_portraits.py from the
+    originals in headshots/; the file is named for the username the URL uses.
+    """
+    if not username:
+        return None
+    name = "portraits/%s.webp" % username.lower()
+    return static_url(name) if (STATIC_DIR / name).exists() else None
+
+
 templates.env.globals["static_url"] = static_url
+templates.env.globals["portrait_url"] = portrait_url
 templates.env.filters["league_field"] = league_field
 def crest_when(row):
     """When a crest was won, and what earned it, on one line.

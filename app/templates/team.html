@@ -124,6 +124,24 @@
     <a class="to-top" href="#top">Top</a>
   </header>
 
+  {# The painted portrait, above everything the manager has done.
+
+     Outside the header on purpose: the header is sticky and condenses to a
+     thin bar the moment it sticks, and a painting is the first thing that
+     would have to go. Here it scrolls away like the rest of the page and the
+     bar keeps the name.
+
+     Only for a manager who has one. Theo is retired and was never painted,
+     so portrait_url returns None and this whole block disappears rather than
+     leaving a broken image where a face should be. #}
+  {% set portrait = portrait_url(owner.username) %}
+  {% if portrait %}
+  <section class="portrait-panel">
+    <img class="portrait" src="{{ portrait }}" width="640" height="853"
+         alt="{{ owner.username }}">
+  </section>
+  {% endif %}
+
   <section id="seasons">
     <h2>Season by season</h2>
     <table>

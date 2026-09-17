@@ -5,6 +5,13 @@ this is deliberate, since Render's ephemeral filesystem would lose uploaded file
 on every deploy and storing image bytes in Postgres is more machinery than this
 needs.
 
+**The painted portraits are not a counter-example.** `/team/<name>` shows a
+manager's portrait, but those are committed repo assets served from
+`app/static/portraits/`, not anything a user uploads — so the ephemeral
+filesystem never comes into it. The sigil stays CSS everywhere it is drawn.
+Nothing about this feature changed; see `portrait_url` in `main.py` and
+`scripts/make_portraits.py`.
+
 ## Schema
 
 Built as `sql/migrations/030_owner_avatars.sql`:

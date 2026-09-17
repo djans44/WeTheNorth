@@ -2129,6 +2129,21 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .kept .term { display: block; margin: 0 0 0 1.9rem; }
 
 
+/* ---- the painted portraits ---- */
+
+/* Sized by the panel rather than fixed, so it comes down with the page on a
+   phone instead of needing its own breakpoint. 22rem is about where the face
+   stops being the subject and the banner behind it starts competing. */
+.portrait-panel { text-align: center; }
+.portrait {
+  width: min(22rem, 100%);
+  height: auto;
+  /* The paintings already have a dark border of their own; the frame is the
+     panel edge, not a second line drawn around the art. */
+  border: var(--frame);
+  background: var(--panel-sink);
+}
+
 /* ---- new season checklist ---- */
 
 /* Numbered by the list rather than by a marker drawn in: the order is the
