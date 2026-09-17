@@ -922,6 +922,7 @@ form > button[type="submit"] { margin-top: var(--s5); }
    score lower than the rule above and lose. */
 .picker > button[type="submit"],
 .inline > button[type="submit"],
+.writer > button[type="submit"],
 .add-form > button[type="submit"] { margin-top: 0; }
 
 
@@ -2292,6 +2293,30 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    two sit side by side on one line, so the label takes only its words. */
 .season-form .field > label { flex: 0 0 auto; }
 .season-form .field > input { flex: 0 0 5rem; }
+
+/* The things that can be written, on /admin/summaries. Each is a button,
+   whatever that button needs beside it, and a line saying what it does.
+   Ruled apart rather than boxed: they are three forms of one action, not
+   three sections of a page. */
+.writers > * + * {
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule);
+}
+.writer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  margin: 0;
+}
+.writer .field { margin: 0; }
+/* .field gives labels a 9rem column for the full-width admin forms. Here the
+   label is one word on a line with a button, so it takes only its words. */
+.writer .field > label { flex: 0 0 auto; }
+/* The explanation takes the rest of the line and wraps inside it, rather
+   than being pushed under the button as a block of its own. */
+.writer .tm { flex: 1 1 18rem; }
 
 .roster-table { margin-top: var(--s3); }
 .roster-table td.name input[type="text"] { width: 100%; }

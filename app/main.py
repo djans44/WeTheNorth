@@ -2738,6 +2738,15 @@ async def admin_scores_save(request: Request):
             log.exception("crest recompute failed for %s week %s", season, week)
             crested = "failed"
 
+    # The week's account, if this is the save that completed the week. Runs
+    # off the request thread and is allowed to fail quietly -- see
+    # queue_week_summary. Nothing here can lose the scores, which are
+    # committed above.
+    try:
+        queue_week_summary(season, week)
+    except Exception:
+        log.exception("could not start the week %s summary for %s", week, season)
+
     return RedirectResponse(
         url=f"/admin/scores?season={season}&week={week}&mode={mode}"
             f"&saved={len(prepared)}&crests={crested}",
@@ -4810,6 +4819,106 @@ def write_summary(conn, season, kind, body, model, week=None, matchup_id=None):
     return new_id
 
 
+# Which kinds can be written, in the order the page offers them. Two of the
+# five are not here: a matchup summary needs per-player results the database
+# does not hold, and the chat audit needs the league's chat, which nothing
+# reads yet. They are named on the page rather than left off it, so the gap
+# is a known gap.
+WRITEABLE = ("preview", "week", "season")
+
+
+def summary_writer(conn):
+    """The `q` a fact gatherer wants: a query that returns dicts.
+
+    app/summaries.py never sees a connection or psycopg -- it is handed this
+    and does its own SQL, which is what keeps the domain module free of the
+    web app.
+    """
+    def q(sql, params):
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return [dict(r) for r in cur.fetchall()]
+    return q
+
+
+def write_one_summary(conn, season, kind, week=None):
+    """Generate and store one, unpublished. Returns (id, managers missed)."""
+    q = summary_writer(conn)
+    if kind == "preview":
+        body, missed = summaries.generate_preview(q, season)
+    elif kind == "season":
+        body, missed = summaries.generate_season(q, season)
+    elif kind == "week":
+        body, missed = summaries.generate_week(q, season, week)
+    else:
+        raise summaries.SummaryError("%s summaries are not written yet." % kind)
+    return write_summary(conn, season, kind, body, summaries.MODEL,
+                         week=week), missed
+
+
+def week_is_complete(conn, season, week):
+    """Every game of a week has a score, byes excepted."""
+    rows = query(conn, """
+        select count(*) as games,
+               count(*) filter (where team_a_points is not null
+                                  and (team_b_id is null
+                                       or team_b_points is not null)) as scored
+        from matchups where season_year = %s and week = %s
+    """, (season, week))
+    return bool(rows and rows[0]["games"] and
+                rows[0]["games"] == rows[0]["scored"])
+
+
+def queue_week_summary(season, week):
+    """Write a week's account off the back of the scores that finished it.
+
+    Entering scores is the moment a week becomes something there is anything
+    to say about, so it is the moment this fires -- nobody should have to
+    remember a second step, and the whole point of generating it now is that
+    it is ready to read long before anyone asks for it.
+
+    Three guards, each of which has a cost behind it:
+
+      - a key must be configured, or there is nothing to call;
+      - the week must be complete, so a half-entered week does not get an
+        account of the three games that were in it;
+      - and there must be no summary for that week already. Scores get
+        corrected, and the free tier allows twenty calls a day. Without this
+        an afternoon of fixing a typo would spend the week's quota on twelve
+        accounts of the same six games.
+
+    Off the request thread. The call takes the best part of a minute and the
+    admin who entered the scores would otherwise sit through it, and Render
+    would very likely time the request out first. The cost is that a process
+    which spins down mid-write leaves nothing behind -- so the page says so,
+    and writing one by hand is a button.
+    """
+    if not summaries.available():
+        return False
+    with get_db() as conn:
+        if not week_is_complete(conn, season, week):
+            return False
+        existing = query(conn, """
+            select 1 from summaries
+            where season_year = %s and kind = 'week' and week = %s limit 1
+        """, (season, week))
+        if existing:
+            return False
+
+    def run():
+        try:
+            with get_db() as conn:
+                write_one_summary(conn, season, "week", week)
+            log.info("wrote the week %s summary for %s", week, season)
+        except Exception:
+            log.exception("could not write the week %s summary for %s",
+                          week, season)
+
+    threading.Thread(target=run, name="summary-%s-w%s" % (season, week),
+                     daemon=True).start()
+    return True
+
+
 @app.get("/admin/summaries", response_class=HTMLResponse)
 def admin_summaries(request: Request, season: int = 0,
                     msg: str = "", error: str = ""):
@@ -4833,13 +4942,28 @@ def admin_summaries(request: Request, season: int = 0,
             from summaries where season_year = %s
             order by (published_at is not null), generated_at desc
         """, (season,))
+        # Which weeks can be written about, and which already have been. A
+        # week with no scores has nothing to say, and offering it would only
+        # spend a call finding that out.
+        weeks = [r["week"] for r in query(conn, """
+            select distinct week from matchups
+            where season_year = %s and team_a_points is not null
+            order by week
+        """, (season,))]
+        # Whether the year is finished decides whether a recap is a thing
+        # that can be written or a thing to wait for.
+        done = query(conn, """
+            select 1 from season_results where season_year = %s and champion is not null
+        """, (season,))
 
     drafts = [r for r in rows if not r["published_at"]]
     published = [r for r in rows if r["published_at"]]
+    written = {(r["kind"], r["week"]) for r in rows}
     return templates.TemplateResponse(
         request=request, name="admin_summaries.html",
         context={"years": years, "season": season,
                  "drafts": drafts, "published": published,
+                 "weeks": weeks, "written": written, "finished": bool(done),
                  "have_key": summaries.available(), "model": summaries.MODEL,
                  "msg": msg, "error": error})
 
@@ -4855,26 +4979,28 @@ async def admin_summary_generate(request: Request):
     form = await request.form()
     season = int(form["season"])
     kind = form.get("kind") or "preview"
+    week = int(form.get("week") or 0) or None
     back = "/admin/summaries?season=%d" % season
 
-    if kind != "preview":
+    if kind not in WRITEABLE:
         return RedirectResponse(
-            url=back + "&error=" + quote("Only the preview can be written by "
-                                         "hand so far."), status_code=303)
+            url=back + "&error=" + quote("%s summaries are not written yet."
+                                         % kind.title()), status_code=303)
+    if kind == "week" and not week:
+        return RedirectResponse(
+            url=back + "&error=" + quote("Choose a week to write about."),
+            status_code=303)
 
     with get_db() as conn:
-        def q(sql, params):
-            with conn.cursor() as cur:
-                cur.execute(sql, params)
-                return [dict(r) for r in cur.fetchall()]
         try:
-            body, missed = summaries.generate_preview(q, season)
+            _, missed = write_one_summary(conn, season, kind, week)
         except summaries.SummaryError as e:
             return RedirectResponse(url=back + "&error=" + quote(str(e)),
                                     status_code=303)
-        write_summary(conn, season, "preview", body, summaries.MODEL)
 
-    note = "Preview written for %s. Read it before publishing." % season
+    what = {"preview": "Preview", "season": "Recap"}.get(
+        kind, "The week %s account" % week)
+    note = "%s written for %s. Read it before publishing." % (what, season)
     if missed:
         # Reported rather than hidden: the retry already had its go, and an
         # admin deciding whether to publish should know who was left out.

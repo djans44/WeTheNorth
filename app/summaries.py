@@ -567,19 +567,22 @@ def week_facts(q, season, week):
                              % (best[1], week, best[0])})
         tops.append({"note": "%s scored the fewest points of week %d, %.2f"
                              % (worst[1], week, worst[0])})
-        margins = sorted(
-            (abs(float(g["a_points"]) - float(g["b_points"])), g)
-            for g in played)
-        widest = margins[-1][1]
-        tightest = margins[0][1]
-        tops.append({"note": "the widest margin of week %d was %.2f, %s over %s"
-                             % (week, margins[-1][0],
-                                widest["a"] if float(widest["a_points"]) > float(widest["b_points"]) else widest["b"],
-                                widest["b"] if float(widest["a_points"]) > float(widest["b_points"]) else widest["a"])})
-        tops.append({"note": "the narrowest margin of week %d was %.2f, %s over %s"
-                             % (week, margins[0][0],
-                                tightest["a"] if float(tightest["a_points"]) > float(tightest["b_points"]) else tightest["b"],
-                                tightest["b"] if float(tightest["a_points"]) > float(tightest["b_points"]) else tightest["a"])})
+        # max/min with a key rather than sorting (margin, game) pairs: two
+        # games with the same margin sent Python on to compare the dicts
+        # beside them, which is a TypeError rather than a tie.
+        def margin(g):
+            return abs(float(g["a_points"]) - float(g["b_points"]))
+
+        def won(g):
+            return g["a"] if float(g["a_points"]) > float(g["b_points"]) else g["b"]
+
+        def lost(g):
+            return g["b"] if float(g["a_points"]) > float(g["b_points"]) else g["a"]
+
+        for label, g in (("widest", max(played, key=margin)),
+                         ("narrowest", min(played, key=margin))):
+            tops.append({"note": "the %s margin of week %d was %.2f, %s over %s"
+                                 % (label, week, margin(g), won(g), lost(g))})
         # Against the projection. The league keeps projections beside the
         # scores, so over- and under-performing is a fact here rather than a
         # guess -- and it is most of what makes a fantasy week feel unfair.

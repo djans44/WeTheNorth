@@ -35,18 +35,65 @@
         published summaries and there simply are none.</p>
     {% endif %}
 
-    {# The press is the last thing that happens for the best part of a
-       minute, so the button takes over saying so -- see data-working in
-       app.js. It also stops a second press starting a second generation. #}
-    <form method="post" action="/admin/summaries/generate" class="season-form"
-          data-working="Writing">
-      <input type="hidden" name="season" value="{{ season }}">
-      <input type="hidden" name="kind" value="preview">
-      <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>
-        Write a {{ season }} preview</button>
-      <span class="tm">Takes around half a minute. Written by {{ model }},
-        and stored unpublished.</span>
-    </form>
+    {# Three of the five kinds can be written. The two that cannot are named
+       below rather than left off, because a gap nobody can see is a gap
+       somebody rediscovers. #}
+    <div class="writers">
+      <form method="post" action="/admin/summaries/generate" class="writer"
+            data-working="Writing">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="kind" value="preview">
+        <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>
+          Write the {{ season }} preview</button>
+        <span class="tm">The year ahead, from the keepers and the draft board.
+          {%- if ("preview", none) in written %} One has been written already; this
+          writes another beside it.{% endif %}</span>
+      </form>
+
+      <form method="post" action="/admin/summaries/generate" class="writer"
+            data-working="Writing">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="kind" value="week">
+        {% if weeks %}
+          <span class="field short">
+            <label for="wk">Week</label>
+            <select id="wk" name="week">
+              {% for w in weeks %}
+                <option value="{{ w }}" {% if loop.last %}selected{% endif %}>
+                  {{ w }}{% if ("week", w) in written %} &mdash; written{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </span>
+          <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>
+            Write the week</button>
+          <span class="tm">Weeks write themselves when their last score is
+            entered. This is for the ones that did not &mdash; the process can
+            go to sleep mid-sentence, and a corrected week does not write
+            itself twice.</span>
+        {% else %}
+          <p class="note">No week of {{ season }} has scores yet. The first one
+            entered writes its own account.</p>
+        {% endif %}
+      </form>
+
+      <form method="post" action="/admin/summaries/generate" class="writer"
+            data-working="Writing">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="kind" value="season">
+        <button type="submit" class="seal"
+                {% if not have_key or not finished %}disabled{% endif %}>
+          Write the {{ season }} recap</button>
+        <span class="tm">{% if finished %}The whole year, from the bracket
+          backwards.{% else %}Waits for a champion: the recap is written from
+          the final table and the bracket, and {{ season }} has neither
+          yet.{% endif %}</span>
+      </form>
+
+      <p class="note">Two kinds are not built. A matchup summary needs
+        per-player results, which the league does not keep; an audit of the
+        Sunday chat needs the chat, which nothing reads yet.</p>
+    </div>
   </section>
 
   {% if drafts %}
