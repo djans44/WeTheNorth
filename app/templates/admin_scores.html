@@ -1,42 +1,56 @@
 {% extends "base.html" %}
+{% from "macros.html" import leaf %}
 {% block title %}Enter scores | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
-    <h1>Enter scores</h1>
-    <p class="lede">
-      Saving replaces every matchup for that week, so what you see below
-      is exactly what will be stored.
-    </p>
+  {# The header every page with a year to switch wears: the year is the
+     control that changes the year, in a <details> so it needs no script,
+     with the h1 inside the summary so the outline survives. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Enter scores {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/scores?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section>
+    {# Each label travels with its control inside a .pickfield, or a wrap at
+       phone width leaves "Round" on one line and its dropdown on the next. #}
     <form method="get" action="/admin/scores" class="picker">
-      <label for="season">Season</label>
-      <select id="season" name="season">
-        {% for y in years %}
-          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-        {% endfor %}
-      </select>
+      <input type="hidden" name="season" value="{{ season }}">
 
-      <label for="week">Week</label>
-      <select id="week" name="week">
-        <option value="0">&mdash;</option>
-        {% for w in range(1, 18) %}
-          <option value="{{ w }}" {% if w == week %}selected{% endif %}>{{ w }}{% if week_modes[w] != "regular" %} &mdash; {{ labels[week_modes[w]] }}{% endif %}</option>
-        {% endfor %}
-      </select>
+      <span class="pickfield">
+        <label for="week">Week</label>
+        <select id="week" name="week">
+          <option value="0">&mdash;</option>
+          {% for w in range(1, 18) %}
+            <option value="{{ w }}" {% if w == week %}selected{% endif %}>{{ w }}{% if week_modes[w] != "regular" %} &mdash; {{ labels[week_modes[w]] }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </span>
 
-      <label for="mode">Round</label>
-      <select id="mode" name="mode">
-        <option value="" {% if not requested %}selected{% endif %}>Auto</option>
-        {% for m, lab in labels.items() %}
-          <option value="{{ m }}" {% if requested == m %}selected{% endif %}>{{ lab }}</option>
-        {% endfor %}
-      </select>
+      <span class="pickfield">
+        <label for="mode">Round</label>
+        <select id="mode" name="mode">
+          <option value="" {% if not requested %}selected{% endif %}>Auto</option>
+          {% for m, lab in labels.items() %}
+            <option value="{{ m }}" {% if requested == m %}selected{% endif %}>{{ lab }}</option>
+          {% endfor %}
+        </select>
+      </span>
 
-      <button type="submit">Load</button>
+      <button type="submit" class="seal">Load</button>
     </form>
 
     {% if filled %}
@@ -48,16 +62,17 @@
       <p class="note">No matchups recorded for {{ season }} yet.</p>
     {% endif %}
 
-    {% if saved %}
-      {# The crests recompute on save, so the count says it happened. Named
-         plainly rather than left silent: if it ever says failed, the fix is
-         scripts/award_crests.py --season <year> --apply #}
-      <p class="note ok">Saved {{ saved }} matchup{{ "s" if saved != 1 }}.
-        {%- if crests == "failed" %}
-          <span class="tm">The crests could not be recomputed.</span>
-        {%- elif crests %}
-          <span class="tm">{{ crests }} crest row{{ "s" if crests != "1" }} rewritten.</span>
-        {%- endif %}</p>
+    {# The save itself is reported by the toast every other page uses. This
+       is the one thing that outlives it: the scores went in but the crests
+       did not follow, which wants doing something about rather than sliding
+       away after four seconds. #}
+    {% if crests == "failed" %}
+      <div class="errors">
+        <b>The scores saved, but the crests could not be recomputed.</b>
+        <p>Until they are, the crests and titles for this week and the ones
+          after it are out of date. Run:</p>
+        <p><code>python scripts/award_crests.py --season {{ season }} --apply</code></p>
+      </div>
     {% endif %}
   </section>
 
@@ -80,14 +95,14 @@
       <div class="scroller">
       <table class="entry">
         <thead>
-          <tr><th>Game</th><th>Team</th><th>Pts</th><th>Proj</th>
+          <tr>{% if mixed %}<th>Game</th>{% endif %}<th>Team</th><th>Pts</th><th>Proj</th>
               <th>Opponent</th><th>Pts</th><th>Proj</th></tr>
         </thead>
         <tbody>
         {% for r in rows %}
           {% set i = loop.index0 %}
           <tr>
-            <td class="gt">{{ r.game_type.replace("_", " ") }}</td>
+            {% if mixed %}<td class="gt">{{ r.game_type.replace("_", " ") }}</td>{% endif %}
             <td>
               <select name="r{{ i }}_team_a">
                 <option value="">&mdash;</option>
@@ -117,9 +132,21 @@
       <p class="note">
         Scores may be left blank to record a fixture before it is played.
         Leave the opponent on &ldquo;bye&rdquo; for a team sitting the round out.
+        Saving replaces every matchup in the week, so what is above is exactly
+        what will be stored.
       </p>
 
-      <button type="submit">Save week {{ week }}</button>
+      {# The tickbox is here only when the save would take something out of
+         the week -- a correction to a score keeps the same six games and asks
+         nothing. It appears when the form bounced for that reason, so it is
+         the answer to a message rather than a box to tick by habit. #}
+      <div class="actionrow">
+        {% if losing %}
+          <label class="confirm"><input type="checkbox" name="confirm" value="1">
+            Yes, remove {{ losing }} matchup{{ "s" if losing != 1 }}</label>
+        {% endif %}
+        <button type="submit" class="seal">Save week {{ week }}</button>
+      </div>
     </form>
   </section>
   {% endif %}

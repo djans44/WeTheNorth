@@ -1,5 +1,6 @@
 import contextvars
 import datetime
+import decimal
 import logging
 import os
 import pathlib
@@ -2572,6 +2573,33 @@ WEEK_MODES = {w: {15: "quarterfinal", 16: "semifinal", 17: "final"}.get(w, "regu
               for w in range(1, 18)}
 
 
+def score_value(raw, where, errors):
+    """One points or projection box, checked before it reaches the column.
+
+    These went to the insert as whatever was typed, so a stray letter, a minus
+    sign or a very long number came back as a 500 with an error page and
+    everything else the admin had entered gone. A team entered twice has always
+    produced a tidy message and kept the form; numbers get the same now.
+    """
+    if raw is None:
+        return None
+    try:
+        n = decimal.Decimal(raw)
+    except decimal.InvalidOperation:
+        errors.append("%s is not a number: %s" % (where, raw))
+        return None
+    if not n.is_finite():
+        errors.append("%s is not a number: %s" % (where, raw))
+        return None
+    if n < 0:
+        errors.append("%s cannot be less than nothing: %s" % (where, raw))
+        return None
+    if n >= 1000:
+        errors.append("%s is too large to be a score: %s" % (where, raw))
+        return None
+    return str(n)
+
+
 def infer_mode(existing):
     types = {r["game_type"] for r in existing}
     if types & {"championship", "third_place", "seventh_place", "ninth_place"}:
@@ -2605,7 +2633,7 @@ def build_rows(mode, existing):
 
 @app.get("/admin/scores", response_class=HTMLResponse)
 def admin_scores(request: Request, season: int = 0, week: int = 0,
-                 mode: str = "", saved: int = 0, crests: str = ""):
+                 mode: str = "", crests: str = "", msg: str = ""):
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     with get_db() as conn:
@@ -2646,8 +2674,9 @@ def admin_scores(request: Request, season: int = 0, week: int = 0,
         context={"years": years, "season": season, "week": week, "mode": mode,
                  "requested": requested, "week_modes": WEEK_MODES,
                  "teams": teams_list, "rows": build_rows(mode, existing),
-                 "filled": filled, "saved": saved, "crests": crests,
-                 "account": account, "errors": [],
+                 "mixed": len(set(LAYOUTS[mode])) > 1,
+                 "filled": filled, "crests": crests,
+                 "account": account, "errors": [], "losing": 0,
                  "labels": MODE_LABELS})
 
 
@@ -2665,14 +2694,17 @@ async def admin_scores_save(request: Request):
         v = (form.get(name) or "").strip()
         return v or None
 
-    rows, seen = [], []
+    rows, seen, number_errors = [], [], []
     for i, gt in enumerate(layout):
         a, b = val(f"r{i}_team_a"), val(f"r{i}_team_b")
+        where = "Row %d" % (i + 1)
         row = {"game_type": gt,
                "team_a_id": int(a) if a else None,
                "team_b_id": int(b) if b else None,
-               "pa": val(f"r{i}_pa"), "pb": val(f"r{i}_pb"),
-               "ja": val(f"r{i}_ja"), "jb": val(f"r{i}_jb")}
+               "pa": score_value(val(f"r{i}_pa"), where + " points", number_errors),
+               "pb": score_value(val(f"r{i}_pb"), where + " opponent points", number_errors),
+               "ja": score_value(val(f"r{i}_ja"), where + " projection", number_errors),
+               "jb": score_value(val(f"r{i}_jb"), where + " opponent projection", number_errors)}
         rows.append(row)
         seen += [t for t in (row["team_a_id"], row["team_b_id"]) if t]
 
@@ -2687,9 +2719,25 @@ async def admin_scores_save(request: Request):
             select week from matchups where season_year = %s
             group by week order by week
         """, (season,))
+        # What is in the week now, to work out what saving would take out of
+        # it, and to put the account back on the page if this bounces.
+        before = query(conn, """
+            select matchup_id, game_type, team_a_id, team_b_id, team_a_points
+            from matchups where season_year = %s and week = %s
+        """, (season, week))
+        account = week_summary_state(conn, season, week) if week else None
+        # A summary pinned to one of these matchups would make the delete
+        # fail on the foreign key, which is a 500 rather than a sentence.
+        # Nothing writes those today; this is here so that stays true.
+        pinned = query(conn, """
+            select count(*) as n from summaries
+            where matchup_id in (
+                select matchup_id from matchups
+                where season_year = %s and week = %s)
+        """, (season, week))[0]["n"] if before else 0
 
     names = {t["team_id"]: t["team_name"] for t in teams_list}
-    errors = []
+    errors = list(number_errors)
     for t in sorted({x for x in seen if seen.count(x) > 1}):
         errors.append(f"{names.get(t, t)} appears more than once.")
     for i, row in enumerate(rows, start=1):
@@ -2701,6 +2749,31 @@ async def admin_scores_save(request: Request):
         missing = [n for tid, n in names.items() if tid not in seen]
         if missing:
             errors.append("Not entered: " + ", ".join(sorted(missing)) + ".")
+    if pinned:
+        errors.append("An account is pinned to a matchup in this week, so the "
+                      "week cannot be rewritten. Remove it first.")
+
+    # What saving takes away. The week is deleted and rewritten, so anything
+    # in it that is not in the form goes -- and it used to go quietly. Picking
+    # the wrong Round was enough: the layout comes back empty because the game
+    # types do not match, the empty rows are skipped, and the delete had
+    # already run. Two clicks emptied a played week and the page said "Saved 0
+    # matchups" in green.
+    keeping = {(r["game_type"], r["team_a_id"], r["team_b_id"])
+               for r in rows if r["team_a_id"]}
+    losing = [r for r in before
+              if (r["game_type"], r["team_a_id"], r["team_b_id"]) not in keeping]
+    scored = [r for r in losing if r["team_a_points"] is not None]
+    if before and not keeping:
+        errors.append("Every row is blank, so this would empty week %d rather "
+                      "than save it. Check the Round is right for this week."
+                      % week)
+    elif losing and not form.get("confirm"):
+        errors.append(
+            "This removes %d matchup%s from week %d%s. Tick the box below if "
+            "that is meant." % (len(losing), "" if len(losing) == 1 else "s",
+                                week,
+                                ", %d with scores in" % len(scored) if scored else ""))
 
     if errors:
         return templates.TemplateResponse(
@@ -2708,8 +2781,9 @@ async def admin_scores_save(request: Request):
             context={"years": years, "season": season, "week": week, "mode": mode,
                      "requested": mode, "week_modes": WEEK_MODES,
                      "teams": teams_list, "rows": rows, "filled": filled,
-                     "saved": 0, "account": None, "errors": errors,
-                     "labels": MODE_LABELS})
+                     "mixed": len(set(LAYOUTS[mode])) > 1,
+                     "account": account, "errors": errors,
+                     "losing": len(losing), "labels": MODE_LABELS})
 
     prepared = []
     for row in rows:
@@ -2768,11 +2842,19 @@ async def admin_scores_save(request: Request):
     except Exception:
         log.exception("could not start the week %s summary for %s", week, season)
 
-    return RedirectResponse(
-        url=f"/admin/scores?season={season}&week={week}&mode={mode}"
-            f"&saved={len(prepared)}&crests={crested}"
-            + ("#account" if started else ""),
-        status_code=303)
+    # Through the toast the rest of the app uses, rather than the green
+    # paragraph this page kept above the form. A failed crest recompute is the
+    # exception: it wants doing something about, so it goes to the page as an
+    # error rather than sliding away after four seconds.
+    from urllib.parse import quote
+    told = "Saved %d matchup%s" % (len(prepared), "" if len(prepared) == 1 else "s")
+    if losing:
+        told += ", %d removed" % len(losing)
+    url = (f"/admin/scores?season={season}&week={week}&mode={mode}"
+           f"&msg={quote(told + '.')}")
+    if crested == "failed":
+        url += "&crests=failed"
+    return RedirectResponse(url + ("#account" if started else ""), status_code=303)
 
 
 @app.get("/admin/crests", response_class=HTMLResponse)
