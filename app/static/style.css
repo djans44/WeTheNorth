@@ -2203,10 +2203,15 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .phase-act.acts {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--s3);
   margin: var(--s5) 0 0;
 }
 .phase-act.acts button { min-width: 12rem; }
+/* The one that takes something away, pushed to the far side of the row from
+   the two that make something. An auto margin rather than an order, so what
+   the eye sees and what the keyboard reaches stay the same sequence. */
+.phase-act.acts .apart { margin-right: auto; }
 
 /* Ranged right, at the end of the draft they act on, and to one width: the
    two words are different lengths and the pair reads as a choice rather than
@@ -2889,6 +2894,14 @@ button.seal.working::before {
 
   /* Three columns of records will not fit; one under the other. */
   .record-sets { grid-template-columns: 1fr; }
+
+  /* A row ranged two ways becomes three buttons at three different
+     horizontal positions the moment it wraps, which reads as an accident.
+     Stacked and full width instead, in the order the markup has them. */
+  .phase-act.acts { display: block; }
+  .phase-act.acts form { display: block; }
+  .phase-act.acts form + form { margin-top: var(--s2); }
+  .phase-act.acts button { width: 100%; min-width: 0; }
 
   /* Eighteen links ran to three rows here, so the week strip gives way to
      the dropdown, which is one line. Same choice either way: the strip's

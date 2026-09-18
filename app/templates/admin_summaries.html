@@ -105,8 +105,24 @@
        draft on the season page over whatever was there. Remove takes the
        draft when there is one and the published summary when there is not,
        which is the only way to withdraw something the league can already
-       read. A div, not a p: a form is block-level and closes a paragraph. #}
+       read.
+
+       Remove sits away from the other two, on the left, because it is the
+       answer nobody came looking for. It is first in the markup rather than
+       moved there by CSS, so tabbing reaches the buttons in the order the eye
+       reads them.
+
+       A div, not a p: a form is block-level and closes a paragraph. #}
     <div class="phase-act acts">
+      <form method="post" action="/admin/summaries/discard" class="inline apart">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="summary_id" value="{{ (draft or published).summary_id if (draft or published) }}">
+        <button type="submit" class="seal quiet"
+                {% if not draft and not published %}disabled{% endif %}
+                data-confirm="{% if draft %}Remove this draft? It cannot be recovered.{% else %}Remove the published summary? The season page will have nothing there, and the text cannot be recovered.{% endif %}">
+          {% if draft %}Remove the draft{% else %}Remove{% endif %}</button>
+      </form>
+
       <form method="post" action="/admin/summaries/generate" class="inline"
             data-working="Writing">
         <input type="hidden" name="season" value="{{ season }}">
@@ -124,14 +140,6 @@
           Publish</button>
       </form>
 
-      <form method="post" action="/admin/summaries/discard" class="inline">
-        <input type="hidden" name="season" value="{{ season }}">
-        <input type="hidden" name="summary_id" value="{{ (draft or published).summary_id if (draft or published) }}">
-        <button type="submit" class="seal quiet"
-                {% if not draft and not published %}disabled{% endif %}
-                data-confirm="{% if draft %}Remove this draft? It cannot be recovered.{% else %}Remove the published summary? The season page will have nothing there, and the text cannot be recovered.{% endif %}">
-          {% if draft %}Remove the draft{% else %}Remove{% endif %}</button>
-      </form>
     </div>
 
     {% if blocked %}
