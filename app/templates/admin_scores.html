@@ -26,8 +26,13 @@
 
   <section>
     {# Each label travels with its control inside a .pickfield, or a wrap at
-       phone width leaves "Round" on one line and its dropdown on the next. #}
-    <form method="get" action="/admin/scores" class="picker">
+       phone width leaves "Round" on one line and its dropdown on the next.
+       loadonpick loads on the choice itself; the button stays in the markup
+       and app.js hides it, so the form still works with the script off.
+       Both selects are bound, so changing the Round reloads as the Week
+       does -- and picking "--" for the week is a choice like any other,
+       so no data-needs-value here. #}
+    <form method="get" action="/admin/scores" class="picker loadonpick">
       <input type="hidden" name="season" value="{{ season }}">
 
       <span class="pickfield">
