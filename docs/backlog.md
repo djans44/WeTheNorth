@@ -103,15 +103,26 @@ migrations.
 
 Paste or upload, preview what it will do, then apply. Never a silent write.
 
+Two are built and live, both on that pattern and both worth copying for the
+rest: `/admin/transactions` and `/admin/draft`. What they settled --
+
+- the parser is a module of its own, takes text, touches no database, and
+  reports what it could not read rather than guessing;
+- the preview is a separate press from the write, and carries the paste
+  through in a hidden field so what is saved is what was read;
+- a tickbox appears only for a thing the page has just told you about;
+- Yahoo prints the same data more than one way, and a loader that knows only
+  the shape it was written against will meet the other one.
+
 | Element | Table | Notes |
 |---|---|---|
 | Seasons | `seasons` | The row every other import needs first |
 | Teams | `teams` | One per owner per season; team names change yearly |
 | Owners | `owners` | Emails are the credential and are deliberately not in git |
 | Players | `players` | ~359 rows. **No Yahoo id** — `player_id` is a local identity column and every importer matches on `lower(full_name)`. See `docs/features/player-scoring.md` |
-| Draft picks | `draft_picks` | ~624 rows; the source of every keeper cost basis |
+| ~~Draft picks~~ | `draft_picks` | **Done** -- `/admin/draft`. Reads both board shapes; the keeper badge is a private-use glyph and has to be read before the icons are stripped |
 | Rosters | `rosters` | End-of-season snapshot; what keepers are drawn from |
-| Transactions | `transactions` | ~301 rows; adds, drops, trades. Cost basis depends on these |
+| ~~Transactions~~ | `transactions` | **Done** -- `/admin/transactions`. A week at a time, idempotent on a natural key, and it says so when a paste may have a gap |
 | Matchups | `matchups` | Score entry already exists; a bulk import is for a season's history |
 | ADP | `player_adp` | Locked at signing for 3-year contract pricing |
 | Keeper selections | `keeper_selections` | ~104 rows |
@@ -202,7 +213,8 @@ exists:
 
 1. **Show the transactions.** They have been loaded since 2025 and are
    displayed nowhere. A manager's page and a league-wide log, newest first.
-   The data is already there; this is a page, not a pipeline.
+   The data is already there; this is a page, not a pipeline. **Next up** --
+   both loaders below are now built, so nothing blocks this.
 2. **Derive the current roster.** Draft picks plus transactions up to a date.
    Needs the draft loaded for the season, which 2026 does not have yet --
    see the loader below. Shown per team, and it is the thing that makes a
@@ -214,15 +226,13 @@ exists:
    so a hole in the transaction record is a wrong keeper price -- this is
    the check that catches it before anyone selects.
 
-Loaders for the two inputs, both of which are rows in item 4's table and
-should be built the same way as the transactions paste page:
+Loaders for the two inputs:
 
-- **Rosters.** `rosters` today is an end-of-season snapshot, 2025 only.
-- **Draft results.** `draft_picks` has 2022-2025 and no 2026, which is why
-  a derived roster cannot be built for the current season yet.
-
-Both paste, preview, apply -- never a silent write -- as the transactions
-page does.
+- **Draft results.** Built, and 2026 is loaded. This was the blocker on
+  step 2 and it is gone.
+- **Rosters.** Still a row in item 4. `rosters` is an end-of-season
+  snapshot, 2025 only -- and under this item it stops being the source of
+  truth and becomes the thing step 3 reconciles against.
 
 ## 14. Let the league vote on the four honours
 
