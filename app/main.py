@@ -5057,18 +5057,39 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
         """)]
         if not season:
             season = years[0] if years else 0
-        # Which weeks can be written about, and which already have something.
-        # A week with no scores has nothing to say, and offering it would only
-        # spend a call finding that out.
+        # Which weeks can be written about, and what state each is in. A week
+        # with no scores has nothing to say, and offering it would only spend
+        # a call finding that out.
         weeks = [r["week"] for r in query(conn, """
             select distinct week from matchups
             where season_year = %s and team_a_points is not null
             order by week
         """, (season,))]
-        written_weeks = {r["week"] for r in query(conn, """
-            select distinct week from summaries
+        # Draft and published are different answers to "is this week done
+        # with", and one word for both made the picker useless for finding
+        # the weeks that still want reading.
+        week_state = {}
+        for r in query(conn, """
+            select week, published_at is not null as live from summaries
             where season_year = %s and kind = 'week' and week is not null
-        """, (season,))}
+        """, (season,)):
+            week_state.setdefault(r["week"], set()).add(
+                "published" if r["live"] else "draft")
+        written_weeks = {w: " and ".join(sorted(v)) for w, v in week_state.items()}
+
+        # What the season has, as a whole. One target at a time is the right
+        # way to work on these and the wrong way to find out which ones still
+        # want work, so the count of both goes above the picker.
+        tally = {"preview": None, "season": None}
+        for r in query(conn, """
+            select kind, published_at is not null as live from summaries
+            where season_year = %s and kind in ('preview', 'season')
+              and matchup_id is null
+        """, (season,)):
+            tally[r["kind"]] = "published" if r["live"] else "draft"
+        weeks_live = sum(1 for v in written_weeks.values() if "published" in v)
+        weeks_draft = sum(1 for v in written_weeks.values() if "draft" in v)
+
         # Whether the year is finished decides whether a recap is a thing that
         # can be written or a thing to wait for. season_results reads the
         # champion off the championship game, so "no champion" has two quite
@@ -5108,6 +5129,33 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
         # No week of this season has scores, so there is no week to name.
         name = "a weekly recap"
 
+    # The season at a glance, in one line above the picker.
+    def said(state):
+        return {"published": "published",
+                "draft": "waiting to be read"}.get(state, "not written")
+
+    if not weeks:
+        weeks_said = "no week has scores yet"
+    else:
+        weeks_said = "%d of %d weeks published" % (weeks_live, len(weeks))
+        if weeks_draft:
+            weeks_said += ", %d waiting to be read" % weeks_draft
+    at_a_glance = "Preview %s &middot; %s &middot; recap %s" % (
+        said(tally["preview"]), weeks_said, said(tally["season"]))
+
+    # Where a published summary can be read in place. A week's account sits on
+    # the page of the week after it -- week nine's read is on the week ten
+    # page -- which leaves the last week of a season with nowhere to appear.
+    # Said plainly rather than linked to a page that does not exist.
+    shown_on = None
+    if kind == "preview" and weeks:
+        shown_on = "/season/%d?week=%d" % (season, weeks[0])
+    elif kind == "season":
+        shown_on = "/season/%d?week=season" % season
+    elif kind == "week" and week:
+        nxt = next((w for w in weeks if w > week), None)
+        shown_on = "/season/%d?week=%d" % (season, nxt) if nxt else None
+
     # A recap needs a champion and a week needs scores. Saying which is
     # missing beats a button that fails after thirty seconds.
     blocked = ""
@@ -5129,8 +5177,8 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
                  "kind": kind, "week": week, "weeks": weeks,
                  "written_weeks": written_weeks, "name": name,
                  "draft": draft, "published": published, "blocked": blocked,
-                 "have_key": summaries.available(), "model": summaries.MODEL,
-                 "msg": msg, "error": error})
+                 "at_a_glance": at_a_glance, "shown_on": shown_on,
+                 "model": summaries.MODEL})
 
 
 @app.post("/admin/summaries/generate")

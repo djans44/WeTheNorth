@@ -30,6 +30,10 @@
      screen and the week is simply ignored, which is what the server does with
      it anyway. #}
   <section class="weekbar">
+    {# One target at a time is the right way to work on these and the wrong
+       way to find out which ones still want work. #}
+    <p class="draftstate">{{ at_a_glance|safe }}</p>
+
     <form method="get" action="/admin/summaries" class="picker loadonpick"
           id="summarypick">
       <input type="hidden" name="season" value="{{ season }}">
@@ -41,12 +45,15 @@
         {% endfor %}
       </select>
 
-      <span class="pickfield" {% if kind != "week" %}hidden{% endif %}>
+      {# Hidden when the kind does not want a week, and when the season has
+         no week to offer -- an empty dropdown is furniture, not a control. #}
+      <span class="pickfield"
+            {% if kind != "week" or not weeks %}hidden{% endif %}>
         <label for="week">Week</label>
         <select id="week" name="week">
           {% for w in weeks %}
             <option value="{{ w }}" {% if w == week %}selected{% endif %}>
-              {{ w }}{% if w in written_weeks %} &mdash; written{% endif %}</option>
+              {{ w }}{% if written_weeks.get(w) %} &mdash; {{ written_weeks[w] }}{% endif %}</option>
           {% endfor %}
         </select>
       </span>
@@ -90,7 +97,11 @@
       <article class="draft">
         <p class="setup-head">
           <b>Published</b>
-          <span class="pill live">On the season page</span>
+          {% if shown_on %}
+            <a class="pill live" href="{{ shown_on }}">On the season page</a>
+          {% else %}
+            <span class="pill">Published, but on no page</span>
+          {% endif %}
           <span class="tm">{{ published.model }}
             {%- if published.published_at %} &middot; {{ published.published_at.day }}
             {{ published.published_at.strftime("%b, %H:%M") }}{% endif %}</span>

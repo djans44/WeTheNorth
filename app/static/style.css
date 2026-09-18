@@ -1159,13 +1159,24 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    the strip and the dropdown already carry are the only room it needs. */
 .weekbar { padding: var(--s3) var(--pad-section) 0; }
 .weekbar .pickstrip { margin-top: 0; }
+/* The season at a glance, above the control that narrows it to one thing. */
+.weekbar .draftstate { margin: 0 0 var(--s3); }
 .weekbar .week-picker { margin-bottom: var(--s3); }
 
 /* A label and its control travelling together inside a picker, so the pair
    can be hidden as one when the choice above them does not want it. No
    display of its own: a class that sets display beats the browser's own
    [hidden] rule, which is how a panel JS had hidden once stayed on screen. */
-.pickfield { display: contents; }
+/* A label and its control travelling together inside a picker, so the pair
+   can be hidden as one when the choice above them does not want it -- and so
+   a wrap cannot leave the label on one line and the select on the next, which
+   display:contents allowed. The attribute selector outscores the class, so
+   hiding works whatever the order. */
+.pickfield {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s3);
+}
 .pickfield[hidden] { display: none; }
 
 /* The one entry that is not a number: the year as a whole. It comes after
