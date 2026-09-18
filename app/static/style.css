@@ -1887,6 +1887,10 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .week-card.rival { border-color: var(--gold); border-width: 3px; }
 .week-card h3 { margin: 0 0 0.4rem; font-size: var(--t-base); color: var(--ink); }
 .week-card ul { margin: 0; padding: 0; list-style: none; font-size: var(--t-sm); line-height: 1.7; }
+/* The shared .tm is display: block, so the "v" between two managers had been
+   breaking every matchup across three lines since this page was written. It
+   is a separator here, not a line of its own. */
+.week-card .tm { display: inline; }
 
 
 /* ---- keeper history ---- */

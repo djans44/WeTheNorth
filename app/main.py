@@ -5874,11 +5874,6 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
             where season_year = %s and owner_id < rival_owner_id
         """, (season,))
 
-        existing = query(conn, """
-            select week, count(*) as n from matchups
-            where season_year = %s and game_type = 'regular'
-            group by week order by week
-        """, (season,))
         # What saving would actually destroy, and what it would leave. Saying
         # "weeks with scores are left alone" is true and is not a number.
         standing = query(conn, """
@@ -5888,7 +5883,28 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
             where season_year = %s and game_type = 'regular'
         """, (season,))[0]
 
+        # The schedule that is actually in the table. Rolling one and saving it
+        # used to be the only way to see anything here, so the answer to "what
+        # does 2026 look like" was to roll a fresh one and hope it matched.
+        saved_rows = query(conn, """
+            select m.week, oa.username as a, ob.username as b
+            from matchups m
+            join teams ta on ta.team_id = m.team_a_id
+            join teams tb on tb.team_id = m.team_b_id
+            join owners oa on oa.owner_id = ta.owner_id
+            join owners ob on ob.owner_id = tb.owner_id
+            where m.season_year = %s and m.game_type = 'regular'
+            order by m.week, oa.username
+        """, (season,))
+
         hist = meeting_history(conn, season)
+
+    saved = []
+    for r in saved_rows:
+        if not saved or saved[-1]["week"] != r["week"]:
+            saved.append({"week": r["week"], "rival": r["week"] == 10,
+                          "games": []})
+        saved[-1]["games"].append((r["a"], r["b"]))
 
     ids = [t["owner_id"] for t in teams_list]
     names = {t["owner_id"]: t["username"] for t in teams_list}
@@ -5925,7 +5941,7 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
         request=request, name="admin_schedule.html",
         context={"years": years, "season": season, "seed": seed,
                  "weeks": weeks, "counts": counts, "error": err or problem,
-                 "existing": existing, "teams": teams_list,
+                 "teams": teams_list, "saved": saved,
                  "replaceable": standing["replaceable"], "kept": standing["kept"]})
 
 

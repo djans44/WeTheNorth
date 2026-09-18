@@ -2,13 +2,31 @@
 {% from "macros.html" import leaf %}
 {% block title %}Schedule | We the North{% endblock %}
 
+{# One grid, drawn twice: once for a schedule being considered and once for the
+   one in the table. They must look the same, because the whole question on
+   this page is how they differ. #}
+{% macro weekgrid(rows) %}
+  <div class="week-grid">
+  {% for w in rows %}
+    <div class="week-card {% if w.rival %}rival{% endif %}">
+      <h3>Week {{ w.week }}{% if w.rival %} <span class="pill live">Rivalry</span>{% endif %}</h3>
+      <ul>
+      {% for a, b in w.games %}
+        <li>{{ a }} <span class="tm">v</span> {{ b }}</li>
+      {% endfor %}
+      </ul>
+    </div>
+  {% endfor %}
+  </div>
+{% endmacro %}
+
 {% block content %}
 <div class="page wide">
   {# The same header every page with a year to switch wears: the year is the
      control that changes the year, in a <details> so it needs no script, with
      the h1 inside the summary so the outline survives. Switching years drops
-     the seed, which is right -- a schedule belongs to the year it was rolled
-     for, and carrying one across would show a schedule for the wrong teams. #}
+     the seed, which is right -- a rolled schedule belongs to the year it was
+     rolled for, and the year it lands on shows its own saved one instead. #}
   <header class="page-head tight stuck">
     <details class="headpick">
       <summary>
@@ -30,22 +48,29 @@
     <p class="note">Fourteen weeks. Every manager plays three opponents twice and
       the rest once, favouring pairings that have met least often. Week 10 is
       rivalry week.</p>
-    {# A fresh seed each time the page renders, so the button is "roll another"
-       rather than "roll the same one again". #}
-    <form method="get" action="/admin/schedule" class="picker">
-      <input type="hidden" name="season" value="{{ season }}">
-      <input type="hidden" name="seed" value="{{ range(1, 999999) | random }}">
-      <button type="submit" class="seal">
-        {% if weeks %}Roll a different schedule{% else %}Generate a schedule{% endif %}</button>
-    </form>
+    {# A fresh seed each render, so the button is "roll another" rather than
+       "roll the same one again". #}
+    <div class="actionrow">
+      <form method="get" action="/admin/schedule" class="inline">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="seed" value="{{ range(1, 999999) | random }}">
+        <button type="submit" class="seal">
+          {% if weeks %}Roll another{% else %}Roll a schedule{% endif %}</button>
+      </form>
+    </div>
     {% if error %}<div class="errors">{{ error }}</div>{% endif %}
-    {% if existing %}
-      <p class="note">{{ season }} already has regular season matchups in weeks
-        {% for e in existing %}{{ e.week }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
-    {% endif %}
   </section>
 
   {% if weeks %}
+  {# ---- a schedule that has been rolled and not saved ---- #}
+  <section>
+    <h2>Rolled, not saved</h2>
+    <p class="note">Nobody can see this but you until it is saved.
+      {% if saved %}<a href="/admin/schedule?season={{ season }}">Show the saved
+        schedule instead</a>.{% endif %}</p>
+    {{ weekgrid(weeks) }}
+  </section>
+
   <section>
     <h2>Doubled opponents</h2>
     <table class="keepers">
@@ -62,22 +87,6 @@
     </table>
     <p class="note">Eighteen pairs, three per manager. Lower "met before" means
       the generator is spreading things out.</p>
-  </section>
-
-  <section>
-    <h2>Weeks</h2>
-    <div class="week-grid">
-    {% for w in weeks %}
-      <div class="week-card {% if w.rival %}rival{% endif %}">
-        <h3>Week {{ w.week }}{% if w.rival %} <span class="pill live">Rivalry</span>{% endif %}</h3>
-        <ul>
-        {% for a, b in w.games %}
-          <li>{{ a }} <span class="tm">v</span> {{ b }}</li>
-        {% endfor %}
-        </ul>
-      </div>
-    {% endfor %}
-    </div>
   </section>
 
   <section class="danger">
@@ -101,6 +110,26 @@
       <label class="confirm"><input type="checkbox" name="confirm" value="1"> I mean it</label>
       <button type="submit" class="seal">Save schedule</button>
     </form>
+  </section>
+
+  {% elif saved %}
+  {# ---- what the season actually has ---- #}
+  <section>
+    <h2>The {{ season }} schedule</h2>
+    <p class="note">{{ saved|length }} week{{ "s" if saved|length != 1 }} saved,
+      {{ kept }} of {{ kept + replaceable }} matchup{{ "s" if (kept + replaceable) != 1 }}
+      played.
+      {%- if replaceable %} Rolling another replaces the {{ replaceable }} with no
+        scores in {{ "it" if replaceable == 1 else "them" }} yet.
+      {%- else %} Every matchup has scores, so rolling another would replace
+        nothing.{% endif %}</p>
+    {{ weekgrid(saved) }}
+  </section>
+
+  {% else %}
+  <section>
+    <p class="note">{{ season }} has no schedule yet. Roll one above and it will
+      appear here to look over before anything is written.</p>
   </section>
   {% endif %}
 </div>
