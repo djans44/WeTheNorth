@@ -39,7 +39,7 @@
       than trimming it to what looks new, because the rows already stored are
       what prove nothing fell between this week and last.
       {% if stored %}{{ season }} has {{ stored }} stored,
-        the most recent on {{ newest_stored.strftime("%-d %b") if newest_stored else "no date" }}.
+        the most recent on {{ newest_stored.strftime("%b") ~ " " ~ newest_stored.day if newest_stored else "no date" }}.
       {% else %}Nothing is stored for {{ season }} yet.{% endif %}</p>
 
     {# Two boxes rather than one. Each is parsed as the thing it holds, so a
@@ -82,9 +82,9 @@
         <div class="errors">
           <b>There may be transactions missing.</b>
           <p>Nothing in this paste is already stored, and the oldest of it is
-            {{ flow.oldest.strftime("%-d %b") if flow.oldest else "undated" }} &mdash;
+            {{ flow.oldest.strftime("%b") ~ " " ~ flow.oldest.day if flow.oldest else "undated" }} &mdash;
             later than the most recent one stored,
-            {{ flow.newest_stored.strftime("%-d %b") }}. Anything between those
+            {{ flow.newest_stored.strftime("%b") ~ " " ~ flow.newest_stored.day }}. Anything between those
             two dates would be lost quietly, and a missing add is a wrong
             keeper price in January. Scroll back a page on Yahoo and paste more
             so the two overlap.</p>
