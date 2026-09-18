@@ -5,8 +5,18 @@
 
 {# Season and week beside a name, without the detail crest_when() adds --
    here the detail is its own column. #}
+{# A career crest is won across every season rather than in one, so it has no
+   year to print. Until Master of Coin and Master of Whisperers there was no
+   earned crest like that -- dynasty is one and has never been awarded -- so
+   this printed the word None. #}
 {% macro when(r) -%}
-  <span class="when">{{ r.season_year }}{% if r.week %} wk{{ r.week }}{% endif %}</span>
+  <span class="when">
+    {%- if r.season_year -%}
+      {{ r.season_year }}{% if r.week %} wk{{ r.week }}{% endif %}
+    {%- else -%}
+      All time
+    {%- endif -%}
+  </span>
 {%- endmacro %}
 
 {% block content %}
