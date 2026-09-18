@@ -31,7 +31,15 @@ import datetime as dt
 import re
 
 SUFFIX = re.compile(r"\b(jr|sr|ii|iii|iv|v)\b")
-PLAYER = re.compile(r"^(.+?)\s+([A-Za-z]{2,3})\s+-\s+(QB|RB|WR|TE|K|DEF)(\s+.*)?$")
+# "Taysom Hill NO - QB,TE NA". Two positions because Yahoo lists every one
+# a player is eligible at, and a trailing NA or Q or IR-R for his status.
+# The first position is the one kept: players.position holds one, and the
+# first is the one Yahoo leads with.
+POS = "QB|RB|WR|TE|K|DEF"
+PLAYER = re.compile(
+    r"^(?P<name>.+?)\s+(?P<club>[A-Za-z]{2,3})\s+-\s+"
+    r"(?P<pos>" + POS + r")(?P<also>(?:\s*,\s*(?:" + POS + r"))*)"
+    r"(?P<status>\s+.*)?$")
 MONTHS = {m: i for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], start=1)}
@@ -111,7 +119,7 @@ def blocks(text):
 
 def player_of(line):
     m = PLAYER.match(line)
-    return (m.group(1).strip(), m.group(3)) if m else (None, None)
+    return (m.group("name").strip(), m.group("pos")) if m else (None, None)
 
 
 def parse(text, season, expect="adds"):

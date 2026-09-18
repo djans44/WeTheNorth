@@ -32,8 +32,12 @@ KEEPER_MARK = ""
 POSITIONS = ("QB", "RB", "WR", "TE", "K", "DEF")
 ROUND = re.compile(r"^Round\s+(\d+)\s*$")
 PICK = re.compile(r"^(\d+)\.\s*(.+)$")
-# "(Atl - RB)" under a player, in the three-line shape.
-POSITION = re.compile(r"^\((.+?)\s+-\s+([A-Z]{1,3})\)$")
+# "(Atl - RB)" under a player, in the three-line shape, and "(NO - QB,TE)"
+# when Yahoo lists every position he is eligible at. The first is the one
+# kept, because players.position holds one.
+POSITION = re.compile(
+    r"^\((?P<club>.+?)\s+-\s+(?P<pos>QB|RB|WR|TE|K|DEF)"
+    r"(?P<also>(?:\s*,\s*(?:QB|RB|WR|TE|K|DEF))*)\)$")
 
 
 def clean(line):
@@ -115,7 +119,7 @@ def parse(text):
                                        "“(Team - POS)” under it."})
                 i += 1
                 continue
-            position = got.group(2)
+            position = got.group("pos")
             j = next_filled(j + 1)
             if (j >= len(rows) or PICK.match(rows[j][0])
                     or ROUND.match(rows[j][0])):
