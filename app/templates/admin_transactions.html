@@ -42,11 +42,23 @@
         the most recent on {{ newest_stored.strftime("%-d %b") if newest_stored else "no date" }}.
       {% else %}Nothing is stored for {{ season }} yet.{% endif %}</p>
 
+    {# Two boxes rather than one. Each is parsed as the thing it holds, so a
+       trade cannot be read as an add by a parser willing to try; a block in
+       the wrong box is named and sent to the other rather than guessed at.
+       Both are optional -- most weeks only the first has anything in it. #}
     <form method="post" action="/admin/transactions" class="writer">
       <input type="hidden" name="season" value="{{ season }}">
-      <label for="text">What Yahoo shows</label>
-      <textarea id="text" name="text" rows="{{ 8 if previewed else 16 }}"
-                placeholder="Paste here.">{{ text }}</textarea>
+
+      <label for="text">Adds and drops</label>
+      <textarea id="text" name="text" rows="{{ 8 if previewed else 14 }}"
+                placeholder="Paste the waivers and free agents here."
+                >{{ text }}</textarea>
+
+      <label for="trades" class="second">Trades</label>
+      <textarea id="trades" name="trades" rows="{{ 5 if previewed else 8 }}"
+                placeholder="Paste trades here. Both halves of a trade together, or it cannot be paired."
+                >{{ trades }}</textarea>
+
       <div class="actionrow">
         <button type="submit" name="action" value="preview" class="seal">
           {% if previewed %}Read it again{% else %}Read the paste{% endif %}</button>
@@ -132,11 +144,12 @@
   {% if puzzles %}
   <section>
     <h2>Blocks that made no sense</h2>
-    <p class="note">These are shown rather than guessed at. If Yahoo has
-      changed the shape of something &mdash; a trade, most likely, which has
-      not been seen in this export yet &mdash; this is where it turns up.</p>
+    <p class="note">Shown rather than guessed at. Most often this is something
+      pasted into the wrong box, and it says so; if Yahoo has changed the shape
+      of an entry, this is where that turns up too.</p>
     {% for p in puzzles %}
-      <pre class="raw">{% for line in p %}{{ line }}
+      <p class="note why">{{ p.why }}</p>
+      <pre class="raw">{% for line in p.lines %}{{ line }}
 {% endfor %}</pre>
     {% endfor %}
   </section>
@@ -172,6 +185,7 @@
     <form method="post" action="/admin/transactions">
       <input type="hidden" name="season" value="{{ season }}">
       <textarea name="text" hidden>{{ text }}</textarea>
+      <textarea name="trades" hidden>{{ trades }}</textarea>
       {% if wanted %}
         <label class="confirm"><input type="checkbox" name="make_players" value="1">
           Create the {{ wanted|length }} new player{{ "s" if wanted|length != 1 }}</label>

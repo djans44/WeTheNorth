@@ -1299,6 +1299,11 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   text-transform: lowercase;
 }
 .moves .pos { width: 3rem; font-size: var(--t-sm); color: var(--ink-soft); }
+/* The second label in a form of two boxes, which would otherwise sit flush
+   against the box above it and read as its caption. */
+label.second { margin-top: var(--s4); }
+/* Why a block was not understood, immediately above the block itself. */
+.note.why { margin-bottom: var(--s1); color: var(--loss); font-style: normal; }
 /* Tables range right by default, which suits numbers. These columns are
    names and read from the left. */
 .moves td, .moves th { text-align: left; }

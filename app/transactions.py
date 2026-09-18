@@ -114,18 +114,29 @@ def player_of(line):
     return (m.group(1).strip(), m.group(3)) if m else (None, None)
 
 
-def parse(text, season):
+def parse(text, season, expect="adds"):
     """Every move in the paste, and every block that made no sense.
 
+    `expect` says which kind of page this is, because they are pasted into
+    separate boxes. A block of the other shape is not quietly reinterpreted:
+    it becomes a puzzle saying which box it belongs in. Keeping them apart is
+    what stops a trade being read as an add by a parser willing to try.
+
     Returns (moves, puzzles). A move is a dict the caller can match against
-    the database; a puzzle is the block's lines, kept verbatim so the admin
-    can see what was skipped rather than wonder what happened to it.
+    the database; a puzzle is {"lines", "why"}, the lines kept verbatim so the
+    admin sees what was skipped rather than wondering where it went.
     """
     moves, puzzles, trade_sides = [], [], []
+
+    def puzzle(block, why):
+        puzzles.append({"lines": block, "why": why})
 
     for block in blocks(text):
         # ---- a trade, in the shape 2025 was imported from ----
         if "Traded to" in block:
+            if expect != "trades":
+                puzzle(block, "This is a trade. Paste it in the trades box.")
+                continue
             at = block.index("Traded to")
             players = [player_of(l) for l in block[:at]]
             if (len(block) >= at + 3 and all(n for n, _ in players)
@@ -134,13 +145,18 @@ def parse(text, season):
                                     "team": strip_paren(block[at + 1]),
                                     "date": block[at + 2]})
             else:
-                puzzles.append(block)
+                puzzle(block, "A trade with no players read from it.")
+            continue
+
+        if expect == "trades":
+            puzzle(block, "No “Traded to” in this block. If it is a waiver "
+                          "or a free agent pickup, paste it in the box above.")
             continue
 
         # ---- an add, with or without the player who made room ----
         name, pos = player_of(block[0]) if block else (None, None)
         if not name:
-            puzzles.append(block)
+            puzzle(block, "The first line is not a player.")
             continue
 
         if len(block) == 4:
@@ -150,10 +166,10 @@ def parse(text, season):
             _, method_text, drop_line, _, team, date = block
             dropped = player_of(drop_line)
             if not dropped[0]:
-                puzzles.append(block)
+                puzzle(block, "The dropped player could not be read.")
                 continue
         else:
-            puzzles.append(block)
+            puzzle(block, "%d lines, and not a shape this knows." % len(block))
             continue
 
         method, faab = method_of(method_text)
@@ -178,9 +194,9 @@ def parse(text, season):
     for date, sides in by_date.items():
         if len(sides) != 2:
             for side in sides:
-                puzzles.append(["Traded to " + side["team"], date,
-                                "%d side(s) on this date, expected 2"
-                                % len(sides)])
+                puzzle(["Traded to " + side["team"], date],
+                       "%d side to this trade, expected 2. A trade needs both "
+                       "halves pasted together." % len(sides))
             continue
         a, b = sides
         for side, other in ((a, b), (b, a)):

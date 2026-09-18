@@ -2860,7 +2860,7 @@ async def admin_scores_save(request: Request):
 
 # ---------------------------------------------------------------- transactions
 
-def transaction_context(conn, season, text="", previewed=False):
+def transaction_context(conn, season, text="", trades="", previewed=False):
     """Everything the page shows, for a paste or for an empty box.
 
     The parse and the matching are pure -- app/transactions.py -- so this is
@@ -2884,14 +2884,22 @@ def transaction_context(conn, season, text="", previewed=False):
         from transactions where season_year = %s
     """, (season,))}
 
-    ctx = {"years": years, "season": season, "text": text,
+    ctx = {"years": years, "season": season, "text": text, "trades": trades,
            "previewed": previewed, "stored": stored["n"],
            "newest_stored": stored["newest"], "ready": [], "known": [],
            "unresolved": [], "puzzles": [], "wanted": [], "flow": None}
-    if not text.strip():
+    if not text.strip() and not trades.strip():
         return ctx
 
-    moves, puzzles = txn.parse(text, season)
+    # Two boxes, each parsed as the thing it is meant to hold. A block of the
+    # wrong shape is reported rather than reinterpreted, which is the point of
+    # keeping them apart.
+    moves, puzzles = [], []
+    for source, expect in ((text, "adds"), (trades, "trades")):
+        if source.strip():
+            got, odd = txn.parse(source, season, expect)
+            moves += got
+            puzzles += odd
     ready, known, unresolved, wanted = txn.resolve(
         moves, teams, players, existing, season)
     ctx.update({"ready": ready, "known": known, "unresolved": unresolved,
@@ -2936,10 +2944,11 @@ async def admin_transactions_post(request: Request):
     form = await request.form()
     season = int(form["season"])
     text = form.get("text") or ""
+    trades = form.get("trades") or ""
     apply_it = form.get("action") == "apply"
 
     with get_db() as conn:
-        ctx = transaction_context(conn, season, text, previewed=True)
+        ctx = transaction_context(conn, season, text, trades, previewed=True)
 
         if not apply_it:
             return templates.TemplateResponse(
