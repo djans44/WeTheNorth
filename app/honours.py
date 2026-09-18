@@ -5,8 +5,13 @@ No rule computes them -- they are opinions -- so the league is asked.
 
 Every candidate resolves to exactly one owner, because a crest is held by a
 person. A team name belongs to its manager; a defeat belongs to whoever
-suffered it; a trade has two sides and each is its own candidate, so the vote
-decides who receives it rather than leaving that to be settled afterwards.
+suffered it; a late pick belongs to whoever made it; a trade has two sides and
+each is its own candidate, so the vote decides who receives it rather than
+leaving that to be settled afterwards.
+
+Three of the four read a season that has been played. The fourth, the late
+pick, also needs the end-of-season roster, because the condition that makes it
+worth voting on is that the player was still there at the end.
 
 Nothing here writes. It reads a season and returns the four ballots.
 """
@@ -16,6 +21,9 @@ Nothing here writes. It reads a season and returns the four ballots.
 # and around a quarter of them come in under this, which is a ballot rather
 # than a list.
 CLOSE = 10
+
+# Where the late rounds begin. Ten of thirteen, so the last four.
+LATE_FROM = 10
 
 CODES = ("best_team_name", "draft_day", "trade_of_year", "worst_beat")
 
@@ -35,20 +43,42 @@ def team_names(q, season):
              "what": r["team_name"]} for r in rows]
 
 
-def managers(q, season):
-    """Legend of the Choosing. Conduct at the draft is about a person, so the
-    ballot is the people."""
+def late_picks(q, season):
+    """Legend of the Choosing. The best pick of the late rounds.
+
+    Three conditions, and each throws something out:
+
+      round ten or after     -- the early rounds are where the good players
+                                are, and taking one is not a discovery
+      not a keeper           -- a keeper is not a pick, it is a price paid,
+                                and it lands in whatever round it costs
+      still on the roster at -- the difference between finding a player and
+      the end of the season     taking a flier on one. Most late picks are
+                                cut by October
+
+    That leaves nine in 2025, which is a ballot. It needs the end-of-season
+    roster, so a season with none offers nothing to vote on rather than
+    offering a list nobody can judge.
+    """
     rows = q("""
-        select o.owner_id, o.username, t.team_name
-        from teams t join owners o on o.owner_id = t.owner_id
-        where t.season_year = %s
-        order by o.username
-    """, (season,))
-    return [{"candidate": "mgr:%d" % r["owner_id"],
+        select o.owner_id, o.username, p.full_name, p.position,
+               d.round, d.pick_in_round
+        from draft_picks d
+        join players p on p.player_id = d.player_id
+        join teams t on t.team_id = d.team_id
+        join owners o on o.owner_id = t.owner_id
+        join rosters r on r.season_year = d.season_year
+                      and r.team_id = d.team_id
+                      and r.player_id = d.player_id
+        where d.season_year = %s and d.round >= %s and not d.is_keeper
+        order by d.round, d.pick_in_round
+    """, (season, LATE_FROM))
+    return [{"candidate": "pick:%d:%d" % (r["round"], r["pick_in_round"]),
              "owner_id": r["owner_id"],
-             "detail": r["team_name"],
+             "detail": "%s, round %d" % (r["full_name"], r["round"]),
              "who": r["username"],
-             "what": ""} for r in rows]
+             "what": "%s, round %d" % (r["full_name"], r["round"]),
+             "scores": r["position"]} for r in rows]
 
 
 def trades(q, season):
@@ -146,7 +176,7 @@ def beats(q, season):
 def ballots(q, season):
     """The four, in the order they are voted on."""
     return {"best_team_name": team_names(q, season),
-            "draft_day": managers(q, season),
+            "draft_day": late_picks(q, season),
             "trade_of_year": trades(q, season),
             "worst_beat": beats(q, season)}
 

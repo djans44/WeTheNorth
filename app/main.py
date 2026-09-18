@@ -3661,7 +3661,7 @@ async def admin_draft_post(request: Request):
 def admin_crests(request: Request, season: int = 0):
     """The four crests nobody can earn.
 
-    Best team name, conduct at the draft, the trade of the year, the defeat
+    Best team name, the best late pick, the trade of the year, the defeat
     nobody deserved. They are opinions, so no rule computes them and the
     commissioner writes them down. They have existed since the catalogue was
     seeded and there has never been a way to give one.
