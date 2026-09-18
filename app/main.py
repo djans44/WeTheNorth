@@ -3054,12 +3054,35 @@ async def admin_transactions_post(request: Request):
                   for r in ctx["ready"]])
         conn.commit()
 
+        # The Sellsword and Traffic in Men count a season's moves, and Master
+        # of Coin and Master of Whisperers count every season's, so a load of
+        # transactions is exactly the thing that can change who holds them.
+        # Entering a week's scores has recomputed crests since it was built;
+        # this is the same recompute for the same reason.
+        #
+        # Every completed season from this one on, not just this one: the two
+        # career titles are cumulative, so adding a trade to 2022 moves what
+        # the count stood at when 2023 and 2024 closed as well.
+        #
+        # A failure here must not lose the transactions, which are committed
+        # above. It is reported instead, and scripts/award_crests.py --apply
+        # is the fix.
+        crested = ""
+        try:
+            crestrules.recompute_market(conn, [r["season_year"] for r in query(
+                conn, "select season_year from seasons order by season_year")])
+        except Exception:
+            log.exception("crest recompute failed after loading %s transactions",
+                          season)
+            crested = " The crests could not be recomputed."
+
     told = "%d transaction%s stored" % (len(ctx["ready"]),
                                         "" if len(ctx["ready"]) == 1 else "s")
     if made:
         told += ", %d new player%s created" % (made, "" if made == 1 else "s")
     return RedirectResponse(
-        url="/admin/transactions?season=%d&msg=%s" % (season, quote(told + ".")),
+        url="/admin/transactions?season=%d&msg=%s"
+            % (season, quote(told + "." + crested)),
         status_code=303)
 
 

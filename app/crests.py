@@ -746,6 +746,63 @@ def write(conn, awards, season=None, weeks_from=1):
     return removed, written
 
 
+# The four a transaction can move, and nothing else.
+MARKET_CODES = ("waiver_warrior", "wheeler_dealer", "most_faab", "most_trades")
+
+
+def recompute_market(conn, seasons):
+    """Just the crests a load of transactions can change.
+
+    recompute() runs every rule there is, which is fourteen seconds a season
+    and thirty-three for the four a 2022 load would touch -- too long to hold
+    a request open on a free tier, and all of it spent on titles that count
+    games. A transaction moves four crests: the season's adds and trades, and
+    the two career titles that total them up.
+
+    The delete is scoped to those four codes so nothing else is disturbed,
+    which is the whole reason this exists rather than a narrower call to
+    write().
+    """
+    awards = collections.defaultdict(list)
+    for code, rows in transactions(conn, seasons).items():
+        awards[code] += rows
+    # The career pair as things stand, and as they stood at each close. Every
+    # completed season, not just the ones asked for: these are cumulative, so
+    # a trade added to 2022 moves what the count was when 2024 closed.
+    every = [r["season_year"] for r in
+             q(conn, "select distinct season_year from seasons")]
+    for code, rows in market_titles(conn).items():
+        awards[code] += rows
+    for y in complete_seasons(conn, every):
+        for code, rows in market_titles(conn, y).items():
+            awards[code] += rows
+
+    for code in list(awards):
+        awards[code] = pick_best([r for r in awards[code] if r[0] is not None])[0]
+
+    crests = {r["code"]: r for r in q(conn, "select * from crests")}
+    ids = [crests[c]["crest_id"] for c in MARKET_CODES if c in crests]
+    with conn.cursor() as cur:
+        cur.execute("""
+            delete from owner_crests
+             where crest_id = any(%s) and awarded_by is null
+        """, (ids,))
+        removed = cur.rowcount
+        written = 0
+        for code, rows in awards.items():
+            cid = crests[code]["crest_id"]
+            for oid, year, week, detail, _ in rows:
+                cur.execute("""
+                    insert into owner_crests
+                        (owner_id, crest_id, season_year, week, detail)
+                    values (%s, %s, %s, %s, %s)
+                    on conflict do nothing
+                """, (oid, cid, year, week, detail))
+                written += cur.rowcount
+    conn.commit()
+    return removed, written
+
+
 def recompute(conn, season, weeks_from=1):
     """One season, from one week on. What score entry calls."""
     awards, _ = compute(conn, [season], weeks_from)
