@@ -46,19 +46,27 @@ def team_names(q, season):
 def late_picks(q, season):
     """Legend of the Choosing. The best pick of the late rounds.
 
-    Three conditions, and each throws something out:
+    Four conditions, and each throws something out:
 
-      round ten or after     -- the early rounds are where the good players
-                                are, and taking one is not a discovery
-      not a keeper           -- a keeper is not a pick, it is a price paid,
-                                and it lands in whatever round it costs
-      still on the roster at -- the difference between finding a player and
-      the end of the season     taking a flier on one. Most late picks are
-                                cut by October
+      round ten or after   -- the early rounds are where the good players
+                              are, and taking one is not a discovery
+      not a keeper         -- a keeper is not a pick, it is a price paid,
+                              and it lands in whatever round it costs
+      on the roster at the -- the difference between finding a player and
+      end of the season       taking a flier on one
+      and never moved at   -- held the whole way, which is the claim being
+      any point in between    made
 
-    That leaves nine in 2025, which is a ballot. It needs the end-of-season
-    roster, so a season with none offers nothing to vote on rather than
-    offering a list nobody can judge.
+    That last one is not the same as the one before it, which is how this
+    was wrong first time round. Borys drafted Luther Burden III in round
+    thirteen, dropped him on the tenth of September, watched him pass through
+    David, Curtis and David again, and picked him back up as a free agent on
+    the twenty-seventh of December. Start and end both say Borys. Nothing in
+    between does, and the crest is about the middle.
+
+    Any transaction at all disqualifies: an add, a drop or a trade all mean
+    somebody let him go or somebody else had him. Seven of 2025's nine
+    survive it.
     """
     rows = q("""
         select o.owner_id, o.username, p.full_name, p.position,
@@ -71,6 +79,10 @@ def late_picks(q, season):
                       and r.team_id = d.team_id
                       and r.player_id = d.player_id
         where d.season_year = %s and d.round >= %s and not d.is_keeper
+          and not exists (
+              select 1 from transactions x
+              where x.season_year = d.season_year
+                and x.player_id = d.player_id)
         order by d.round, d.pick_in_round
     """, (season, LATE_FROM))
     return [{"candidate": "pick:%d:%d" % (r["round"], r["pick_in_round"]),
