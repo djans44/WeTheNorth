@@ -3134,6 +3134,13 @@ def draft_context(conn, season, text="", previewed=False, positions=None):
 # and their order decides who holds a player: Niall dropped Jameson Williams
 # at 10:43 and signed him back at 10:51 on the same morning, and read the
 # wrong way round that leaves him off a roster he was on.
+# And newest first, for reading. Same reason: the log groups moves by the
+# moment they happened, so two on one day have to be in the order they
+# happened or a drop appears above the add that made room for it.
+MOVE_ORDER_DESC = ("order by occurred_on desc, "
+                   "to_timestamp(split_part(occurred_raw, ', ', 2), 'HH12:MI am')::time desc, "
+                   "transaction_id desc")
+
 MOVE_ORDER = ("order by occurred_on, "
               "to_timestamp(split_part(occurred_raw, ', ', 2), 'HH12:MI am')::time, "
               "transaction_id")
@@ -3380,9 +3387,7 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
             select x.kind, x.player_id, x.to_team_id, x.occurred_on,
                    p.full_name, p.position
             from transactions x join players p on p.player_id = x.player_id
-            where x.season_year = %s
-            order by x.occurred_on, x.transaction_id
-        """, (season,))
+            where x.season_year = %s """ + MOVE_ORDER, (season,))
         sides = query(conn, """
             select t.team_id, t.team_name, o.username
             from teams t join owners o on o.owner_id = t.owner_id
@@ -3456,9 +3461,7 @@ def transactions_page(request: Request, season: int = 0, who: str = "",
             left join owners ot on ot.owner_id = tt.owner_id
             left join teams ft on ft.team_id = x.from_team_id
             left join owners ofr on ofr.owner_id = ft.owner_id
-            where x.season_year = %s
-            order by x.occurred_on desc, x.transaction_id desc
-        """, (season,))
+            where x.season_year = %s """ + MOVE_ORDER_DESC, (season,))
         owners = [r["username"] for r in query(conn, """
             select distinct o.username
             from transactions x
