@@ -38,19 +38,6 @@
         other. Loading the end-of-season roster would give it one.</p>
     {% endif %}
 
-    {# Only for a derived roster. A snapshot is simply what was loaded --
-       squads genuinely end a season at different sizes -- so measuring it
-       against its own average would cry wolf every year. #}
-    {% if odd and source == "derived" %}
-      {# The loudest sign that a move never made it in. Not a verdict: a squad
-         genuinely can sit a player short for a day. #}
-      <div class="errors">
-        <b>{{ odd|length }} roster{{ "s" if odd|length != 1 }} of an odd size.</b>
-        <p>Most hold {{ usual }}. A waiver claim is one in and one out, so a
-          squad that has drifted is usually a move that was never loaded &mdash;
-          an add whose drop scrolled off the page before it was pasted.</p>
-      </div>
-    {% endif %}
   </section>
 
   {% if squads %}

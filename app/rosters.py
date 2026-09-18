@@ -11,6 +11,11 @@ the record instead of the record itself: import it, compare, and a difference
 is a gap in the transactions worth finding -- which matters because
 keeper_cost_basis counts any add at all, so a missing one is a wrong price.
 
+Size proves nothing on its own. IR slots mean a squad can legitimately carry
+anywhere from thirteen to fifteen, so a roster that is a player over is not
+evidence of a missing drop; comparing against a loaded roster is, and that is
+the check worth building.
+
 Only from 2026. The 2022-2025 transactions were loaded as adds alone -- drops
 were not recorded until the paste page was built -- so applying them would put
 players on rosters and never take any off, and every squad would grow all
@@ -65,20 +70,3 @@ def derive(picks, moves):
     for row in held.values():
         out[row["team_id"]].append(row)
     return dict(out)
-
-
-def odd_sizes(squads):
-    """Which rosters are not the size the rest of them are.
-
-    Every squad starts the same size and a waiver claim is one in, one out, so
-    they should stay level. One that has drifted is the loudest sign that a
-    move was never loaded -- an add whose drop scrolled off the page before it
-    was pasted. It is a hint rather than a verdict, because a roster genuinely
-    can differ mid-week.
-    """
-    if not squads:
-        return {}, None
-    sizes = collections.Counter(len(v) for v in squads.values())
-    usual = sizes.most_common(1)[0][0]
-    return ({tid: len(v) for tid, v in squads.items() if len(v) != usual},
-            usual)

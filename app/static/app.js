@@ -52,20 +52,9 @@
     siteNav.classList.add("collapsible");
     siteNav.insertBefore(toggle, siteNav.querySelector("ul"));
 
-    // The section strip sticks directly below the site nav, so it needs the
-    // nav's real height -- which changes when the menu opens. Published as a
-    // custom property rather than hard-coded in the stylesheet.
-    var publishNavHeight = function () {
-      document.documentElement.style.setProperty(
-        "--nav-h", siteNav.getBoundingClientRect().height + "px");
-    };
-    publishNavHeight();
-    window.addEventListener("resize", publishNavHeight);
-
     toggle.addEventListener("click", function () {
       var open = siteNav.classList.toggle("open");
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
-      publishNavHeight();
     });
 
     // Each group gets its own chevron, closed to start with. Fully unfolded
@@ -101,7 +90,6 @@
         b.addEventListener("click", function () {
           var open = li.classList.toggle("open");
           b.setAttribute("aria-expanded", open ? "true" : "false");
-          publishNavHeight();
         });
         li.insertBefore(b, sub);
       }(groups[g]));

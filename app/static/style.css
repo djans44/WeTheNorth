@@ -1124,10 +1124,21 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .sectionnav:hover span,
 .sectionnav:focus-within span { max-width: 11rem; }
 
-/* The rail needs a gutter to open into. The panel is 56rem and the open rail
-   about 8rem, so below roughly 74rem there is nowhere for it to go: it would
-   either cover the panel or run off the left edge. It becomes a strip across
-   the top instead.
+/* The rail needs a gutter to sit in. The panel is 56rem, so the gutter is
+   half of whatever is left, and the rail collapsed measures 56px. Measured
+   across widths rather than guessed:
+
+     1367px  gutter 236   1067px  gutter 86    1015px  gutter 60
+     1167px  gutter 136   1048px  gutter 76     967px  gutter 36
+
+   so the rail stops fitting at about 1024px, which is 64rem. It was set to
+   74rem and gave up with 144px of gutter still unused -- a rail thrown away
+   at every width from 1024 to 1184 that had room for it.
+
+   Between 64rem and about 74rem a label opening on hover reaches over the
+   panel's edge, which is what the old comment was avoiding. That is a
+   transient hover state on a few hundred pixels of width, and it is worth
+   less than having the rail at all.
 
    This is the one component with a second breakpoint. CLAUDE.md asks for a
    single 48rem block and that still holds for page layout; this threshold is
@@ -1136,13 +1147,15 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    between the two.
 
    Labels always show here: a strip has room for them, and on touch there is
-   no hover, so an icon alone could never be identified. --nav-h is measured
-   in app.js, because the site nav changes height when the menu opens and a
-   fixed offset would leave a gap or an overlap. */
-@media (max-width: 74rem) {
+   no hover, so an icon alone could never be identified.
+
+   The strip does not follow the page. It used to stick below the site nav,
+   and pinned it is a full-width band of furniture riding down over the thing
+   it points at -- the same reason both navigation bars were already let go
+   at 48rem, applied at the width the argument actually starts. */
+@media (max-width: 64rem) {
   .sectionnav {
-    position: sticky;
-    top: var(--nav-h, 2.75rem);
+    position: static;
     left: auto;
     right: auto;
     flex-direction: row;
@@ -3033,12 +3046,11 @@ button.seal.working::before {
   .bracket.settled > .fifth  { order: 4; }
   .bracket.settled > .qf     { order: 5; }
 
-  /* Both navigation bars scroll away here -- pinned, they and the header
-     took the top third of an 844px screen before the page began. The header
-     stays, but as a thin strip: the sigil, the name, and a way back up. It
-     is the one thing worth the room, because a phone screen of crests says
-     nothing about whose they are. */
-  .sectionnav { position: static; }
+  /* The section strip is already static from 64rem down, where the same
+     argument starts: pinned, it and the site nav and the header took the top
+     third of an 844px screen before the page began. The header stays, but as
+     a thin strip -- the sigil, the name, and a way back up -- because a phone
+     screen of crests says nothing about whose they are. */
 
   .page-head.stuck.condensed {
     padding: 0.25rem var(--s3);

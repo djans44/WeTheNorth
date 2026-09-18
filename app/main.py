@@ -3122,7 +3122,6 @@ def rosters_page(request: Request, season: int = 0):
         source = "none"
         squads = {}
 
-    odd, usual = rosterrules.odd_sizes(squads)
     for team in squads.values():
         team.sort(key=lambda r: (POSITION_ORDER.get(r["position"], 9),
                                  r["full_name"] or ""))
@@ -3130,7 +3129,7 @@ def rosters_page(request: Request, season: int = 0):
     return templates.TemplateResponse(
         request=request, name="rosters.html",
         context={"years": years, "season": season, "source": source,
-                 "sides": sides, "squads": squads, "odd": odd, "usual": usual,
+                 "sides": sides, "squads": squads,
                  "moves": len(moves), "picks": len(picks)})
 
 
