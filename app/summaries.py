@@ -575,6 +575,151 @@ def _runs(rows):
     return out
 
 
+def _words(n):
+    """Small numbers as words, because a fact that reads as a sentence is
+    less likely to come back as a row."""
+    return {2: "twice", 3: "three times", 4: "four times", 5: "five times",
+            6: "six times", 7: "seven times"}.get(n, "%d times" % n)
+
+
+def _season_so_far(q, season, week, runs_now):
+    """What the weeks before this one say, without handing over the weeks.
+
+    A week's account kept wanting things it could not see: that a crest had
+    gone to the same sigil twice running, that a five-game run had just been
+    broken, that a game was the closest of the season rather than of the
+    afternoon. All of those are in the earlier weeks, and the earlier weeks
+    are the last thing to put in a prompt -- thirteen weeks of results is a
+    table, and a table in the facts comes back as a table in the prose.
+
+    So the history arrives already reduced to the handful of sentences a
+    writer actually reaches for. Tallies only where something has happened
+    more than once, because "has taken it once" is not a pattern.
+    """
+    out = []
+
+    # Who leads each weekly crest, and only where somebody does. Tallying
+    # every manager who has taken one twice gave nineteen lines by week
+    # fourteen, which is the table this whole approach exists to avoid.
+    # Favoured by the Gods in particular goes to half the league every year,
+    # so a five-way tie on three apiece is noise and is dropped; two names
+    # sharing a lead is still a story and is kept.
+    tallies = {}
+    for r in q("""
+        select o.username, cr.name, cr.sort_order, count(*) as n
+        from owner_crests oc
+        join crests cr on cr.crest_id = oc.crest_id
+        join owners o on o.owner_id = oc.owner_id
+        where oc.season_year = %(y)s and oc.week is not null
+          and oc.week <= %(w)s and cr.standing = 'earned'
+        group by o.username, cr.name, cr.sort_order
+        having count(*) > 1
+        order by cr.sort_order
+    """, {"y": season, "w": week}):
+        best, names = tallies.setdefault(r["name"], (0, []))
+        if r["n"] > best:
+            tallies[r["name"]] = (r["n"], [r["username"]])
+        elif r["n"] == best:
+            names.append(r["username"])
+    for name, (n, who) in tallies.items():
+        if len(who) > 2:
+            continue
+        out.append({"note": "%s %s taken %s %s this season, more than anyone"
+                            % (" and ".join(who),
+                               "has" if len(who) == 1 else "have",
+                               name, _words(n))})
+
+    # The marks of the season to date, so a week can be measured against the
+    # year rather than only against itself.
+    for r in q("""
+        select username, week, round(points_for::numeric, 2) as pts
+        from game_log
+        where season_year = %(y)s and week <= %(w)s
+        order by points_for desc limit 1
+    """, {"y": season, "w": week}):
+        out.append({"note": "the highest score of the season so far is %s's "
+                            "%s in week %d" % (r["username"], r["pts"], r["week"])})
+    for label, direction in (("widest", "desc"), ("narrowest", "asc")):
+        for r in q("""
+            select m.week, oa.username as a, ob.username as b,
+                   round(abs(m.team_a_points - m.team_b_points)::numeric, 2) as gap
+            from matchups m
+            join teams ta on ta.team_id = m.team_a_id
+            join owners oa on oa.owner_id = ta.owner_id
+            join teams tb on tb.team_id = m.team_b_id
+            join owners ob on ob.owner_id = tb.owner_id
+            where m.season_year = %%(y)s and m.week <= %%(w)s
+              and m.team_a_points is not null and m.team_b_points is not null
+            order by abs(m.team_a_points - m.team_b_points) %s limit 1
+        """ % direction, {"y": season, "w": week}):
+            out.append({"note": "the %s margin of the season so far is %s, "
+                                "%s and %s in week %d"
+                                % (label, r["gap"], r["a"], r["b"], r["week"])})
+
+    # A run of three or more that this week ended. The thing a weekly account
+    # most wants to say and the one thing a single week cannot know.
+    if week > 1:
+        before = {r["note"].split(" has ")[0]: r["note"]
+                  for r in _runs(q("""
+                      select username, result from game_log
+                      where season_year = %(y)s and game_type = 'regular'
+                        and week <= %(w)s
+                      order by week
+                  """, {"y": season, "w": week - 1}))}
+        still = {r["note"].split(" has ")[0] for r in runs_now}
+        for name in sorted(set(before) - still):
+            out.append({"note": "%s, and that run ended this week"
+                                % before[name].replace(" has ", " had ", 1)})
+
+    # Who has been at the head of the roll, and for how much of the season. A
+    # leader three weeks in is a different story from a leader all year.
+    #
+    # One query with a running total rather than the table rebuilt once per
+    # week. The obvious version called standings_after seventeen times for a
+    # week seventeen summary, which is seventeen round trips to Neon for two
+    # lines of output.
+    leaders = {}
+    for r in q("""
+        with sides as (
+            select m.week, m.team_a_id as team_id, m.team_a_points as pf,
+                   (m.team_a_points > m.team_b_points)::int as won
+            from matchups m
+            where m.season_year = %(y)s and m.game_type = 'regular'
+              and m.team_a_points is not null and m.team_b_points is not null
+            union all
+            select m.week, m.team_b_id, m.team_b_points,
+                   (m.team_b_points > m.team_a_points)::int
+            from matchups m
+            where m.season_year = %(y)s and m.game_type = 'regular'
+              and m.team_b_id is not null
+              and m.team_a_points is not null and m.team_b_points is not null
+        ), running as (
+            select week, team_id,
+                   sum(won) over (partition by team_id order by week) as wins,
+                   sum(pf)  over (partition by team_id order by week) as pf
+            from sides
+        ), ranked as (
+            select week, team_id,
+                   row_number() over (partition by week
+                                      order by wins desc, pf desc) as place
+            from running where week <= %(w)s
+        )
+        select o.username
+        from ranked r
+        join teams t on t.team_id = r.team_id
+        join owners o on o.owner_id = t.owner_id
+        where r.place = 1
+    """, {"y": season, "w": week}):
+        leaders[r["username"]] = leaders.get(r["username"], 0) + 1
+    played = sum(leaders.values())
+    for name, n in sorted(leaders.items(), key=lambda kv: -kv[1]):
+        if n > 1:
+            out.append({"note": "%s has ended %d of the %d weeks played so "
+                                "far at the head of the roll"
+                                % (name, n, played)})
+    return out
+
+
 def week_facts(q, season, week):
     """What one week did, and what it leaves the league facing.
 
@@ -701,6 +846,8 @@ def week_facts(q, season, week):
         where season_year = %(y)s and game_type = 'regular' and week <= %(w)s
         order by week
     """, {"y": season, "w": week}))
+
+    facts["the_season_so_far"] = _season_so_far(q, season, week, facts["runs"])
 
     facts["crests_settled_this_week"] = [
         {"note": "%s won %s%s" % (r["username"], r["name"],
@@ -861,6 +1008,11 @@ where they belong.
 The second job is what it has done to the season. Who moved, who is running
 out of weeks, who is quietly fine. A league table is only interesting as a
 story about people trying to get up it.
+
+The season so far is background, not material. It is there so a score can be
+measured against the year rather than only against the afternoon, and so a
+run that has just ended can be named as one. Reach for a line of it when it
+earns its place. Do not work through it.
 
 %s
 
