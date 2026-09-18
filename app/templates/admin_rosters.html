@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}End of season rosters | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Rosters {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/rosters?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  <section>
+    <p class="note">Copy the rosters from Yahoo at the end of the season, all
+      twelve, and paste them whole. This is the second opinion: the roster can
+      already be worked out from the draft and every move since, so where the
+      two differ, a move was never loaded &mdash; and a missing add is a wrong
+      keeper price in January.
+      {% if stored %}{{ season }} has {{ stored }} rows stored.
+      {% else %}Nothing is stored for {{ season }} yet.{% endif %}</p>
+
+    <form method="post" action="/admin/rosters">
+      <input type="hidden" name="season" value="{{ season }}">
+      <label for="text">The rosters</label>
+      <textarea id="text" name="text" rows="{{ 8 if previewed else 16 }}"
+                placeholder="Paste all twelve here."
+                >{{ text }}</textarea>
+      <div class="actionrow">
+        <button type="submit" name="action" value="preview" class="seal">
+          Read the rosters</button>
+      </div>
+    </form>
+  </section>
+
+  {% if previewed %}
+  <section>
+    <h2>What this would do</h2>
+    {% if stop %}<div class="errors"><b>Nothing written.</b> {{ stop }}</div>{% endif %}
+    <p class="note"><b>{{ squads|length }}</b> rosters,
+      <b>{{ rows }}</b> players{% if unknown_teams %},
+      <b>{{ unknown_teams|length }}</b> team{{ "s" if unknown_teams|length != 1 }}
+      not {{ season }}&rsquo;s{% endif %}{% if unknown_players %},
+      <b>{{ unknown_players|length }}</b> player{{ "s" if unknown_players|length != 1 }}
+      the league has never seen{% endif %}{% if puzzles %},
+      <b>{{ puzzles|length }}</b> line{{ "s" if puzzles|length != 1 }} not
+      understood{% endif %}.</p>
+
+    {% if unknown_teams %}
+      <div class="errors">
+        <b>Not {{ season }}&rsquo;s teams.</b>
+        <ul>{% for t in unknown_teams %}<li>{{ t }}</li>{% endfor %}</ul>
+        <p>A manager renaming a team is the usual cause. Rename it on the
+          <a href="/admin/owners">owners</a> page to match, then read again.</p>
+      </div>
+    {% endif %}
+
+    {% if unknown_players %}
+      <div class="errors">
+        <b>The league has never seen these.</b>
+        <ul>{% for p in unknown_players %}<li>{{ p }}</li>{% endfor %}</ul>
+        <p>A roster names no positions, so they cannot be created from it.
+          Load the <a href="/admin/transactions?season={{ season }}">transactions</a>
+          that brought them in and they will exist.</p>
+      </div>
+    {% endif %}
+
+    {% for p in puzzles %}
+      <p class="note why">{{ p.why }}</p>
+      <pre class="raw">{{ p.line }}</pre>
+    {% endfor %}
+  </section>
+
+  {# ---- the whole point of the page ---- #}
+  {% if derived %}
+  <section>
+    <h2>Against the record</h2>
+    {% set off = checks|rejectattr("extra", "equalto", [])|list
+                 + checks|rejectattr("absent", "equalto", [])|list %}
+    {% if not off %}
+      <p class="note ok">Every roster matches what the draft and the moves
+        say. Nothing is missing from the record.</p>
+    {% else %}
+      <p class="note">Where the two disagree, a move is missing. <b>On the
+        roster</b> means Yahoo has him and the record does not &mdash; an add
+        that was never loaded. <b>In the record</b> means the reverse: the
+        record still has him and Yahoo does not, so he left and nothing says
+        so.</p>
+      <table class="keepers moves">
+        <thead><tr><th>Manager</th><th class="how">Counted</th>
+                   <th>On the roster, not in the record</th>
+                   <th>In the record, not on the roster</th></tr></thead>
+        <tbody>
+        {% for c in checks %}
+          {% if c.extra or c.absent %}
+            <tr>
+              <td class="name">{{ c.who }}</td>
+              <td class="how">{{ c.counted }} v {{ c.expected }}</td>
+              <td>{{ c.extra|join(", ") or "&mdash;"|safe }}</td>
+              <td>{{ c.absent|join(", ") or "&mdash;"|safe }}</td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </section>
+  {% elif previewed %}
+  <section>
+    <h2>Against the record</h2>
+    <p class="note">{{ season }} has no draft or no transactions of its own,
+      so there is nothing to check this against. It will be stored as the only
+      roster the season has.</p>
+  </section>
+  {% endif %}
+
+  {% if squads and not stop %}
+  <section class="danger">
+    <h2>Store it</h2>
+    <p class="note">A roster is one object, so it is written entire: saving
+      replaces every row {{ season }} has.</p>
+    <form method="post" action="/admin/rosters">
+      <input type="hidden" name="season" value="{{ season }}">
+      <textarea name="text" hidden>{{ text }}</textarea>
+      {% if stored %}
+        <label class="confirm"><input type="checkbox" name="replace" value="1">
+          Replace the {{ stored }} rows already stored for {{ season }}</label>
+      {% endif %}
+      <div class="actionrow">
+        <button type="submit" name="action" value="save" class="seal"
+                {% if unknown_teams or unknown_players or puzzles %}disabled{% endif %}>
+          Store {{ rows }} rows</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if squads %}
+  <section>
+    <h2>The rosters</h2>
+    <div class="week-grid">
+      {% for s in squads %}
+        <div class="week-card">
+          <h3>{{ s.team }}<span class="tm"> {{ s.players|length }}</span></h3>
+          <ul class="squad">
+            {% for p in s.players %}
+              <li><span class="pos">{{ p.slot }}</span>
+                  <span class="who">{{ p.name }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

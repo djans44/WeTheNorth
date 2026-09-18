@@ -20,6 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app import crests as crestrules
 from app import honours
+from app import rosterpaste
 from app import rosters as rosterrules
 from app import standings
 from app import summaries
@@ -3127,6 +3128,17 @@ def draft_context(conn, season, text="", previewed=False, positions=None):
     return ctx
 
 
+# occurred_on is a date and the time lives only in occurred_raw, so two moves
+# on one day fall back to transaction_id -- which is the order they were
+# pasted in, not the order they happened. 341 dates carry more than one move
+# and their order decides who holds a player: Niall dropped Jameson Williams
+# at 10:43 and signed him back at 10:51 on the same morning, and read the
+# wrong way round that leaves him off a roster he was on.
+MOVE_ORDER = ("order by occurred_on, "
+              "to_timestamp(split_part(occurred_raw, ', ', 2), 'HH12:MI am')::time, "
+              "transaction_id")
+
+
 POSITION_ORDER = {p: i for i, p in
                   enumerate(("QB", "RB", "WR", "TE", "K", "DEF"))}
 
@@ -3558,6 +3570,188 @@ def draft_results(request: Request, season: int = 0):
                  "teams": sorted(((k, v) for k, v in by_team.items()),
                                  key=lambda kv: kv[0][2]),
                  "kept": sum(1 for r in rows if r["is_keeper"])})
+
+
+# What the derived roster calls an arrival, in the words rosters.acquired
+# allows. A keeper arrived by being drafted, as far as that column cares.
+ACQUIRED = {rosterrules.KEPT: "draft", rosterrules.DRAFTED: "draft",
+            rosterrules.ADDED: "waiver", rosterrules.TRADED: "trade"}
+
+
+def roster_key(name):
+    """Match a pasted team name against the season's teams."""
+    return rosterpaste.strip_icons(name).strip().lower()
+
+
+def roster_context(conn, season, text="", previewed=False):
+    """The paste, and what the record says each roster should be."""
+    years = query(conn, "select season_year from seasons order by season_year desc")
+    teams = {roster_key(r["team_name"]): r for r in query(conn, """
+        select t.team_id, t.team_name, o.username from teams t
+        join owners o on o.owner_id = t.owner_id where t.season_year = %s
+    """, (season,))}
+    players = {}
+    for r in query(conn, "select player_id, full_name from players"):
+        players.setdefault(txn.norm(r["full_name"]), r["player_id"])
+    stored = query(conn, """
+        select count(*) as n from rosters where season_year = %s
+    """, (season,))[0]["n"]
+
+    ctx = {"years": years, "season": season, "text": text,
+           "previewed": previewed, "stored": stored, "squads": [],
+           "puzzles": [], "unknown_teams": [], "unknown_players": [],
+           "rows": 0, "checks": [], "derived": False}
+    if not text.strip():
+        return ctx
+
+    squads, puzzles = rosterpaste.parse(text)
+
+    # What the draft and the moves say each roster should be, which is the
+    # thing worth comparing against. A season with no moves of its own has
+    # nothing to compare and the page says so rather than inventing one.
+    picks = query(conn, """
+        select team_id, player_id, round, is_keeper from draft_picks
+        where season_year = %s order by round, pick_in_round
+    """, (season,))
+    moves = query(conn, """
+        select kind, player_id, to_team_id, occurred_on from transactions
+        where season_year = %s """ + MOVE_ORDER, (season,))
+    derived = rosterrules.derive(picks, moves) if picks and moves else None
+    name_of = {r["player_id"]: r["full_name"]
+               for r in query(conn, "select player_id, full_name from players")}
+
+    rows, unknown_teams, unknown_players, checks = 0, [], [], []
+    for squad in squads:
+        team = teams.get(roster_key(squad["team"]))
+        if not team:
+            unknown_teams.append(squad["team"])
+            continue
+        here = []
+        for p in squad["players"]:
+            pid = players.get(txn.norm(p["name"]))
+            if pid is None:
+                unknown_players.append(p["name"])
+                continue
+            here.append(pid)
+            rows += 1
+        if derived is not None:
+            said = {r["player_id"] for r in derived.get(team["team_id"], [])}
+            # Two directions, and they mean different things. On the paste and
+            # not in the record is a move that was never loaded. In the record
+            # and not on the paste is the same gap from the other end -- he
+            # left and nothing says so.
+            checks.append({
+                "who": team["username"], "team": team["team_name"],
+                "extra": sorted(name_of.get(p, "?") for p in here if p not in said),
+                "absent": sorted(name_of.get(p, "?") for p in said if p not in here),
+                "counted": len(here), "expected": len(said)})
+
+    return dict(ctx, squads=squads, puzzles=puzzles, rows=rows,
+                unknown_teams=sorted(set(unknown_teams)),
+                unknown_players=sorted(set(unknown_players)),
+                checks=checks, derived=derived is not None)
+
+
+@app.get("/admin/rosters", response_class=HTMLResponse)
+def admin_rosters(request: Request, season: int = 0, msg: str = "",
+                  error: str = ""):
+    """Load the roster a season ended on, and see what it disagrees with.
+
+    The point is not the storing. A roster can be worked out from the draft
+    and every move since, so the one Yahoo shows is a second opinion -- and
+    where the two differ, a move was never loaded. keeper_cost_basis counts
+    any add at all, so a missing one is a wrong keeper price, and this is the
+    check that finds it before anyone selects.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"] if years else 0
+        ctx = roster_context(conn, season)
+    return templates.TemplateResponse(request=request,
+                                      name="admin_rosters.html", context=ctx)
+
+
+@app.post("/admin/rosters")
+async def admin_rosters_post(request: Request):
+    """Read it, then write it. A roster is a whole season at once."""
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    text = form.get("text") or ""
+    save_it = form.get("action") == "save"
+
+    with get_db() as conn:
+        ctx = roster_context(conn, season, text, previewed=True)
+        if not save_it:
+            return templates.TemplateResponse(
+                request=request, name="admin_rosters.html", context=ctx)
+
+        stop = ""
+        if not ctx["rows"]:
+            stop = "Nothing to store."
+        elif ctx["unknown_teams"]:
+            stop = ("A team on that roster is not one of %d's. Fix the name "
+                    "and read it again." % season)
+        elif ctx["unknown_players"]:
+            stop = ("%d player%s the league has never seen. A roster names no "
+                    "positions, so they cannot be created from it -- load the "
+                    "transactions that brought them in first."
+                    % (len(ctx["unknown_players"]),
+                       "" if len(ctx["unknown_players"]) == 1 else "s"))
+        elif ctx["puzzles"]:
+            stop = "Some lines could not be read."
+        elif ctx["stored"] and not form.get("replace"):
+            stop = ("%d already has a roster of %d rows. Tick the box to "
+                    "replace it." % (season, ctx["stored"]))
+        if stop:
+            return templates.TemplateResponse(
+                request=request, name="admin_rosters.html",
+                context=dict(ctx, stop=stop), status_code=400)
+
+        teams = {roster_key(r["team_name"]): r["team_id"] for r in query(conn, """
+            select team_id, team_name from teams where season_year = %s
+        """, (season,))}
+        players = {}
+        for r in query(conn, "select player_id, full_name from players"):
+            players.setdefault(txn.norm(r["full_name"]), r["player_id"])
+        picks = query(conn, """
+            select team_id, player_id, round, is_keeper from draft_picks
+            where season_year = %s order by round, pick_in_round
+        """, (season,))
+        moves = query(conn, """
+            select kind, player_id, to_team_id, occurred_on from transactions
+            where season_year = %s """ + MOVE_ORDER, (season,))
+        # How each player got there, for rosters.acquired. Only the derived
+        # roster knows, and it is null where it does not.
+        how = {}
+        if picks and moves:
+            for tid, squad in rosterrules.derive(picks, moves).items():
+                for r in squad:
+                    how[(tid, r["player_id"])] = ACQUIRED.get(r["how"])
+
+        with conn.cursor() as cur:
+            cur.execute("delete from rosters where season_year = %s", (season,))
+            for squad in ctx["squads"]:
+                tid = teams[roster_key(squad["team"])]
+                for p in squad["players"]:
+                    pid = players[txn.norm(p["name"])]
+                    cur.execute("""
+                        insert into rosters
+                            (season_year, team_id, player_id, acquired)
+                        values (%s, %s, %s, %s)
+                        on conflict do nothing
+                    """, (season, tid, pid, how.get((tid, pid))))
+        conn.commit()
+
+    return RedirectResponse(
+        url="/admin/rosters?season=%d&msg=%s"
+            % (season, quote("%d roster rows stored." % ctx["rows"])),
+        status_code=303)
 
 
 @app.get("/admin/draft", response_class=HTMLResponse)
