@@ -1299,6 +1299,21 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 /* Keeper and admin listings. */
 .keepers td, .keepers th { padding: 0.4rem var(--s2); }
 .keepers .rd { font-weight: 700; width: 4rem; }
+/* .tm is display:block, which is right on a span under a name and wrong on a
+   whole cell: a td set to block drops out of the row, so keeper admin's
+   Origin, Note and State columns sat half a row high and drew their own rule
+   under the text. The colour and size are what those columns want; only the
+   display was ever the problem. */
+.keepers td.tm { display: table-cell; }
+/* The windows table is phases, fields and states -- no numbers in it, so the
+   sheet's right-aligned default put "Opens" and "Closes" at the far end of a
+   column that is almost entirely input, labelling nothing. */
+.windows th, .windows td { text-align: left; }
+/* The void chooser. Its options are a manager, a player, a round and a
+   penalty round on one line, which is 26rem before it starts truncating --
+   but a fixed min-width is what pushed a 420px phone into scrolling
+   sideways, so it gives way to the panel instead. */
+.voidpick { width: 26rem; max-width: 100%; }
 /* A count under a header too long for .rd's four rems -- the schedule page's
    "Times this season" was stacking onto three lines. No width, so the header
    sets the column and the number sits under it. */

@@ -37,7 +37,7 @@
     <h2>Windows</h2>
     <form method="post" action="/admin/keepers/windows">
       <input type="hidden" name="season" value="{{ season }}">
-      <table class="keepers">
+      <table class="keepers windows">
         <thead>
           <tr><th>Phase</th><th>Opens</th><th>Closes</th><th>State</th><th></th></tr>
         </thead>
@@ -181,7 +181,7 @@
     <p class="note">This clears that manager's saved plans, same as if they did it.</p>
     <form method="post" action="/admin/keepers/void" class="picker">
       <input type="hidden" name="season" value="{{ season }}">
-      <select name="contract_id" style="min-width:26rem">
+      <select name="contract_id" class="voidpick">
         {% for c in voidable %}
           <option value="{{ c.contract_id }}">
             {# No avatar here: an <option> renders text only, so the markup
