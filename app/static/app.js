@@ -505,6 +505,38 @@
       }
     }(pickers[p]));
   }
+  // ---- a page waiting on something that finishes elsewhere ----
+  // An account is written on a background thread, so the page that says it
+  // is being written has no way to hear that it finished -- it asked the
+  // reader to click a link and guess when. Opt in with data-recheck on the
+  // element, whose value is the seconds between looks.
+  //
+  // Bounded, and that matters: the writing state is a process-local set, so
+  // a process that restarts mid-sentence forgets it was writing and the page
+  // would otherwise reload for ever. After the cap it stops and the manual
+  // link, which is always in the markup, is what is left.
+  var waiting = document.querySelector("[data-recheck]");
+  if (waiting) {
+    var mark = "recheck:" + window.location.pathname + window.location.search;
+    var went = 0;
+    try { went = Number(sessionStorage.getItem(mark)) || 0; } catch (e) {}
+    if (went < 12) {
+      try { sessionStorage.setItem(mark, went + 1); } catch (e) {}
+      window.setTimeout(function () {
+        window.location.reload();
+      }, Number(waiting.getAttribute("data-recheck")) * 1000 || 6000);
+    } else {
+      waiting.className += " gaveup";
+    }
+  } else {
+    // Off this page, or here with the account written: forget the count so
+    // the next wait starts from nothing.
+    try {
+      sessionStorage.removeItem(
+        "recheck:" + window.location.pathname + window.location.search);
+    } catch (e) {}
+  }
+
   // Table columns rather than panels, and a dropdown with no strip beside
   // it. The helper cares about neither: it hides whatever the selector
   // matches, and it drives from the select when there is no strip.

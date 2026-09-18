@@ -947,6 +947,11 @@ form > button[type="submit"] { margin-top: var(--s5); }
   margin-bottom: var(--s4);
 }
 .picker label { margin: 0; }
+/* Ranged right, for a picker that chooses what the page below is rather
+   than filtering something beside it. The Load button is hidden by
+   loadonpick, so without this the two dropdowns sit alone against the far
+   left of a wide panel with the whole width empty after them. */
+.picker.ranged { justify-content: flex-end; }
 
 /* Label/input rows. Direct children only -- a .field can hold a colour
    picker, whose swatches are labels too and must not inherit the label
@@ -2586,6 +2591,24 @@ button.seal.working::before {
   animation: turning 0.9s linear infinite;
 }
 @keyframes turning { to { transform: rotate(360deg); } }
+
+/* The same ring on a line of prose, for a page waiting on work that is
+   happening somewhere else. Reuses the button's keyframes: one spinner in
+   the app, so waiting always looks like the same thing. */
+.waiting::before {
+  content: "";
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 0.5em;
+  vertical-align: -0.04em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: turning 0.9s linear infinite;
+}
+/* Stopped looking. The ring would say it is still working when nothing is. */
+.waiting.gaveup::before { display: none; }
 
 .gate-error {
   margin: 14px 0 0;

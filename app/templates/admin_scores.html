@@ -32,7 +32,7 @@
        Both selects are bound, so changing the Round reloads as the Week
        does -- and picking "--" for the week is a choice like any other,
        so no data-needs-value here. #}
-    <form method="get" action="/admin/scores" class="picker loadonpick">
+    <form method="get" action="/admin/scores" class="picker ranged loadonpick">
       <input type="hidden" name="season" value="{{ season }}">
 
       <span class="pickfield">
@@ -165,10 +165,14 @@
   <section id="account">
     <h2>The week {{ week }} account</h2>
 
+    {# The ring turns while the thread works, and the page looks again on its
+       own. The link stays for the script being off, and for after the dozen
+       looks run out. #}
     {% if account.state == "writing" %}
-      <p class="note">Being written now. It takes about half a minute &mdash;
+      <p class="note waiting" data-recheck="6">Being written now. It takes about
+        half a minute, and this page will look again on its own &mdash; or
         <a href="/admin/scores?season={{ season }}&week={{ week }}&mode={{ mode }}#account">look
-        again</a>.</p>
+        now</a>.</p>
 
     {% elif account.state in ("draft", "published") %}
       <article class="written">
@@ -208,7 +212,8 @@
           {# Writing again never replaces what is there: the new one is a row
              beside the old, and whichever is published is the one the league
              reads. #}
-          <form method="post" action="/admin/scores/summary" class="inline">
+          <form method="post" action="/admin/scores/summary" class="inline"
+                data-working="Writing">
             <input type="hidden" name="season" value="{{ season }}">
             <input type="hidden" name="week" value="{{ week }}">
             <input type="hidden" name="mode" value="{{ mode }}">
@@ -228,7 +233,8 @@
         nothing can be written.</p>
 
     {% else %}
-      <form method="post" action="/admin/scores/summary" class="writer">
+      <form method="post" action="/admin/scores/summary" class="writer"
+            data-working="Writing">
         <input type="hidden" name="season" value="{{ season }}">
         <input type="hidden" name="week" value="{{ week }}">
         <input type="hidden" name="mode" value="{{ mode }}">
