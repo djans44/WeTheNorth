@@ -613,27 +613,29 @@ def nav_seasons():
 
 
 def nav_unvoted(owner_id):
-    """How many open assemblies this manager has not answered.
+    """What the badge counts: assemblies sitting that want this manager's
+    attention.
 
-    A badge on the nav, so a vote that is open is a thing you are told about
-    rather than a page you have to think to visit. One assembly runs at a
-    time, so this is almost always nought or one -- it counts rather than
-    assuming, because nothing stops two years being open at once.
-
-    Not cached. It changes the moment someone votes, and a stale badge
-    telling a manager to vote again after they have is worse than the query.
+    Not only "never voted". An honour that has grown since they voted, or one
+    whose candidate has since left the ballot, is worth another look -- and a
+    vote you can only find by thinking to look is a vote that gets eight
+    replies.
     """
     if not owner_id:
         return 0
     try:
         with get_db() as conn:
-            return query(conn, """
-                select count(*) as n from crest_polls p
-                where p.closed_at is null and p.closes_at > now()
-                  and not exists (
-                      select 1 from crest_votes v
-                      where v.poll_id = p.poll_id and v.owner_id = %s)
-            """, (owner_id,))[0]["n"]
+            polls = query(conn, """
+                select * from crest_polls
+                where closed_at is null and closes_at > now() and opens_at <= now()
+            """)
+            n = 0
+            for poll in polls:
+                rows, _ = ballot_state(conn, poll, owner_id)
+                if any(r["count"] and (not r["chosen"] or r["grown"] or r["lapsed"])
+                       for r in rows):
+                    n += 1
+            return n
     except Exception:
         return 0
 
@@ -3167,20 +3169,84 @@ def poll_for(conn, season=None):
     return rows[0] if rows else None
 
 
+def poll_state(poll):
+    """Where an assembly is: scheduled, sitting, risen, or nothing at all.
+
+    One rule asked in one place, so the page, the badge and the post can
+    never disagree about whether a vote is open.
+    """
+    if not poll:
+        return "none"
+    now = datetime.datetime.now(datetime.timezone.utc)
+    if poll["closed_at"] or poll["closes_at"] <= now:
+        return "risen"
+    if poll["opens_at"] > now:
+        return "scheduled"
+    return "sitting"
+
+
 def poll_is_open(poll):
-    """Open until it is closed or its date passes. One rule, asked in one
-    place, so the page and the post can never disagree about it."""
-    if not poll or poll["closed_at"]:
-        return False
-    return poll["closes_at"] > datetime.datetime.now(datetime.timezone.utc)
+    return poll_state(poll) == "sitting"
+
+
+def ballot_state(conn, poll, owner_id):
+    """Per honour: how many candidates there are, what this manager said, and
+    whether the ballot has grown since they said it.
+
+    The ballot is live. Five of 2025's Red Week candidates only exist after
+    the playoffs, and Legend of the Choosing has none until the final rosters
+    are in. A vote cast early is still a vote -- nobody is made to change it --
+    but they are told there is more to look at.
+    """
+    def q(sql, p=()):
+        return query(conn, sql, p)
+    ballots = honours.ballots(q, poll["season_year"])
+    mine = {r["crest_id"]: r for r in query(conn, """
+        select crest_id, candidate, ballot_seen from crest_votes
+        where poll_id = %s and owner_id = %s
+    """, (poll["poll_id"], owner_id or 0))}
+    crests = query(conn, """
+        select crest_id, code, name, description from crests
+        where active and award_mode = 'manual' order by sort_order
+    """)
+    out = []
+    for c in crests:
+        options = ballots.get(c["code"], [])
+        vote = mine.get(c["crest_id"])
+        here = {o["candidate"] for o in options}
+        out.append(dict(
+            c, options=options, count=len(options),
+            chosen=vote["candidate"] if vote else None,
+            # A candidate that has left the ballot -- traded away, or moved
+            # so he no longer counts as held all year -- is an abstention.
+            # The vote stays; it simply stops counting for anybody.
+            lapsed=bool(vote and vote["candidate"] not in here),
+            grown=bool(vote and vote["ballot_seen"] is not None
+                       and len(options) > vote["ballot_seen"])))
+    return out, ballots
 
 
 def poll_result(conn, poll):
     """Every honour's count, most votes first, and whether it ties.
 
+    A vote for a candidate that has since left the ballot does not count. The
+    ballot is live while the assembly sits, and a late pick can stop being one
+    -- traded in week sixteen, and he was no longer held all year. The vote
+    stays on the record and becomes an abstention rather than being deleted or
+    quietly counted for somebody who is no longer eligible.
+
     The tie is reported rather than resolved: awarding is still the manual
     grant, and a tie is exactly the thing a commissioner is for.
     """
+    def q(sql, p=()):
+        return query(conn, sql, p)
+    live = honours.ballots(q, poll["season_year"])
+    codes = {r["crest_id"]: r["code"] for r in query(conn, """
+        select crest_id, code from crests where award_mode = 'manual'
+    """)}
+    standing = {cid: {o["candidate"] for o in live.get(code, [])}
+                for cid, code in codes.items()}
+
     rows = query(conn, """
         select v.crest_id, v.candidate, v.detail, v.choice_owner_id,
                count(*) as votes, o.username
@@ -3190,16 +3256,26 @@ def poll_result(conn, poll):
         group by v.crest_id, v.candidate, v.detail, v.choice_owner_id, o.username
         order by count(*) desc, o.username
     """, (poll["poll_id"],))
-    out = {}
+
+    out, lapsed = {}, {}
     for r in rows:
+        here = standing.get(r["crest_id"])
+        if here is not None and r["candidate"] not in here:
+            lapsed[r["crest_id"]] = lapsed.get(r["crest_id"], 0) + r["votes"]
+            continue
         out.setdefault(r["crest_id"], []).append(r)
+
     for crest_id, tally in out.items():
         top = tally[0]["votes"]
         for r in tally:
             r["winner"] = r["votes"] == top
         # A tie only matters at the top.
         out[crest_id] = {"tally": tally,
-                         "tied": sum(1 for r in tally if r["votes"] == top) > 1}
+                         "tied": sum(1 for r in tally if r["votes"] == top) > 1,
+                         "abstained": lapsed.get(crest_id, 0)}
+    for crest_id, n in lapsed.items():
+        if crest_id not in out:
+            out[crest_id] = {"tally": [], "tied": False, "abstained": n}
     return out
 
 
@@ -3223,17 +3299,8 @@ def assembly_page(request: Request, season: int = 0, msg: str = "", error: str =
                          "crests": [], "mine": {}, "result": {},
                          "turnout": 0, "voters": 0})
 
-        crests = query(conn, """
-            select crest_id, code, name, description from crests
-            where active and award_mode = 'manual' order by sort_order
-        """)
-        def q(sql, p=()):
-            return query(conn, sql, p)
-        ballots = honours.ballots(q, poll["season_year"])
-        mine = {r["crest_id"]: r["candidate"] for r in query(conn, """
-            select crest_id, candidate from crest_votes
-            where poll_id = %s and owner_id = %s
-        """, (poll["poll_id"], me or 0))}
+        rows, ballots = ballot_state(conn, poll, me)
+        mine = {r["crest_id"]: r["chosen"] for r in rows if r["chosen"]}
         voters = query(conn, """
             select count(distinct owner_id) as n from crest_votes
             where poll_id = %s
@@ -3246,8 +3313,8 @@ def assembly_page(request: Request, season: int = 0, msg: str = "", error: str =
 
     return templates.TemplateResponse(
         request=request, name="assembly.html",
-        context={"poll": poll, "open": live, "ballots": ballots,
-                 "crests": crests, "mine": mine,
+        context={"poll": poll, "open": live, "state": poll_state(poll),
+                 "ballots": ballots, "crests": rows, "mine": mine,
                  "voters": voters, "seats": seats,
                  "msg": msg, "error": error})
 
@@ -3292,15 +3359,17 @@ async def assembly_vote(request: Request):
                 cur.execute("""
                     insert into crest_votes
                         (poll_id, crest_id, owner_id, choice_owner_id,
-                         candidate, detail)
-                    values (%s, %s, %s, %s, %s, %s)
+                         candidate, detail, ballot_seen)
+                    values (%s, %s, %s, %s, %s, %s, %s)
                     on conflict (poll_id, crest_id, owner_id) do update
                        set choice_owner_id = excluded.choice_owner_id,
                            candidate = excluded.candidate,
                            detail = excluded.detail,
+                           ballot_seen = excluded.ballot_seen,
                            cast_at = now()
                 """, (poll["poll_id"], c["crest_id"], me,
-                      found["owner_id"], found["candidate"], found["detail"]))
+                      found["owner_id"], found["candidate"], found["detail"],
+                      len(ballots.get(c["code"], []))))
                 cast += 1
         conn.commit()
 
@@ -3893,14 +3962,32 @@ def admin_crests(request: Request, season: int = 0):
             order by oc.season_year desc, c.sort_order
         """)
         poll = poll_for(conn, season)
-        vote = {"poll": poll, "open": poll_is_open(poll), "result": {},
-                "voters": 0}
+        # What the league will be asked, rebuilt every time this is drawn.
+        # Two of the four grow while the assembly sits, so this is the state
+        # of the ballot now rather than when it was called.
+        def q(sql, p=()):
+            return query(conn, sql, p)
+        live = honours.ballots(q, season)
+        nominees = [{"name": r["name"], "count": len(live.get(r["code"], [])),
+                     "sample": ", ".join(
+                         "%s (%s)" % (o["who"], o["what"]) if o["what"] else o["who"]
+                         for o in live.get(r["code"], [])[:3])}
+                    for r in query(conn, """
+                        select code, name from crests
+                        where active and award_mode = 'manual' order by sort_order
+                    """)]
+        vote = {"poll": poll, "state": poll_state(poll),
+                "open": poll_is_open(poll), "result": {}, "voters": 0,
+                "nominees": nominees,
+                "seats": query(conn, """
+                    select count(*) as n from teams where season_year = %s
+                """, (season,))[0]["n"]}
         if poll:
             vote["voters"] = query(conn, """
                 select count(distinct owner_id) as n from crest_votes
                 where poll_id = %s
             """, (poll["poll_id"],))[0]["n"]
-            if not vote["open"]:
+            if vote["state"] == "risen":
                 vote["result"] = poll_result(conn, poll)
     return templates.TemplateResponse(
         request=request, name="admin_crests.html",
@@ -3965,26 +4052,34 @@ async def admin_crests_poll(request: Request):
     with get_db() as conn:
         with conn.cursor() as cur:
             if doing == "open":
+                opens = (form.get("opens") or "").strip()
                 closes = (form.get("closes") or "").strip()
-                if not closes:
+                if not opens or not closes:
                     return RedirectResponse(
                         url="/admin/crests?season=%d&error=%s"
-                            % (season, quote("Give the vote a closing date.")),
+                            % (season, quote("Say when it sits and when it rises.")),
+                        status_code=303)
+                if league_moment(opens) >= league_moment(closes):
+                    return RedirectResponse(
+                        url="/admin/crests?season=%d&error=%s"
+                            % (season, quote("It cannot rise before it sits.")),
                         status_code=303)
                 cur.execute("""
-                    insert into crest_polls (season_year, opened_by, closes_at)
-                    values (%s, %s, %s)
+                    insert into crest_polls
+                        (season_year, opened_by, opens_at, closes_at)
+                    values (%s, %s, %s, %s)
                     on conflict (season_year) do update
-                       set closes_at = excluded.closes_at, closed_at = null
+                       set opens_at = excluded.opens_at,
+                           closes_at = excluded.closes_at, closed_at = null
                 """, (season, request.session.get("owner_id"),
-                      league_moment(closes)))
-                told = "The %d vote is open." % season
+                      league_moment(opens), league_moment(closes)))
+                told = "The %d assembly is called." % season
             elif doing == "close":
                 cur.execute("""
                     update crest_polls set closed_at = now()
                     where season_year = %s and closed_at is null
                 """, (season,))
-                told = ("The %d vote is closed and the count is on the page."
+                told = ("The %d assembly has risen and the count is on the page."
                         % season)
             else:
                 told = ""

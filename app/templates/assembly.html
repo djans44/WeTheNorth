@@ -27,6 +27,12 @@
         {{ poll.closes_at|league_day }}.
         {{ voters }} of {{ seats }} have spoken. Nobody sees a count, yours
         included, until it closes.</p>
+    {% elif state == "scheduled" %}
+      {# Called but not yet sitting. Saying so beats saying nothing: a manager
+         who hears the vote is coming and finds an empty page assumes it is
+         broken. #}
+      <p class="note">The assembly is called and sits on
+        {{ poll.opens_at|league_day }}. Nothing can be said before then.</p>
     {% else %}
       <p class="note">This assembly has risen. What it decided is in the
         <a href="/assembly/proclamations?season={{ poll.season_year }}">proclamations</a>.</p>
@@ -41,9 +47,23 @@
       <section>
         <h2>{{ c.name }}</h2>
         <p class="note">{{ c.description }}</p>
-        {% set options = ballots.get(c.code, []) %}
+        {# The ballot is live while the assembly sits: the playoffs add
+           defeats, and the late pick has no candidates at all until the final
+           rosters are in. A vote already cast stands -- nobody is made to
+           change their mind -- but they are told there is more to look at. #}
+        {% if c.grown %}
+          <p class="note ok">There are more to choose from than when you
+            voted. Yours stands unless you change it.</p>
+        {% endif %}
+        {% if c.lapsed %}
+          <p class="note why">The one you chose is no longer on this ballot,
+            so your vote here counts for nobody. Choose again if you would
+            rather it counted.</p>
+        {% endif %}
+        {% set options = c.options %}
         {% if not options %}
-          <p class="note">Nothing to vote on: the season has none of these.</p>
+          <p class="note">Nothing to vote on yet. This one needs the season
+            finished before it has any candidates.</p>
         {% else %}
           <ul class="ballot">
             {% for o in options %}
@@ -51,7 +71,7 @@
                 <label>
                   <input type="radio" name="crest_{{ c.crest_id }}"
                          value="{{ o.candidate }}"
-                         {% if mine.get(c.crest_id) == o.candidate %}checked{% endif %}>
+                         {% if c.chosen == o.candidate %}checked{% endif %}>
                   <span class="who">{{ o.who }}</span>
                   {% if o.what %}<span class="what">{{ o.what }}</span>{% endif %}
                   {% if o.rivals %}<span class="pill">Rivals</span>{% endif %}

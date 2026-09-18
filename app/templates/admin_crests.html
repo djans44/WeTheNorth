@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar %}
 {% from "crestart.html" import crestshield %}
-{% block title %}Crests | We the North{% endblock %}
+{% block title %}Assembly admin | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
   <header class="page-head">
-    <h1>Crests</h1>
+    <h1>Assembly admin</h1>
     <p class="lede">The four nobody can earn. No rule can settle the best team
       name or the trade of the year, so the commissioner writes them down.
       Everything else on the crests page works itself out from the scores.</p>
@@ -87,59 +87,124 @@
     {% endif %}
   </section>
 
-  {# ---- the league's vote ----
-     The four here are opinions, and twelve people hold them. A poll decides
-     who should have one; the grant above is still what gives it, which is
-     what leaves a tie somebody to settle it. #}
+  {# ---- the assembly, in the order it happens ----
+     Call it, look at what the league will be asked, let it sit, then settle
+     what it decided. The ballot is built from the season and stays live while
+     the assembly sits, so step two is worth returning to rather than a thing
+     done once. #}
   <section>
     <h2>The assembly</h2>
+
     {% if not vote.poll %}
-      <p class="note">No assembly called for {{ season }}. Opening one puts four
-        questions to the league at <a href="/assembly">the assembly</a>, built from the
-        season itself: the twelve names, the twelve managers, each side of each
-        trade, and every defeat by ten points or fewer.</p>
+      <p class="note">No assembly called for {{ season }}. Say when it sits and
+        when it rises. The plan the league runs on is to open after the last
+        week of the regular season and rise on the Monday after the last night
+        of the playoffs &mdash; the worst defeat of a year is often a playoff
+        game, and it cannot be voted on before it happens.</p>
       <form method="post" action="/admin/crests/poll" class="picker">
         <input type="hidden" name="season" value="{{ season }}">
         <input type="hidden" name="action" value="open">
         <span class="pickfield">
-          <label for="closes">Closes</label>
+          <label for="opens">Sits</label>
+          <input type="datetime-local" id="opens" name="opens" required>
+        </span>
+        <span class="pickfield">
+          <label for="closes">Rises</label>
           <input type="datetime-local" id="closes" name="closes" required>
         </span>
         <button type="submit" class="seal">Call the assembly</button>
       </form>
 
-    {% elif vote.open %}
-      <p class="note">Open until
-        {{ vote.poll.closes_at|league_day }}.
-        {{ vote.voters }} have voted. Nobody sees a count until it closes,
-        including you.</p>
-      <form method="post" action="/admin/crests/poll">
-        <input type="hidden" name="season" value="{{ season }}">
-        <input type="hidden" name="action" value="close">
-        <div class="actionrow">
-          <button type="submit" class="seal"
-                  data-confirm="Rise the assembly now? The count becomes visible to the whole league and nothing more can be said.">
-            Rise the assembly</button>
-        </div>
-      </form>
-
     {% else %}
-      <p class="note">Risen. {{ vote.voters }} spoke, and the league can read
-        the count at the <a href="/assembly/proclamations?season={{ season }}">proclamations</a>.
-        Nothing is held until you proclaim it.</p>
-      <form method="post" action="/admin/crests/proclaim">
-        <input type="hidden" name="season" value="{{ season }}">
-        <div class="actionrow">
-          <button type="submit" class="seal"
-                  data-confirm="Proclaim the results? Each honour the assembly decided is granted to whoever it named, replacing anything held for that crest this season. A tie is left for you.">
-            Proclaim the results</button>
-        </div>
-      </form>
-      {% for c in manual %}
-        {% set r = vote.result.get(c.crest_id) %}
-        {% if r %}
-          <p class="setup-head"><b>{{ c.name }}</b>
-            {% if r.tied %}<span class="pill">Tied</span>{% endif %}</p>
+      <p class="note">
+        {% if vote.state == "scheduled" %}
+          Called, and sits on {{ vote.poll.opens_at|league_day }}. Nobody can
+          vote before then.
+        {% elif vote.state == "sitting" %}
+          Sitting since {{ vote.poll.opens_at|league_day }}, rises
+          {{ vote.poll.closes_at|league_day }}. {{ vote.voters }} of
+          {{ vote.seats }} have spoken. Nobody sees a count until it rises,
+          you included.
+        {% else %}
+          Risen. {{ vote.voters }} of {{ vote.seats }} spoke.
+        {% endif %}
+      </p>
+
+      {% if vote.state != "risen" %}
+        <form method="post" action="/admin/crests/poll" class="picker">
+          <input type="hidden" name="season" value="{{ season }}">
+          <input type="hidden" name="action" value="open">
+          <span class="pickfield">
+            <label for="opens">Sits</label>
+            <input type="datetime-local" id="opens" name="opens"
+                   value="{{ vote.poll.opens_at|league_field }}" required>
+          </span>
+          <span class="pickfield">
+            <label for="closes">Rises</label>
+            <input type="datetime-local" id="closes" name="closes"
+                   value="{{ vote.poll.closes_at|league_field }}" required>
+          </span>
+          <button type="submit" class="seal quiet">Change the dates</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </section>
+
+  {# ---- what the league will be asked ---- #}
+  {% if vote.nominees %}
+  <section>
+    <h2>The nominees</h2>
+    <p class="note">Built from the season, and rebuilt every time this page is
+      drawn &mdash; so this is what the ballot says right now, not what it said
+      when the assembly was called. The two that grow are the ones that depend
+      on the season finishing.</p>
+    <table class="keepers moves">
+      <thead><tr><th>Honour</th><th class="how">Candidates</th><th>Who is on it</th></tr></thead>
+      <tbody>
+      {% for n in vote.nominees %}
+        <tr>
+          <td class="name">{{ n.name }}</td>
+          <td class="how">{{ n.count }}</td>
+          <td>{% if n.count %}{{ n.sample }}{% if n.count > 3 %}
+              &hellip;{% endif %}
+            {% else %}<span class="tm">nothing yet &mdash; this one needs the
+              season finished</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {# ---- and what it decided ---- #}
+  {% if vote.poll and vote.state == "sitting" %}
+  <section>
+    <form method="post" action="/admin/crests/poll">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="action" value="close">
+      <div class="actionrow">
+        <button type="submit" class="seal"
+                data-confirm="Rise the assembly now? The count becomes visible to the whole league and nothing more can be said.">
+          Rise it now</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if vote.poll and vote.state == "risen" %}
+  <section>
+    <h2>What it decided</h2>
+    <p class="note">The league can read the count at the
+      <a href="/assembly/proclamations?season={{ season }}">proclamations</a>.
+      Nothing is held until you proclaim it, and a tie is yours to settle.</p>
+    {% for c in manual %}
+      {% set r = vote.result.get(c.crest_id) %}
+      {% if r %}
+        <p class="setup-head"><b>{{ c.name }}</b>
+          {% if r.tied %}<span class="pill">Tied</span>{% endif %}
+          {% if r.abstained %}<span class="tm">{{ r.abstained }}
+            abstained &mdash; their candidate left the ballot</span>{% endif %}</p>
+        {% if r.tally %}
           <table class="keepers tally">
             <tbody>
             {% for row in r.tally %}
@@ -162,9 +227,21 @@
             {% endfor %}
             </tbody>
           </table>
+        {% else %}
+          <p class="note">Every vote here was for a candidate that has since
+            left the ballot, so nobody was chosen.</p>
         {% endif %}
-      {% endfor %}
-    {% endif %}
+      {% endif %}
+    {% endfor %}
+    <form method="post" action="/admin/crests/proclaim">
+      <input type="hidden" name="season" value="{{ season }}">
+      <div class="actionrow">
+        <button type="submit" class="seal"
+                data-confirm="Proclaim the results? Each honour the assembly decided is granted to whoever it named, replacing anything held for that crest this season. A tie is left for you.">
+          Proclaim the results</button>
+      </div>
+    </form>
   </section>
+  {% endif %}
 </div>
 {% endblock %}
