@@ -46,7 +46,7 @@
        trade cannot be read as an add by a parser willing to try; a block in
        the wrong box is named and sent to the other rather than guessed at.
        Both are optional -- most weeks only the first has anything in it. #}
-    <form method="post" action="/admin/transactions" class="writer">
+    <form method="post" action="/admin/transactions">
       <input type="hidden" name="season" value="{{ season }}">
 
       <label for="text">Adds and drops</label>
@@ -61,7 +61,7 @@
 
       <div class="actionrow">
         <button type="submit" name="action" value="preview" class="seal">
-          {% if previewed %}Read it again{% else %}Read the paste{% endif %}</button>
+          Import transactions</button>
       </div>
     </form>
   </section>
