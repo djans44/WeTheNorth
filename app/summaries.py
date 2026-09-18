@@ -855,11 +855,25 @@ def week_facts(q, season, week):
 
     facts["the_season_so_far"] = _season_so_far(q, season, week, facts["runs"])
 
+    # Each with how often that crest has gone out this season, because rarity
+    # is what separates a thing worth a sentence from a thing that happens
+    # every week. Spared by Inches once all year is a story; the fourth
+    # Favoured by the Gods is a Sunday.
     facts["crests_settled_this_week"] = [
-        {"note": "%s won %s%s" % (r["username"], r["name"],
-                                  " -- %s" % r["detail"] if r["detail"] else "")}
+        # A plain count, not an ordinal. Three of the same crest in one week
+        # would all have read "the 25th", and handing the model an ordinal
+        # worked out from a count is the exact move the prompt forbids.
+        {"note": "%s won %s%s (%s this season)"
+                 % (r["username"], r["name"],
+                    " -- %s" % r["detail"] if r["detail"] else "",
+                    "the first time this crest has gone out"
+                    if r["so_far"] == 1 else
+                    "this crest has gone out %d times" % r["so_far"])}
         for r in q("""
-            select cr.name, o.username, oc.detail
+            select cr.name, o.username, oc.detail,
+                   (select count(*) from owner_crests p
+                    where p.crest_id = oc.crest_id and p.season_year = %(y)s
+                      and p.week is not null and p.week <= %(w)s) as so_far
             from owner_crests oc
             join crests cr on cr.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
@@ -1010,6 +1024,14 @@ The first job is the week that was played. Not a run through every game --
 the scores are on the same page and the reader has already looked at them.
 Pick the two or three that mattered and say why, and let the rest be a clause
 where they belong.
+
+The crests a week settled are something to choose from, not a list to be
+cleared. Each says how often it has gone out this season, which is the whole
+reason for telling you. The first Spared by Inches of the year is worth a
+sentence. Favoured by the Gods has gone out two dozen times by the end of a
+season, so three of them in one week is one observation rather than three,
+and a clause is generous. A crest nobody will remember by Tuesday does not
+need a sentence on Sunday.
 
 The second job is what it has done to the season. Who moved, who is running
 out of weeks, who is quietly fine. A league table is only interesting as a
