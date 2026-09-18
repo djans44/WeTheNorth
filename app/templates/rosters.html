@@ -41,6 +41,50 @@
   </section>
 
   {% if squads %}
+  {# Everyone, or one. The same strip the transaction log uses, because it is
+     the same question asked of the same twelve people. #}
+  <section>
+    <p class="whostrip">
+      <a href="/rosters?season={{ season }}"
+         {% if not who %}class="on"{% endif %}>Everyone</a>
+      {% for s in sides %}
+        <a href="/rosters?season={{ season }}&who={{ s.username }}"
+           {% if who and who.lower() == s.username.lower() %}class="on"{% endif %}>{{ s.username }}</a>
+      {% endfor %}
+    </p>
+  </section>
+
+  {% if one %}
+  {# One squad, at a size meant for reading rather than for comparing twelve
+     of them side by side. #}
+  {% set squad = squads.get(one.team_id, []) %}
+  <section>
+    <h2>{{ one.username }}<span class="tm"> {{ one.team_name }}</span></h2>
+    <p class="note">{{ squad|length }} rostered.</p>
+    <table class="keepers squadtable">
+      <thead>
+        <tr><th class="pos">Pos</th><th>Player</th><th class="got">How</th></tr>
+      </thead>
+      <tbody>
+      {% for p in squad %}
+        <tr>
+          <td class="pos">{{ p.position }}</td>
+          <td class="name">{{ p.full_name }}</td>
+          <td class="got">
+            {% if p.how == "kept" %}<span class="kept">Kept</span>
+            {% elif p.how == "drafted" and p.round %}Drafted, round {{ p.round }}
+            {% elif p.how == "drafted" %}Drafted
+            {% elif p.how == "traded" %}Traded for
+            {% elif p.how == "added" %}Added
+            {% else %}{{ p.how|capitalize }}{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% else %}
   <section>
     <div class="week-grid">
       {% for s in sides %}
@@ -66,6 +110,7 @@
       {% endfor %}
     </div>
   </section>
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

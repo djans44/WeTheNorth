@@ -3064,7 +3064,7 @@ POSITION_ORDER = {p: i for i, p in
 
 
 @app.get("/rosters", response_class=HTMLResponse)
-def rosters_page(request: Request, season: int = 0):
+def rosters_page(request: Request, season: int = 0, who: str = ""):
     """Who holds whom, worked out where it can be and stored where it cannot.
 
     From 2026 a roster is the draft with every move since applied to it. The
@@ -3126,10 +3126,17 @@ def rosters_page(request: Request, season: int = 0):
         team.sort(key=lambda r: (POSITION_ORDER.get(r["position"], 9),
                                  r["full_name"] or ""))
 
+    # One squad at a time, or all twelve. Naming one narrows the page rather
+    # than changing it: the same rosters, read at a size meant for reading
+    # instead of for comparing.
+    one = next((s for s in sides if s["username"].lower() == who.lower()), None)
+    if who and not one:
+        who = ""
+
     return templates.TemplateResponse(
         request=request, name="rosters.html",
         context={"years": years, "season": season, "source": source,
-                 "sides": sides, "squads": squads,
+                 "sides": sides, "squads": squads, "who": who, "one": one,
                  "moves": len(moves), "picks": len(picks)})
 
 

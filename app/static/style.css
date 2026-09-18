@@ -1333,6 +1333,27 @@ label.second { margin-top: var(--s4); }
 .squad .tm { display: inline; flex: 0 0 auto; }
 .squad .tm.kept { color: var(--gold-deep); font-weight: 600; }
 
+/* One squad on its own, read rather than compared, so it takes the base
+   size instead of the small one the twelve cards use. */
+.squadtable { margin-top: var(--s3); font-size: var(--t-base); }
+.squadtable td, .squadtable th { padding: var(--s2) var(--s2); }
+.squadtable td, .squadtable th.pos, .squadtable th { text-align: left; }
+.squadtable .pos {
+  width: 3.5rem;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.squadtable .name { font-weight: 600; }
+.squadtable .got {
+  width: 12rem;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.squadtable .got .kept { color: var(--gold-deep); font-weight: 600; }
+/* A rule between position blocks, so the shape of a squad is still legible
+   in a single list. */
+.squadtable tbody tr td { border-bottom: 1px solid var(--rule); }
+
 /* ---- the transaction log ---- */
 /* Who is filtered to, as links rather than a dropdown: twelve names fit on
    a line or two, and a link says where it goes before you press it. */
