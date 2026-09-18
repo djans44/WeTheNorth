@@ -2683,14 +2683,32 @@ def build_rows(mode, existing):
 
 
 @app.get("/admin/scores", response_class=HTMLResponse)
-def admin_scores(request: Request, season: int = 0, week: int = 0,
+def admin_scores(request: Request, season: int = 0, week: int = None,
                  mode: str = "", crests: str = "", msg: str = ""):
+    """Enter a week. Landing on the one that wants entering, by default.
+
+    `week` is None when it was not asked for and 0 when the picker's dash was
+    chosen, which are different things: the first means "you decide", the
+    second means "show me nothing". A single default of 0 could not tell them
+    apart and would have made the dash unreachable.
+    """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     with get_db() as conn:
         years = query(conn, "select season_year from seasons order by season_year desc")
         if not season:
             season = years[0]["season_year"]
+        if week is None:
+            # The first week with a game still missing a score -- which is the
+            # week somebody opened this page to enter. Failing that the last
+            # week the season has, so a finished year lands on its end rather
+            # than on nothing.
+            found = query(conn, """
+                select min(week) filter (where team_a_points is null) as waiting,
+                       max(week) as last
+                from matchups where season_year = %s
+            """, (season,))[0]
+            week = found["waiting"] or found["last"] or 0
         teams_list = query(conn, """
             select t.team_id, t.team_name, o.username
             from teams t join owners o on o.owner_id = t.owner_id
