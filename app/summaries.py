@@ -123,11 +123,53 @@ RULES YOU MAY NOT BREAK
   the name, or "they".
 - Name titles and crests as the league names them -- Protector of the Realm,
   The Court Fool -- never described generically.
+- Not every crest is a compliment, and the facts say which is which. A crest
+  somebody "won" is one. A crest that "went to" somebody is not: The Forsaken
+  is for finishing last, The Besieged for conceding more than anyone, Winter
+  Has Come for losing five in a row, Undone by Fate for losing a game the
+  reckoning had already handed you, and The Court Fool and Lord of the Wastes
+  ring the sigils of whoever is losing most and whoever finished last. Nobody
+  wins those. They are handed out, landed with, worn, or suffered. Favoured
+  by the Gods is the odd one: it is awarded for winning, and the joke is that
+  the manager did not deserve to.
 - No headings, no bullet points, no markdown. Plain paragraphs separated by
   a blank line.
 - Do not open with "In a league where", and do not open by naming the season
   alongside the word "campaign".
 """
+
+
+# Crests nobody wants. Ten of the catalogue are awarded for finishing last,
+# conceding more than anyone, losing five in a row, losing a game the
+# reckoning had already handed you, breaking a contract, or losing the final.
+# Every fact about every crest said "won", which is wrong on all ten and is
+# exactly the kind of wrong a model repeats without noticing.
+NOT_A_COMPLIMENT = {
+    "sacko",                # The Forsaken -- finished twelfth
+    "runner_up",            # Denied the Throne -- lost the championship game
+    "points_against_king",  # The Besieged -- most points conceded
+    "losing_streak",        # Winter Has Come -- lost five in a row
+    "robbed",               # Undone by Fate -- lost one the reckoning gave you
+    "worst_beat",           # The Red Week -- the defeat nobody deserved
+    "cut_bait",             # Oathbreaker -- voided a contract
+    "court_fool",           # The Court Fool -- longest losing streak running
+    "reigning_sacko",       # Lord of the Wastes -- finished last
+    "most_narrow_losses",   # Hounded by Fate -- most defeats by under a point
+}
+
+
+def _crest_line(row, suffix=""):
+    """One crest award, with a verb that fits the crest.
+
+    Favoured by the Gods stays a win: it is awarded for winning, however
+    little the manager deserved it. The ten above are given, not won.
+    """
+    said = ("%s went to %s" % (row["name"], row["username"])
+            if row["code"] in NOT_A_COMPLIMENT else
+            "%s won %s" % (row["username"], row["name"]))
+    if row.get("detail"):
+        said += " -- %s" % row["detail"]
+    return {"note": said + suffix}
 
 
 def available():
@@ -371,11 +413,10 @@ def preview_facts(q, season):
 
     # What last season handed out. Earned crests are kept for good, so these
     # are the honours the year just gone is remembered by.
-    facts["crests_won_last_season"] = [
-        {"note": "%s won %s%s" % (r["username"], r["name"],
-                                  " -- %s" % r["detail"] if r["detail"] else "")}
+    facts["crests_from_last_season"] = [
+        _crest_line(r)
         for r in q("""
-            select cr.name, o.username, oc.detail
+            select cr.code, cr.name, o.username, oc.detail
             from owner_crests oc
             join crests cr on cr.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
@@ -859,18 +900,17 @@ def week_facts(q, season, week):
     # is what separates a thing worth a sentence from a thing that happens
     # every week. Spared by Inches once all year is a story; the fourth
     # Favoured by the Gods is a Sunday.
+    # Each with how often that crest has gone out this season, because rarity
+    # is what separates a thing worth a sentence from a thing that happens
+    # every week. Spared by Inches once all year is a story; the fourth
+    # Favoured by the Gods is a Sunday.
     facts["crests_settled_this_week"] = [
-        # A plain count, not an ordinal. Three of the same crest in one week
-        # would all have read "the 25th", and handing the model an ordinal
-        # worked out from a count is the exact move the prompt forbids.
-        {"note": "%s won %s%s (%s this season)"
-                 % (r["username"], r["name"],
-                    " -- %s" % r["detail"] if r["detail"] else "",
-                    "the first time this crest has gone out"
-                    if r["so_far"] == 1 else
-                    "this crest has gone out %d times" % r["so_far"])}
+        _crest_line(r, " (%s this season)"
+                    % ("the first time this crest has gone out"
+                       if r["so_far"] == 1 else
+                       "this crest has gone out %d times" % r["so_far"]))
         for r in q("""
-            select cr.name, o.username, oc.detail,
+            select cr.code, cr.name, o.username, oc.detail,
                    (select count(*) from owner_crests p
                     where p.crest_id = oc.crest_id and p.season_year = %(y)s
                       and p.week is not null and p.week <= %(w)s) as so_far
@@ -1110,11 +1150,10 @@ def season_facts(q, season):
             order by m.week, m.game_type
         """, {"y": season})]
 
-    facts["crests_won_this_season"] = [
-        {"note": "%s won %s%s" % (r["username"], r["name"],
-                                  " -- %s" % r["detail"] if r["detail"] else "")}
+    facts["crests_settled_this_season"] = [
+        _crest_line(r)
         for r in q("""
-            select cr.name, o.username, oc.detail
+            select cr.code, cr.name, o.username, oc.detail
             from owner_crests oc
             join crests cr on cr.crest_id = oc.crest_id
             join owners o on o.owner_id = oc.owner_id
