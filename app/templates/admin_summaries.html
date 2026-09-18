@@ -1,31 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Summaries | We the North{% endblock %}
+{% from "macros.html" import leaf %}
+{% block title %}Summaries {{ season }} | We the north{% endblock %}
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
-    <h1>Summaries</h1>
-    <p class="lede">Everything written about a season. Nothing here is on the
-      season page until it is published, so a draft can be read, regenerated
-      or thrown away without the league seeing any of it.</p>
+  {# The same header every page with something to switch between wears: the
+     year is the control that changes the year, inside a <details> so it
+     needs no script, with the h1 in the summary so the outline survives.
+     The lede is gone -- what this page is for is legible from the page. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Summaries {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/summaries?season={{ y }}"
+               {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {# Only reachable once the header has condensed, which is to say once
+       there is somewhere to go back from. #}
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section>
-    <div class="pickhead">
-      <p class="draftstate {% if drafts %}live{% elif published %}set{% else %}none{% endif %}">
-        <span>{% if drafts %}{{ drafts|length }} to read{% else %}Nothing waiting{% endif %}</span>
-        <span class="sub">{{ published|length }} published</span>
-      </p>
-      <form method="get" action="/admin/summaries" class="picker loadonpick">
-        <label for="season">Season</label>
-        <select id="season" name="season">
-          {% for y in years %}
-            <option value="{{ y }}" {% if y == season %}selected{% endif %}>{{ y }}</option>
-          {% endfor %}
-        </select>
-        <button type="submit" class="seal">Load</button>
-      </form>
-    </div>
+    <p class="draftstate {% if drafts %}live{% elif published %}set{% else %}none{% endif %}">
+      <span>{% if drafts %}{{ drafts|length }} to read{% else %}Nothing waiting{% endif %}</span>
+      <span class="sub">{{ published|length }} published</span>
+    </p>
 
     {# Said once, here, rather than left for a failed generation to explain.
        Without a key nothing on this page can write anything. #}
@@ -46,8 +52,9 @@
         <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>
           Write the {{ season }} preview</button>
         <span class="tm">The year ahead, from the keepers and the draft board.
-          {%- if ("preview", none) in written %} One has been written already; this
-          writes another beside it.{% endif %}</span>
+          {%- if ("preview", none) in written %} One exists already: writing
+          another replaces the draft, and the league keeps reading whatever is
+          published until you publish the new one.{% endif %}</span>
       </form>
 
       <form method="post" action="/admin/summaries/generate" class="writer"
@@ -70,7 +77,8 @@
           <span class="tm">Weeks write themselves when their last score is
             entered. This is for the ones that did not &mdash; the process can
             go to sleep mid-sentence, and a corrected week does not write
-            itself twice.</span>
+            itself twice. A week marked <b>written</b> already has one; this
+            replaces its draft.</span>
         {% else %}
           <p class="note">No week of {{ season }} has scores yet. The first one
             entered writes its own account.</p>
