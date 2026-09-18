@@ -103,6 +103,8 @@ def trades(q, season):
     """
     rows = q("""
         select x.occurred_raw, x.occurred_on,
+               to_timestamp(split_part(x.occurred_raw, ', ', 2),
+                            'HH12:MI am')::time as at,
                ot.owner_id as to_owner, oto.username as to_who,
                ofr.owner_id as from_owner, ofrm.username as from_who,
                p.full_name
@@ -113,7 +115,7 @@ def trades(q, season):
         join teams ofr on ofr.team_id = x.from_team_id
         join owners ofrm on ofrm.owner_id = ofr.owner_id
         where x.season_year = %s and x.kind = 'trade'
-        order by x.occurred_on, x.transaction_id
+        order by x.occurred_on, at, x.transaction_id
     """, (season,))
 
     # One row per player moved, so a three-for-one is four rows. A side is
@@ -124,11 +126,17 @@ def trades(q, season):
         side = sides.setdefault(key, {
             "candidate": "trade:%s:%d" % (r["occurred_raw"], r["to_owner"]),
             "owner_id": r["to_owner"], "who": r["to_who"],
-            "from": r["from_who"], "got": [], "on": r["occurred_on"]})
+            "from": r["from_who"], "got": [], "on": r["occurred_on"],
+            "at": r["at"]})
         side["got"].append(r["full_name"])
 
     out = []
-    for side in sorted(sides.values(), key=lambda s: (s["on"] or 0, s["who"])):
+    # Earliest first, and by the time of day within a date: two trades on one
+    # afternoon happened in an order, and a ballot that lists them the other
+    # way round reads as though the second caused the first.
+    for side in sorted(sides.values(),
+                       key=lambda s: (s["on"] or dt.date.min,
+                                      s["at"] or dt.time.min, s["who"])):
         got = _listed(side["got"])
         # What this manager gave is what the other one received, on the same
         # date and between the same two. A trade with only one side on record
@@ -144,6 +152,11 @@ def trades(q, season):
                     "detail": what[4:] if gave else "%s from %s" % (got, side["from"]),
                     "who": side["who"],
                     "what": what,
+                    # The two halves as lists, so a ballot can set them out a
+                    # player to a line rather than in one run-on sentence.
+                    "got": side["got"],
+                    "gave": other["got"] if other else [],
+                    "from": side["from"],
                     "scores": side["from"]})
     return out
 

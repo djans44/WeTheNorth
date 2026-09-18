@@ -1357,6 +1357,20 @@ label.second { margin-top: var(--s4); }
 .ballot .what { flex: 1 1 auto; color: var(--ink-muted); }
 .ballot .tm { display: inline; flex: 0 0 auto; }
 
+/* A trade is two lists read against each other, so it gets two rows rather
+   than a sentence: what came in, and what it cost. */
+.ballot label.deal { align-items: flex-start; }
+.ballot .deal .what { display: block; }
+.ballot .deal .side { display: flex; gap: var(--s2); line-height: 1.6; }
+.ballot .deal .side .lbl {
+  flex: 0 0 4.5rem;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+/* Each player on its own line. The names need a box of their own: flex
+   items sit in a row whatever their display is. */
+.ballot .deal .names { display: flex; flex-direction: column; }
+
 /* The count, once it is allowed to be seen. */
 .tally .count { width: 3rem; font-weight: 700; text-align: right; }
 .tally td { text-align: left; }

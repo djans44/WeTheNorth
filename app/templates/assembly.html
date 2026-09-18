@@ -65,21 +65,65 @@
           <p class="note">Nothing to vote on yet. This one needs the season
             finished before it has any candidates.</p>
         {% else %}
-          <ul class="ballot">
-            {% for o in options %}
-              <li>
-                <label>
-                  <input type="radio" name="crest_{{ c.crest_id }}"
-                         value="{{ o.candidate }}"
-                         {% if c.chosen == o.candidate %}checked{% endif %}>
-                  <span class="who">{{ o.who }}</span>
-                  {% if o.what %}<span class="what">{{ o.what }}</span>{% endif %}
-                  {% if o.rivals %}<span class="pill">Rivals</span>{% endif %}
-                  {% if o.scores %}<span class="tm">{{ o.scores }}</span>{% endif %}
-                </label>
-              </li>
-            {% endfor %}
-          </ul>
+          {% if c.code == "best_team_name" %}
+            {# Twelve names and nothing to say about them. A dropdown, and the
+               names alone -- whose it is would only tell you who you are
+               voting against. #}
+            <p class="field">
+              <label for="pick{{ c.crest_id }}">The name</label>
+              <select id="pick{{ c.crest_id }}" name="crest_{{ c.crest_id }}">
+                <option value="">&mdash;</option>
+                {% for o in options %}
+                  <option value="{{ o.candidate }}"
+                    {% if c.chosen == o.candidate %}selected{% endif %}>{{ o.detail }}</option>
+                {% endfor %}
+              </select>
+            </p>
+
+          {% elif c.code == "trade_of_year" %}
+            {# A deal is two lists, and a bargain is the pair read against
+               each other. One player to a line, earliest trade first. #}
+            <ul class="ballot">
+              {% for o in options %}
+                <li>
+                  <label class="deal">
+                    <input type="radio" name="crest_{{ c.crest_id }}"
+                           value="{{ o.candidate }}"
+                           {% if c.chosen == o.candidate %}checked{% endif %}>
+                    <span class="who">{{ o.who }}</span>
+                    <span class="what">
+                      <span class="side"><span class="lbl">Acquired</span>
+                        <span class="names">
+                          {%- for p in o.got %}<span class="one">{{ p }}</span>{% endfor -%}
+                        </span></span>
+                      <span class="side"><span class="lbl">For</span>
+                        <span class="names">
+                          {%- for p in o.gave %}<span class="one">{{ p }}</span>{% endfor -%}
+                          {%- if not o.gave %}<span class="one tm">not on record</span>{% endif -%}
+                        </span></span>
+                    </span>
+                  </label>
+                </li>
+              {% endfor %}
+            </ul>
+
+          {% else %}
+            <ul class="ballot">
+              {% for o in options %}
+                <li>
+                  <label>
+                    <input type="radio" name="crest_{{ c.crest_id }}"
+                           value="{{ o.candidate }}"
+                           {% if c.chosen == o.candidate %}checked{% endif %}>
+                    <span class="who">{{ o.who }}</span>
+                    {% if o.what %}<span class="what">{{ o.what }}</span>{% endif %}
+                    {% if o.rivals %}<span class="pill">Rivals</span>{% endif %}
+                    {% if o.scores %}<span class="tm">{{ o.scores }}</span>{% endif %}
+                  </label>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         {% endif %}
       </section>
     {% endfor %}
