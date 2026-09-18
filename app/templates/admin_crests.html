@@ -95,8 +95,10 @@
     <h2>The nominees</h2>
     <p class="note">Built from the season, and rebuilt every time this page is
       drawn &mdash; so this is what the ballot says right now, not what it said
-      when the assembly was called. The two that grow are the ones that depend
-      on the season finishing.</p>
+      when the assembly was called. They fill at different times: a name is
+      there from the start, a trade the moment one happens, a close defeat the
+      first week one is played, and the late pick only once the end of season
+      rosters are in.</p>
     <table class="keepers moves">
       <thead><tr><th>Honour</th><th class="how">Candidates</th><th>Who is on it</th></tr></thead>
       <tbody>
@@ -106,8 +108,7 @@
           <td class="how">{{ n.count }}</td>
           <td>{% if n.count %}{{ n.sample }}{% if n.count > 3 %}
               &hellip;{% endif %}
-            {% else %}<span class="tm">nothing yet &mdash; this one needs the
-              season finished</span>{% endif %}</td>
+            {% else %}<span class="tm">{{ n.waiting }}</span>{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>

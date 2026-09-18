@@ -94,8 +94,13 @@ def late_picks(q, season):
 
 
 def trades(q, season):
-    """The Bargain of the Age. Each side of each trade, because a bargain is
-    something one of the two got and the vote should say which."""
+    """The Bargain of the Age. Each side of each trade, with what it cost.
+
+    Each side is its own candidate, because a bargain is something one of the
+    two got and the vote should say which. And each says what was given as
+    well as what was taken: "got A.J. Brown and Jaylen Warren" is not a deal,
+    it is half of one, and nobody can judge it without the price.
+    """
     rows = q("""
         select x.occurred_raw, x.occurred_on,
                ot.owner_id as to_owner, oto.username as to_who,
@@ -125,11 +130,21 @@ def trades(q, season):
     out = []
     for side in sorted(sides.values(), key=lambda s: (s["on"] or 0, s["who"])):
         got = _listed(side["got"])
+        # What this manager gave is what the other one received, on the same
+        # date and between the same two. A trade with only one side on record
+        # still reads, it just cannot say the price.
+        other = next((o for o in sides.values()
+                      if o["on"] == side["on"] and o["who"] == side["from"]
+                      and o["from"] == side["who"]), None)
+        gave = _listed(other["got"]) if other else None
+        what = ("got %s for %s" % (got, gave) if gave
+                else "got %s from %s" % (got, side["from"]))
         out.append({"candidate": side["candidate"],
                     "owner_id": side["owner_id"],
-                    "detail": "%s from %s" % (got, side["from"]),
+                    "detail": what[4:] if gave else "%s from %s" % (got, side["from"]),
                     "who": side["who"],
-                    "what": "got %s from %s" % (got, side["from"])})
+                    "what": what,
+                    "scores": side["from"]})
     return out
 
 

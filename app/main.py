@@ -3968,7 +3968,18 @@ def admin_crests(request: Request, season: int = 0):
         def q(sql, p=()):
             return query(conn, sql, p)
         live = honours.ballots(q, season)
+        # What an empty ballot is actually waiting for. One sentence saying
+        # "the season has to finish" was doing three different jobs badly:
+        # a trade can happen in week three, a close defeat in week one, and
+        # only the late pick truly needs the year over.
+        WAITING = {
+            "best_team_name": "needs the season's teams",
+            "draft_day": "needs the end of season rosters loaded",
+            "trade_of_year": "needs a trade to have happened",
+            "worst_beat": "needs a game decided by ten points or fewer",
+        }
         nominees = [{"name": r["name"], "count": len(live.get(r["code"], [])),
+                     "waiting": WAITING.get(r["code"], "nothing yet"),
                      "sample": ", ".join(
                          "%s (%s)" % (o["who"], o["what"]) if o["what"] else o["who"]
                          for o in live.get(r["code"], [])[:3])}
