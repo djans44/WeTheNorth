@@ -323,11 +323,19 @@ def transactions(conn, seasons):
                 (r["owner_id"], y, None, f"{r['n']} trades", 0))
 
     # ---- and the two that count across every season ----
-    # Career crests, so no season goes on the row. They read every complete
-    # season at once rather than summing the season awards: counting awards
-    # would make one crest depend on another having run first, and a rebuild
-    # would answer differently depending on the order it happened in.
-    done = [y for y in complete_seasons(conn, seasons) if y in have]
+    # Career crests, so no season goes on the row, and every complete season
+    # is read rather than the ones this run was asked for. A season recompute
+    # asks for one year; working "most ever" out of it would answer that the
+    # most anyone ever spent is what they spent in 2023. held() reads all of
+    # history for the same reason.
+    #
+    # They read the transactions rather than summing the season awards:
+    # counting awards would make one crest depend on another having run
+    # first, and a rebuild would answer differently depending on the order it
+    # happened in.
+    every = [r["season_year"] for r in
+             q(conn, "select distinct season_year from seasons")]
+    done = [y for y in complete_seasons(conn, every) if y in have]
     if done:
         # Money. faab_amount is null for a free agent and for a plain waiver
         # claim, so this is the sum of what was actually bid, and a manager
@@ -665,8 +673,14 @@ def write(conn, awards, season=None, weeks_from=1):
 
     The delete has to match what compute() was asked for, or a narrower run
     would wipe rows it is not going to put back. A season run clears that
-    season from `weeks_from` on, plus the live title rows, which are career
-    wide and recomputed every time.
+    season from `weeks_from` on, plus every career row, which are recomputed
+    on every run whatever it was asked for.
+
+    Career scope rather than standing='held': the held titles were the only
+    career rows when this was written, but a career crest that is not a held
+    title -- most spent, most traded -- is rebuilt by the same runs and would
+    otherwise never be cleared, so a season recompute would leave a second
+    copy of it behind every time.
     """
     crests = {r["code"]: r for r in q(conn, "select * from crests")}
     with conn.cursor() as cur:
@@ -683,7 +697,7 @@ def write(conn, awards, season=None, weeks_from=1):
                    and oc.awarded_by is null
                    and ((oc.season_year = %s
                          and (oc.week is null or oc.week >= %s))
-                        or (c.standing = 'held' and oc.season_year is null))
+                        or (c.scope = 'career' and oc.season_year is null))
             """, (season, weeks_from))
         removed = cur.rowcount
         written = 0
