@@ -87,27 +87,39 @@
     {% if wanted %}
     <section>
       <h2>Players the league has never seen</h2>
-      <p class="note">A draft board carries no positions, so these cannot be
-        created from the paste alone. Choose one for each; the row will not
-        save without it.</p>
+      {# Most boards say "(Atl - RB)" under each name and there is nothing to
+         ask. The older shape does not, and players.position cannot be null,
+         so those get a dropdown and the save waits for it. #}
+      <p class="note">Created with the board. Worth a glance for spelling
+        &mdash; a misspelling here becomes a second player who never goes
+        away.</p>
       <table class="keepers">
         <tbody>
         {% for w in wanted %}
           <tr>
-            <td class="name"><label for="pos{{ loop.index }}">{{ w.name }}</label></td>
+            <td class="name">{% if w.position %}{{ w.name }}
+              {%- else %}<label for="pos{{ loop.index }}">{{ w.name }}</label>{% endif %}</td>
             <td class="pos">
-              <select id="pos{{ loop.index }}" name="pos_{{ w.key }}">
-                <option value="">&mdash;</option>
-                {% for p in choices %}
-                  <option value="{{ p }}"
-                    {% if positions.get(w.key) == p %}selected{% endif %}>{{ p }}</option>
-                {% endfor %}
-              </select>
+              {% if w.position %}{{ w.position }}
+              {% else %}
+                <select id="pos{{ loop.index }}" name="pos_{{ w.key }}">
+                  <option value="">&mdash;</option>
+                  {% for p in choices %}
+                    <option value="{{ p }}"
+                      {% if positions.get(w.key) == p %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </select>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
+      {% if wanted|rejectattr("position")|list %}
+        <p class="note">The board gave no position for
+          {{ wanted|rejectattr("position")|list|length }} of these. Choose one
+          for each; the board will not save until you do.</p>
+      {% endif %}
     </section>
     {% endif %}
 

@@ -4,28 +4,27 @@ Pasted into the site rather than read from a file, the same way transactions
 are, and like that one it parses text and reports what it could not read
 instead of guessing. Nothing here touches the database.
 
-The shape:
+Yahoo has printed the board two ways, and both are here because the older
+seasons were loaded from the first:
 
-    Round 1
-    1.<tab>Bijan Robinson<tab>It's Me Mr. Jaxon! Hee-Hee!
-    2.<tab>Saquon Barkley<tab>Go Long London
-    5.<tab>Joe Burrow <tab>I'm stuck Step-Burrow
+    1<tab>Bijan Robinson<tab>Right Where You Dak Me       one line
 
-    Round 2
-    ...
+    1<tab>Bijan Robinson                                  three lines
+    (Atl - RB)
+    Right Where You Dak Me
 
-Two things about that last line matter.
+Two things about those lines matter.
 
-The glyph after Joe Burrow is Yahoo's little keeper badge, and it is the only
-place the board says which picks were keepers -- 35 of them in 2025, matching
-the 35 rows in the league's own keeper_selections exactly. It lives in the
-private use area, which is also where Yahoo's decorative icons live, so it has
-to be looked for *before* those are stripped. The old file importer stripped
+The badge that can follow a player's name is Yahoo's keeper mark, and it is
+the only place the board says which picks were kept -- 35 of them in 2025,
+matching the 35 rows in the league's own keeper_selections exactly. It lives
+in the private use area, which is also where Yahoo's decorative icons live, so
+it has to be read *before* those are stripped. The old file importer stripped
 first and lost it.
 
-And the board carries no positions. A player the league has never seen cannot
-be created from this text alone, so the page asks for the position rather than
-choosing one.
+And only the three-line shape carries a position. That decides whether a
+player the league has never seen can be created from the paste alone or has to
+be asked about, because players.position cannot be null.
 """
 import re
 
@@ -33,6 +32,8 @@ KEEPER_MARK = ""
 POSITIONS = ("QB", "RB", "WR", "TE", "K", "DEF")
 ROUND = re.compile(r"^Round\s+(\d+)\s*$")
 PICK = re.compile(r"^(\d+)\.\s*(.+)$")
+# "(Atl - RB)" under a player, in the three-line shape.
+POSITION = re.compile(r"^\((.+?)\s+-\s+([A-Z]{1,3})\)$")
 
 
 def clean(line):
@@ -52,51 +53,86 @@ def norm(name):
 def parse(text):
     """Every pick on the board, and every line that made no sense.
 
-    Returns (picks, puzzles). A pick is round, pick_in_round, player, team and
-    whether it was kept; a puzzle is {"line", "why"}.
+    Returns (picks, puzzles). A pick is round, pick_in_round, player, team,
+    position (None in the one-line shape) and whether it was kept; a puzzle is
+    {"line", "why"}.
     """
     picks, puzzles, rnd = [], [], None
 
-    for raw in text.replace("\r", "").split("\n"):
-        # The badge is read from the raw line, because clean() would take it.
-        kept = KEEPER_MARK in raw
-        line = clean(raw)
+    # The badge is kept beside the cleaned text, because clean() takes it.
+    rows = [(clean(raw), KEEPER_MARK in raw)
+            for raw in text.replace("\r", "").split("\n")]
+
+    def next_filled(start):
+        j = start
+        while j < len(rows) and not rows[j][0]:
+            j += 1
+        return j
+
+    i = 0
+    while i < len(rows):
+        line, kept = rows[i]
         if not line:
+            i += 1
             continue
 
         m = ROUND.match(line)
         if m:
             rnd = int(m.group(1))
+            i += 1
             continue
 
         m = PICK.match(line)
         if not m:
             puzzles.append({"line": line,
                             "why": "Not a round heading and not a pick."})
+            i += 1
             continue
         if rnd is None:
             puzzles.append({"line": line,
                             "why": "A pick before any “Round N” line."})
+            i += 1
             continue
 
-        # Tabs are what Yahoo uses; runs of spaces are what survives a paste
-        # through something that ate them.
-        parts = re.split(r"\t", m.group(2))
-        if len(parts) < 2:
-            parts = re.split(r"\s{2,}", m.group(2))
-        if len(parts) < 2:
-            puzzles.append({"line": line,
-                            "why": "No gap between the player and the team."})
-            continue
+        rest = re.split(r"\t", m.group(2))
+        if len(rest) < 2:
+            rest = re.split(r"\s{2,}", m.group(2))
 
-        player = clean(parts[0])
-        team = clean(parts[-1])
+        if len(rest) >= 2:
+            # One line: the player and the team, no position anywhere.
+            player, team, position = clean(rest[0]), clean(rest[-1]), None
+            i += 1
+        else:
+            # Three lines. The position and the manager are looked for where
+            # they should be, and a puzzle is raised rather than a guess made
+            # if either is not there.
+            player, position, team = clean(rest[0]), None, None
+            j = next_filled(i + 1)
+            got = POSITION.match(rows[j][0]) if j < len(rows) else None
+            if not got:
+                puzzles.append({"line": line,
+                                "why": "No team on this line, and no "
+                                       "“(Team - POS)” under it."})
+                i += 1
+                continue
+            position = got.group(2)
+            j = next_filled(j + 1)
+            if (j >= len(rows) or PICK.match(rows[j][0])
+                    or ROUND.match(rows[j][0])):
+                puzzles.append({"line": line,
+                                "why": "No manager under the position line."})
+                i += 1
+                continue
+            team = rows[j][0]
+            i = j + 1
+
         if not player or not team:
             puzzles.append({"line": line, "why": "A blank player or team."})
             continue
 
         picks.append({"round": rnd, "pick": int(m.group(1)),
-                      "player": player, "team": team, "keeper": kept})
+                      "player": player, "team": team, "keeper": kept,
+                      "position": position})
     return picks, puzzles
 
 
@@ -138,7 +174,8 @@ def check(picks, teams, season_teams):
         seen.setdefault(norm(p["player"]), []).append(p)
     for name, rows in sorted(seen.items()):
         if len(rows) > 1:
-            problems.append("%s is drafted %d times." % (rows[0]["player"], len(rows)))
+            problems.append("%s is drafted %d times."
+                            % (rows[0]["player"], len(rows)))
 
     return problems
 
@@ -150,11 +187,20 @@ def resolve(picks, teams, players):
     form field that asks for a position is named by the same rule that looks
     the answer up. Deriving that key twice -- once here, once in a template --
     is how the two drift apart and the answer quietly goes missing.
+
+    It also carries the position the board gave, when the board gave one, and
+    then there is nothing to ask.
     """
     rows, wanted = [], {}
     for p in picks:
         pid = players.get(norm(p["player"]))
         if pid is None:
-            wanted[norm(p["player"])] = p["player"]
+            key = norm(p["player"])
+            # First sighting wins, except that one with a position beats one
+            # without.
+            if key not in wanted or (p["position"]
+                                     and not wanted[key]["position"]):
+                wanted[key] = {"key": key, "name": p["player"],
+                               "position": p["position"]}
         rows.append(dict(p, player_id=pid, team_id=teams.get(norm(p["team"]))))
-    return rows, [{"key": k, "name": n} for k, n in sorted(wanted.items())]
+    return rows, [wanted[k] for k in sorted(wanted)]

@@ -3146,8 +3146,10 @@ async def admin_draft_post(request: Request):
                 request=request, name="admin_draft.html", context=ctx)
 
         stop = ""
-        missing = [w for w in ctx["wanted"]
-                   if positions.get(w["key"]) not in draftboard.POSITIONS]
+        # Only the ones the board did not name a position for. The three-line
+        # shape carries one, so most boards ask nothing.
+        missing = [w for w in ctx["wanted"] if not w["position"]
+                   and positions.get(w["key"]) not in draftboard.POSITIONS]
         if ctx["problems"]:
             stop = "The board does not check out. Nothing has been written."
         elif ctx["puzzles"]:
@@ -3169,7 +3171,7 @@ async def admin_draft_post(request: Request):
             for w in ctx["wanted"]:
                 cur.execute("""
                     insert into players (full_name, position) values (%s, %s)
-                """, (w["name"], positions[w["key"]]))
+                """, (w["name"], w["position"] or positions[w["key"]]))
                 made += 1
             if made:
                 players = {}
