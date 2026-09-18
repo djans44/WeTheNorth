@@ -6,8 +6,7 @@
 <div class="page">
   {# The same header every page with something to switch between wears: the
      year is the control that changes the year, inside a <details> so it
-     needs no script, with the h1 in the summary so the outline survives.
-     The lede is gone -- what this page is for is legible from the page. #}
+     needs no script, with the h1 in the summary so the outline survives. #}
   <header class="page-head tight stuck">
     <details class="headpick">
       <summary>
@@ -16,152 +15,137 @@
       <ul>
         {% for y in years %}
           <li>
-            <a href="/admin/summaries?season={{ y }}"
+            <a href="/admin/summaries?season={{ y }}&kind={{ kind }}"
                {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
           </li>
         {% endfor %}
       </ul>
     </details>
-    {# Only reachable once the header has condensed, which is to say once
-       there is somewhere to go back from. #}
     <a class="to-top" href="#top">Top</a>
   </header>
 
-  <section>
-    <p class="draftstate {% if drafts %}live{% elif published %}set{% else %}none{% endif %}">
-      <span>{% if drafts %}{{ drafts|length }} to read{% else %}Nothing waiting{% endif %}</span>
-      <span class="sub">{{ published|length }} published</span>
-    </p>
+  {# ---- what is being looked at ----
+     Kind first, and a week after it when the kind wants one. app.js hides the
+     week control for the kinds that do not; with the script off both are on
+     screen and the week is simply ignored, which is what the server does with
+     it anyway. #}
+  <section class="weekbar">
+    <form method="get" action="/admin/summaries" class="picker loadonpick"
+          id="summarypick">
+      <input type="hidden" name="season" value="{{ season }}">
+      <label for="kind">Showing</label>
+      <select id="kind" name="kind">
+        {% for value, label in kinds %}
+          <option value="{{ value }}" {% if value == kind %}selected{% endif %}>
+            {{ label }}</option>
+        {% endfor %}
+      </select>
 
-    {# Said once, here, rather than left for a failed generation to explain.
-       Without a key nothing on this page can write anything. #}
-    {% if not have_key %}
-      <p class="note">No <b>GEMINI_API_KEY</b> is set in this environment, so
-        nothing can be written here. The season page is unaffected: it shows
-        published summaries and there simply are none.</p>
+      <span class="pickfield" {% if kind != "week" %}hidden{% endif %}>
+        <label for="week">Week</label>
+        <select id="week" name="week">
+          {% for w in weeks %}
+            <option value="{{ w }}" {% if w == week %}selected{% endif %}>
+              {{ w }}{% if w in written_weeks %} &mdash; written{% endif %}</option>
+          {% endfor %}
+        </select>
+      </span>
+
+      <button type="submit" class="seal">Show</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>{{ name|capitalize }}</h2>
+
+    {# Nothing written. An invitation rather than an apology: the button that
+       fixes it is directly below and says the same word. #}
+    {% if not draft and not published %}
+      <p class="note">Nothing has been written. Generate one below.</p>
     {% endif %}
 
-    {# Three of the five kinds can be written. The two that cannot are named
-       below rather than left off, because a gap nobody can see is a gap
-       somebody rediscovers. #}
-    <div class="writers">
-      <form method="post" action="/admin/summaries/generate" class="writer"
+    {# The draft first -- it is the only thing here wanting a decision. The
+       published one sits under it, to be read against. #}
+    {% if draft %}
+      <article class="draft">
+        <p class="setup-head">
+          <b>Draft</b>
+          <span class="pill">Not visible to the league</span>
+          <span class="tm">{{ draft.model }}
+            {%- if draft.generated_at %} &middot; {{ draft.generated_at.day }}
+            {{ draft.generated_at.strftime("%b, %H:%M") }}{% endif %}</span>
+        </p>
+        <div class="summary">
+          {% for para in draft.body.split("\n\n") if para.strip() %}
+            <p>{{ para.strip() }}</p>
+          {% endfor %}
+        </div>
+      </article>
+    {% endif %}
+
+    {% if published %}
+      <article class="draft">
+        <p class="setup-head">
+          <b>Published</b>
+          <span class="pill live">On the season page</span>
+          <span class="tm">{{ published.model }}
+            {%- if published.published_at %} &middot; {{ published.published_at.day }}
+            {{ published.published_at.strftime("%b, %H:%M") }}{% endif %}</span>
+        </p>
+        <div class="summary">
+          {% for para in published.body.split("\n\n") if para.strip() %}
+            <p>{{ para.strip() }}</p>
+          {% endfor %}
+        </div>
+      </article>
+    {% endif %}
+
+    {# ---- the one place anything happens ----
+       Generate writes a draft over the draft that was there. Publish puts the
+       draft on the season page over whatever was there. Remove takes the
+       draft when there is one and the published summary when there is not,
+       which is the only way to withdraw something the league can already
+       read. A div, not a p: a form is block-level and closes a paragraph. #}
+    <div class="phase-act acts">
+      <form method="post" action="/admin/summaries/generate" class="inline"
             data-working="Writing">
         <input type="hidden" name="season" value="{{ season }}">
-        <input type="hidden" name="kind" value="preview">
-        <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>
-          Write the {{ season }} preview</button>
-        <span class="tm">The year ahead, from the keepers and the draft board.
-          {%- if ("preview", none) in written %} One exists already: writing
-          another replaces the draft, and the league keeps reading whatever is
-          published until you publish the new one.{% endif %}</span>
+        <input type="hidden" name="kind" value="{{ kind }}">
+        <input type="hidden" name="week" value="{{ week }}">
+        <button type="submit" class="seal" {% if blocked %}disabled{% endif %}>
+          {% if draft %}Generate again{% else %}Generate{% endif %}</button>
       </form>
 
-      <form method="post" action="/admin/summaries/generate" class="writer"
-            data-working="Writing">
+      <form method="post" action="/admin/summaries/publish" class="inline">
         <input type="hidden" name="season" value="{{ season }}">
-        <input type="hidden" name="kind" value="week">
-        {% if weeks %}
-          <span class="field short">
-            <label for="wk">Week</label>
-            <select id="wk" name="week">
-              {% for w in weeks %}
-                <option value="{{ w }}" {% if loop.last %}selected{% endif %}>
-                  {{ w }}{% if ("week", w) in written %} &mdash; written{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-          </span>
-          <button type="submit" class="seal" {% if not have_key %}disabled{% endif %}>
-            Write the week</button>
-          <span class="tm">Weeks write themselves when their last score is
-            entered. This is for the ones that did not &mdash; the process can
-            go to sleep mid-sentence, and a corrected week does not write
-            itself twice. A week marked <b>written</b> already has one; this
-            replaces its draft.</span>
-        {% else %}
-          <p class="note">No week of {{ season }} has scores yet. The first one
-            entered writes its own account.</p>
-        {% endif %}
+        <input type="hidden" name="summary_id" value="{{ draft.summary_id if draft }}">
+        <button type="submit" class="seal" {% if not draft %}disabled{% endif %}
+                {% if published %}data-confirm="Publish this draft? It replaces the summary the league can read now, and that text cannot be recovered."{% endif %}>
+          Publish</button>
       </form>
 
-      <form method="post" action="/admin/summaries/generate" class="writer"
-            data-working="Writing">
+      <form method="post" action="/admin/summaries/discard" class="inline">
         <input type="hidden" name="season" value="{{ season }}">
-        <input type="hidden" name="kind" value="season">
-        <button type="submit" class="seal"
-                {% if not have_key or not finished %}disabled{% endif %}>
-          Write the {{ season }} recap</button>
-        <span class="tm">{% if finished %}The whole year, from the bracket
-          backwards.{% else %}Waits for a champion: the recap is written from
-          the final table and the bracket, and {{ season }} has neither
-          yet.{% endif %}</span>
+        <input type="hidden" name="summary_id" value="{{ (draft or published).summary_id if (draft or published) }}">
+        <button type="submit" class="seal quiet"
+                {% if not draft and not published %}disabled{% endif %}
+                data-confirm="{% if draft %}Remove this draft? It cannot be recovered.{% else %}Remove the published summary? The season page will have nothing there, and the text cannot be recovered.{% endif %}">
+          {% if draft %}Remove the draft{% else %}Remove{% endif %}</button>
       </form>
-
-      <p class="note">Two kinds are not built. A matchup summary needs
-        per-player results, which the league does not keep; an audit of the
-        Sunday chat needs the chat, which nothing reads yet.</p>
     </div>
-  </section>
 
-  {% if drafts %}
-  <section>
-    <h2>Waiting to be read</h2>
-    {% for d in drafts %}
-      <article class="draft">
-        <p class="setup-head">
-          <b>{% if d.week %}Week {{ d.week }}{% else %}{{ d.kind|capitalize }}{% endif %}</b>
-          <span class="pill">Draft</span>
-          <span class="tm">{{ d.model }} &middot; {% if d.generated_at %}{{ d.generated_at.day }} {{ d.generated_at.strftime("%b, %H:%M") }}{% endif %}</span>
-        </p>
-        <div class="summary">
-          {% for para in d.body.split("\n\n") if para.strip() %}
-            <p>{{ para.strip() }}</p>
-          {% endfor %}
-        </div>
-        {# A div, not a p. A form is block-level, so the parser closes a <p>
-           the moment it meets one -- which left .phase-act an empty element
-           with the two forms as its siblings, and every rule written for it
-           landing on nothing. #}
-        <div class="phase-act">
-          <form method="post" action="/admin/summaries/publish" class="inline">
-            <input type="hidden" name="season" value="{{ season }}">
-            <input type="hidden" name="summary_id" value="{{ d.summary_id }}">
-            <button type="submit" class="seal">Publish</button>
-          </form>
-          <form method="post" action="/admin/summaries/discard" class="inline">
-            <input type="hidden" name="season" value="{{ season }}">
-            <input type="hidden" name="summary_id" value="{{ d.summary_id }}">
-            <button type="submit" class="seal quiet"
-                    data-confirm="Discard this draft? It is not on the season page and cannot be recovered.">
-              Discard</button>
-          </form>
-        </div>
-      </article>
-    {% endfor %}
-  </section>
-  {% endif %}
-
-  <section>
-    <h2>Published</h2>
-    {% if not published %}
-      <p class="note">Nothing published for {{ season }} yet. Write a preview
-        above, read it, and it will appear on the season page.</p>
+    {% if blocked %}
+      <p class="note">{{ blocked }}</p>
+    {% else %}
+      <p class="note">Written by {{ model }}, and takes around half a minute.
+        Nothing reaches the season page until it is published.</p>
     {% endif %}
-    {% for p in published %}
-      <article class="draft">
-        <p class="setup-head">
-          <b>{% if p.week %}Week {{ p.week }}{% else %}{{ p.kind|capitalize }}{% endif %}</b>
-          <span class="pill live">Published</span>
-          <span class="tm">{{ p.model }} &middot; {% if p.published_at %}{{ p.published_at.day }} {{ p.published_at.strftime("%b, %H:%M") }}{% endif %}</span>
-        </p>
-        <div class="summary">
-          {% for para in p.body.split("\n\n") if para.strip() %}
-            <p>{{ para.strip() }}</p>
-          {% endfor %}
-        </div>
-      </article>
-    {% endfor %}
+  </section>
+
+  <section>
+    <p class="note">Two kinds are not built. A matchup summary needs per-player
+      results, which the league does not keep; an audit of the Sunday chat
+      needs the chat, which nothing reads yet.</p>
   </section>
 </div>
 {% endblock %}

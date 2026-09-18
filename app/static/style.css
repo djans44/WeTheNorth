@@ -1161,6 +1161,13 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 .weekbar .pickstrip { margin-top: 0; }
 .weekbar .week-picker { margin-bottom: var(--s3); }
 
+/* A label and its control travelling together inside a picker, so the pair
+   can be hidden as one when the choice above them does not want it. No
+   display of its own: a class that sets display beats the browser's own
+   [hidden] rule, which is how a panel JS had hidden once stayed on screen. */
+.pickfield { display: contents; }
+.pickfield[hidden] { display: none; }
+
 /* The one entry that is not a number: the year as a whole. It comes after
    the weeks, and is set apart from them so the strip reads as a choice
    between a week and the season rather than as nineteen of the same thing. */
@@ -2188,6 +2195,19 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   border: 1px solid var(--rule);
   background: var(--panel-lift);
 }
+/* The one place anything happens on /admin/summaries. Not ranged right like
+   the pair inside a draft card -- these act on the section rather than on the
+   thing above them, so they sit where the reading stops. One width across all
+   three, because they are three answers to the same question and a row of
+   different-sized buttons reads as a row of unrelated ones. */
+.phase-act.acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin: var(--s5) 0 0;
+}
+.phase-act.acts button { min-width: 12rem; }
+
 /* Ranged right, at the end of the draft they act on, and to one width: the
    two words are different lengths and the pair reads as a choice rather than
    as two buttons when the boxes match. 10rem clears the longer of them with

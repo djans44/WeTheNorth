@@ -434,6 +434,21 @@
 
   strips(null, ".keeper-season", "data-season", "keeperpick");
 
+  // ---- a picker whose second control depends on the first ----
+  // Summaries: a weekly recap needs a week and the other two kinds do not.
+  // Without the script both controls are on screen and the week is ignored,
+  // which is what the server does with it anyway.
+  var summarypick = document.getElementById("summarypick");
+  if (summarypick) {
+    var kindsel = document.getElementById("kind");
+    var weekwrap = summarypick.querySelector(".pickfield");
+    if (kindsel && weekwrap) {
+      kindsel.addEventListener("change", function () {
+        weekwrap.hidden = kindsel.value !== "week";
+      });
+    }
+  }
+
   // ---- a button that says it is working ----
   // Some posts take most of a minute -- writing a summary is a call out to a
   // model. The form posts normally and the answer is the next page, so there
@@ -467,19 +482,27 @@
   var pickers = document.querySelectorAll("form.loadonpick");
   for (var p = 0; p < pickers.length; p++) {
     (function (form) {
-      var sel = form.querySelector("select");
+      // Every select, not the first. Summaries picks a kind and then a week,
+      // and binding only the first left the week needing the button that this
+      // hides. Every other picker has one select, so nothing else changes.
+      var sels = form.querySelectorAll("select");
       var btn = form.querySelector("button[type=submit]");
-      if (!sel) { return; }
+      if (!sels.length) { return; }
       if (btn) { btn.hidden = true; }
-      // requestSubmit, not submit: the plain method skips validation and
-      // fires no submit event, so nothing else on the page can see it go.
-      sel.addEventListener("change", function () {
-        // data-needs-value: the blank option is this form's resting state,
-        // not a choice. Without the opt-in an empty value still posts,
-        // because elsewhere -- the seat picker -- blank is how you clear one.
-        if (form.hasAttribute("data-needs-value") && !sel.value) { return; }
-        if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
-      });
+      for (var i = 0; i < sels.length; i++) {
+        (function (sel) {
+          // requestSubmit, not submit: the plain method skips validation and
+          // fires no submit event, so nothing else on the page can see it go.
+          sel.addEventListener("change", function () {
+            // data-needs-value: the blank option is this form's resting
+            // state, not a choice. Without the opt-in an empty value still
+            // posts, because elsewhere -- the seat picker -- blank is how you
+            // clear one.
+            if (form.hasAttribute("data-needs-value") && !sel.value) { return; }
+            if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+          });
+        }(sels[i]));
+      }
     }(pickers[p]));
   }
   // Table columns rather than panels, and a dropdown with no strip beside

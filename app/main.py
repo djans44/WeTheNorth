@@ -4982,51 +4982,126 @@ def queue_week_summary(season, week, force=False):
     return True
 
 
-@app.get("/admin/summaries", response_class=HTMLResponse)
-def admin_summaries(request: Request, season: int = 0,
-                    msg: str = "", error: str = ""):
-    """Everything written about a season, published or not.
+# What can be written, in the order the page offers it. The label is what an
+# admin calls it; the kind is what the summaries table calls it. Two of the
+# five are absent -- a matchup summary needs per-player results the league
+# does not keep, and the chat audit needs the chat -- and they are named on
+# the page rather than left off it.
+SUMMARY_KINDS = (("preview", "Preview"),
+                 ("week", "Weekly recap"),
+                 ("season", "Recap"))
 
-    Drafts first: an unpublished summary is the only thing on this page that
-    wants doing, and the published ones are here to be re-read rather than
-    acted on.
+
+def summary_target(conn, season, kind, week):
+    """The draft and the published summary for one thing written about.
+
+    At most one of each exists -- migration 045 -- so this is two rows at the
+    outside, and the page shows whichever of them are there.
+    """
+    rows = query(conn, """
+        select summary_id, kind, week, body, model, generated_at, published_at
+        from summaries
+        where season_year = %s and kind = %s
+          and week is not distinct from %s and matchup_id is null
+    """, (season, kind, week))
+    return (next((r for r in rows if not r["published_at"]), None),
+            next((r for r in rows if r["published_at"]), None))
+
+
+def summaries_url(season, kind, week=None, msg="", error=""):
+    """Back to the thing that was being looked at, not to the top of the page."""
+    from urllib.parse import quote
+    url = "/admin/summaries?season=%d&kind=%s" % (season, kind)
+    if week:
+        url += "&week=%d" % week
+    if msg:
+        url += "&msg=" + quote(msg)
+    if error:
+        url += "&error=" + quote(error)
+    return url
+
+
+@app.get("/admin/summaries", response_class=HTMLResponse)
+def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
+                    week: int = 0, msg: str = "", error: str = ""):
+    """One thing written about at a time: what exists for it, and what can be
+    done to it.
+
+    The page used to list everything a season had and put a writer for each
+    kind above it, which meant the answer to "what is week nine doing" was a
+    scroll. It asks now: pick the kind, pick the week if the kind wants one,
+    and the page is that target and nothing else.
     """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
+    if kind not in dict(SUMMARY_KINDS):
+        kind = "preview"
+
     with get_db() as conn:
         years = [r["season_year"] for r in query(conn, """
             select season_year from seasons order by season_year desc
         """)]
         if not season:
             season = years[0] if years else 0
-        rows = query(conn, """
-            select summary_id, kind, week, body, model,
-                   generated_at, published_at
-            from summaries where season_year = %s
-            order by (published_at is not null), generated_at desc
-        """, (season,))
-        # Which weeks can be written about, and which already have been. A
-        # week with no scores has nothing to say, and offering it would only
+        # Which weeks can be written about, and which already have something.
+        # A week with no scores has nothing to say, and offering it would only
         # spend a call finding that out.
         weeks = [r["week"] for r in query(conn, """
             select distinct week from matchups
             where season_year = %s and team_a_points is not null
             order by week
         """, (season,))]
-        # Whether the year is finished decides whether a recap is a thing
-        # that can be written or a thing to wait for.
-        done = query(conn, """
-            select 1 from season_results where season_year = %s and champion is not null
-        """, (season,))
+        written_weeks = {r["week"] for r in query(conn, """
+            select distinct week from summaries
+            where season_year = %s and kind = 'week' and week is not null
+        """, (season,))}
+        # Whether the year is finished decides whether a recap is a thing that
+        # can be written or a thing to wait for.
+        finished = bool(query(conn, """
+            select 1 from season_results
+            where season_year = %s and champion is not null
+        """, (season,)))
 
-    drafts = [r for r in rows if not r["published_at"]]
-    published = [r for r in rows if r["published_at"]]
-    written = {(r["kind"], r["week"]) for r in rows}
+        # A week has to be chosen before there is a target at all. Landing on
+        # the newest week with scores beats landing on nothing.
+        if kind == "week" and week not in weeks:
+            week = weeks[-1] if weeks else 0
+        if kind != "week":
+            week = 0
+
+        draft = published = None
+        if kind != "week" or week:
+            draft, published = summary_target(conn, season, kind, week or None)
+
+    # What this target is called, said once so the heading, the buttons and
+    # the toast cannot drift apart.
+    if kind == "preview":
+        name = "the %s preview" % season
+    elif kind == "season":
+        name = "the %s recap" % season
+    elif week:
+        name = "the week %s recap" % week
+    else:
+        # No week of this season has scores, so there is no week to name.
+        name = "a weekly recap"
+
+    # A recap needs a champion and a week needs scores. Saying which is
+    # missing beats a button that fails after thirty seconds.
+    blocked = ""
+    if not summaries.available():
+        blocked = "No GEMINI_API_KEY is set in this environment."
+    elif kind == "season" and not finished:
+        blocked = ("%s has no champion yet. A recap is written from the final "
+                   "table and the bracket." % season)
+    elif kind == "week" and not weeks:
+        blocked = "No week of %s has scores yet." % season
+
     return templates.TemplateResponse(
         request=request, name="admin_summaries.html",
-        context={"years": years, "season": season,
-                 "drafts": drafts, "published": published,
-                 "weeks": weeks, "written": written, "finished": bool(done),
+        context={"years": years, "season": season, "kinds": SUMMARY_KINDS,
+                 "kind": kind, "week": week, "weeks": weeks,
+                 "written_weeks": written_weeks, "name": name,
+                 "draft": draft, "published": published, "blocked": blocked,
                  "have_key": summaries.available(), "model": summaries.MODEL,
                  "msg": msg, "error": error})
 
@@ -5047,28 +5122,31 @@ async def admin_summary_generate(request: Request):
 
     if kind not in WRITEABLE:
         return RedirectResponse(
-            url=back + "&error=" + quote("%s summaries are not written yet."
-                                         % kind.title()), status_code=303)
+            url=summaries_url(season, "preview",
+                              error="%s summaries are not written yet."
+                                    % kind.title()), status_code=303)
     if kind == "week" and not week:
         return RedirectResponse(
-            url=back + "&error=" + quote("Choose a week to write about."),
+            url=summaries_url(season, kind, error="Choose a week to write about."),
             status_code=303)
 
     with get_db() as conn:
         try:
             _, missed = write_one_summary(conn, season, kind, week)
         except summaries.SummaryError as e:
-            return RedirectResponse(url=back + "&error=" + quote(str(e)),
-                                    status_code=303)
+            return RedirectResponse(
+                url=summaries_url(season, kind, week, error=str(e)),
+                status_code=303)
 
-    what = {"preview": "Preview", "season": "Recap"}.get(
-        kind, "The week %s account" % week)
-    note = "%s written for %s. Read it before publishing." % (what, season)
+    what = {"preview": "the %s preview" % season,
+            "season": "the %s recap" % season}.get(kind, "the week %s recap" % week)
+    note = "Wrote %s. Read it before publishing." % what
     if missed:
         # Reported rather than hidden: the retry already had its go, and an
         # admin deciding whether to publish should know who was left out.
         note += " Not mentioned: %s." % ", ".join(missed)
-    return RedirectResponse(url=back + "&msg=" + quote(note), status_code=303)
+    return RedirectResponse(url=summaries_url(season, kind, week, msg=note),
+                            status_code=303)
 
 
 def _scores_url(season, week, mode="", msg="", error=""):
@@ -5178,21 +5256,29 @@ async def admin_summary_publish(request: Request):
         return RedirectResponse(
             url=back + "&error=" + quote("That summary is already published."),
             status_code=303)
-    what = ("week %s" % row["week"]) if row["week"] else row["kind"]
+    what = ("the week %s recap" % row["week"]) if row["week"] else            ("the %s %s" % (season, "preview" if row["kind"] == "preview" else "recap"))
     if from_scores:
         return RedirectResponse(
             url=_scores_url(season, week_back,
-                            msg="Published the %s account. The league can see "
-                                "it now." % what), status_code=303)
+                            msg="Published the week %s account. The league can "
+                                "see it now." % row["week"]), status_code=303)
     return RedirectResponse(
-        url=back + "&msg=" + quote("Published the %s summary." % what),
+        url=summaries_url(season, row["kind"], row["week"],
+                          msg="Published %s. The league can see it now." % what),
         status_code=303)
 
 
 @app.post("/admin/summaries/discard")
 async def admin_summary_discard(request: Request):
-    """Throw a draft away. Only a draft: a published summary has been read by
-    the league and deleting it silently would change what they remember."""
+    """Throw one away.
+
+    A draft by preference: it has never been seen and nothing is lost. The
+    published one only when there is no draft left to remove instead, and only
+    because there is otherwise no way to unsay something -- publishing replaces
+    a published summary but nothing withdraws one. That is a deletion the
+    league will notice, so the button that sends it says which it is about to
+    do and asks first.
+    """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     from urllib.parse import quote
@@ -5205,30 +5291,30 @@ async def admin_summary_discard(request: Request):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                delete from summaries
-                where summary_id = %s and published_at is null
+                delete from summaries where summary_id = %s
+                returning kind, week, published_at is not null as was_live
             """, (sid,))
-            gone = cur.rowcount
+            row = cur.fetchone()
         conn.commit()
 
-    back = "/admin/summaries?season=%d" % season
-    if not gone:
+    if not row:
         if from_scores:
             return RedirectResponse(
                 url=_scores_url(season, week_back,
-                                error="Nothing discarded: a published account "
-                                      "cannot be deleted here."),
+                                error="Nothing to remove: it is already gone."),
                 status_code=303)
         return RedirectResponse(
-            url=back + "&error=" + quote("Nothing discarded: a published "
-                                         "summary cannot be deleted here."),
+            url="/admin/summaries?season=%d" % season + "&error="
+                + quote("Nothing to remove: it is already gone."),
             status_code=303)
+    note = ("Removed the published summary. The season page has nothing there "
+            "now." if row["was_live"] else "Draft removed.")
     if from_scores:
         return RedirectResponse(
-            url=_scores_url(season, week_back, msg="Draft discarded."),
-            status_code=303)
-    return RedirectResponse(url=back + "&msg=" + quote("Draft discarded."),
-                            status_code=303)
+            url=_scores_url(season, week_back, msg=note), status_code=303)
+    return RedirectResponse(
+        url=summaries_url(season, row["kind"], row["week"], msg=note),
+        status_code=303)
 
 
 @app.get("/admin/season-setup", response_class=HTMLResponse)
