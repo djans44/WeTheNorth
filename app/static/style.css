@@ -2198,9 +2198,11 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
   font-style: italic;
   color: var(--ink-muted);
 }
-/* A summary waiting to be read, on /admin/summaries. Panelled so several in
-   a row stay separable, which a page of bare paragraphs would not. */
-.draft {
+/* A summary on an admin page, draft or published. Panelled so two in a row
+   stay separable, which a page of bare paragraphs would not. It was .draft
+   until a published summary started using it too, and a class that is wrong
+   about half its uses is a class somebody eventually believes. */
+.written {
   margin: var(--s4) 0 0;
   padding: var(--s4);
   border: 1px solid var(--rule);
@@ -2228,16 +2230,16 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    two words are different lengths and the pair reads as a choice rather than
    as two buttons when the boxes match. 10rem clears the longer of them with
    the seal's own padding either side. */
-.draft .phase-act {
+.written .phase-act {
   display: flex;
   justify-content: flex-end;
   gap: var(--s3);
   margin-top: var(--s4);
 }
-.draft .phase-act button { min-width: 10rem; }
+.written .phase-act button { min-width: 10rem; }
 /* .inline exists so these two buttons sit on one line rather than each
    taking the margin a lone submit gets. */
-.draft form.inline { margin: 0; }
+.written form.inline { margin: 0; }
 
 /* ---- the bar that arrives after the header ---- */
 

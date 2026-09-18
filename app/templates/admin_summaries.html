@@ -63,7 +63,7 @@
   </section>
 
   <section>
-    <h2>{{ name|capitalize }}</h2>
+    <h2>{{ heading }}</h2>
 
     {# Nothing written, and nothing stopping it being written. An invitation
        rather than an apology: the button that fixes it is directly below and
@@ -77,7 +77,7 @@
     {# The draft first -- it is the only thing here wanting a decision. The
        published one sits under it, to be read against. #}
     {% if draft %}
-      <article class="draft">
+      <article class="written">
         <p class="setup-head">
           <b>Draft</b>
           <span class="pill">Not visible to the league</span>
@@ -94,7 +94,7 @@
     {% endif %}
 
     {% if published %}
-      <article class="draft">
+      <article class="written">
         <p class="setup-head">
           <b>Published</b>
           {% if shown_on %}

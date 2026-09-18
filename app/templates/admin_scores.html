@@ -139,7 +139,7 @@
         again</a>.</p>
 
     {% elif account.state in ("draft", "published") %}
-      <article class="draft">
+      <article class="written">
         <p class="setup-head">
           <b>Week {{ week }}</b>
           <span class="pill {% if account.state == 'published' %}live{% endif %}">

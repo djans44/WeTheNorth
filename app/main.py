@@ -4852,14 +4852,6 @@ def write_summary(conn, season, kind, body, model, week=None, matchup_id=None):
     return new_id
 
 
-# Which kinds can be written, in the order the page offers them. Two of the
-# five are not here: a matchup summary needs per-player results the database
-# does not hold, and the chat audit needs the league's chat, which nothing
-# reads yet. They are named on the page rather than left off it, so the gap
-# is a known gap.
-WRITEABLE = ("preview", "week", "season")
-
-
 def summary_writer(conn):
     """The `q` a fact gatherer wants: a query that returns dicts.
 
@@ -5118,7 +5110,10 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
             draft, published = summary_target(conn, season, kind, week or None)
 
     # What this target is called, said once so the heading, the buttons and
-    # the toast cannot drift apart.
+    # the toast cannot drift apart. The heading is capitalised here rather
+    # than by Jinja's capitalize, which lowercases everything after the first
+    # letter -- harmless while no name holds a proper noun, and silent the day
+    # one does.
     if kind == "preview":
         name = "the %s preview" % season
     elif kind == "season":
@@ -5176,6 +5171,7 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
         context={"years": years, "season": season, "kinds": SUMMARY_KINDS,
                  "kind": kind, "week": week, "weeks": weeks,
                  "written_weeks": written_weeks, "name": name,
+                 "heading": name[:1].upper() + name[1:],
                  "draft": draft, "published": published, "blocked": blocked,
                  "at_a_glance": at_a_glance, "shown_on": shown_on,
                  "model": summaries.MODEL})
@@ -5195,7 +5191,7 @@ async def admin_summary_generate(request: Request):
     week = int(form.get("week") or 0) or None
     back = "/admin/summaries?season=%d" % season
 
-    if kind not in WRITEABLE:
+    if kind not in dict(SUMMARY_KINDS):
         return RedirectResponse(
             url=summaries_url(season, "preview",
                               error="%s summaries are not written yet."
