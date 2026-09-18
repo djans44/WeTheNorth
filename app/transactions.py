@@ -174,6 +174,20 @@ def parse(text, season, expect="adds"):
             puzzle(block, "The first line is not a player.")
             continue
 
+        if len(block) == 4 and gone_line(block[1]):
+            # A drop with nothing coming the other way: the player leaves and
+            # the manager fills the place later or not at all. It looks like
+            # an add of four lines until you read the second, which is where
+            # he went rather than how he arrived -- and read as an add it
+            # would say a dropped player was picked up, which sets his keeper
+            # price to 13 for a season he was not on the roster for.
+            _, _, team, date = block
+            moves.append({"kind": "drop", "player": name, "position": pos,
+                          "team": strip_paren(team), "method": None,
+                          "faab": None, "date": date,
+                          "on": parse_date(date, season), "raw": block})
+            continue
+
         if len(block) == 4:
             _, method_text, team, date = block
             dropped = None
