@@ -74,7 +74,20 @@
    same seven marks inside a roundel, and an <svg> cannot be nested into
    another one and still be styled. #}
 {% macro sigilcharge(code) -%}
-    {%- if code == "reigning_champion" %}
+    {%- if code == "most_faab" %}
+      {#- A coin. Blunt on purpose: at 14px a stack of them is a smudge. -#}
+      <circle cx="10" cy="10" r="6.4"/>
+      <path class="cut" d="M6.2 8.8h7.6v1.2H6.2z M6.2 11h7.6v1.2H6.2z"/>
+    {%- elif code == "most_trades" %}
+      {#- The spider of the shield, with four legs instead of eight. Eight at
+          this size is a blot. -#}
+      <ellipse cx="10" cy="7.6" rx="2" ry="1.7"/>
+      <ellipse cx="10" cy="12" rx="3" ry="3.3"/>
+      <g class="line" stroke-width="1.5">
+        <path d="M7.2 10.2L3.2 7.6M12.8 10.2l4-2.6"/>
+        <path d="M7.2 13.8l-4 2.6M12.8 13.8l4 2.6"/>
+      </g>
+    {%- elif code == "reigning_champion" %}
       <path d="M2.8 15.6V5.2l4 3.4L10 3.4l3.2 5.2 4-3.4v10.4z"/>
     {%- elif code == "best_record" %}
       <path d="M10 2.6l2.3 4.8 5.2.7-3.8 3.7.9 5.2-4.6-2.5-4.6 2.5.9-5.2L2.5 8.1l5.2-.7z"/>
