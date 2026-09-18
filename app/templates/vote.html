@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}The vote | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    <h1>{{ leaf(20) }}The vote{% if poll %} {{ poll.season_year }}{% endif %}</h1>
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  {% if not poll %}
+    <section>
+      <p class="note">No vote has been called. Four of the crests are opinions
+        rather than records &mdash; the best name, conduct at the draft, the
+        deal of the year, the defeat nobody deserved &mdash; and when a season
+        ends the league is asked for them here.</p>
+    </section>
+
+  {% else %}
+  <section>
+    {% if open %}
+      <p class="note">Four questions, one answer each. Change any of them
+        until the vote closes on
+        {{ poll.closes_at|league_day }}.
+        {{ voters }} of {{ seats }} have voted so far. Nobody sees a result,
+        yours included, until it closes.</p>
+    {% else %}
+      <p class="note">This vote is closed. {{ voters }} of {{ seats }} took
+        part.</p>
+    {% endif %}
+  </section>
+
+  {% if open %}
+  {# ---- the ballot ---- #}
+  <form method="post" action="/vote">
+    <input type="hidden" name="season" value="{{ poll.season_year }}">
+    {% for c in crests %}
+      <section>
+        <h2>{{ c.name }}</h2>
+        <p class="note">{{ c.description }}</p>
+        {% set options = ballots.get(c.code, []) %}
+        {% if not options %}
+          <p class="note">Nothing to vote on: the season has none of these.</p>
+        {% else %}
+          <ul class="ballot">
+            {% for o in options %}
+              <li>
+                <label>
+                  <input type="radio" name="crest_{{ c.crest_id }}"
+                         value="{{ o.candidate }}"
+                         {% if mine.get(c.crest_id) == o.candidate %}checked{% endif %}>
+                  <span class="who">{{ o.who }}</span>
+                  {% if o.what %}<span class="what">{{ o.what }}</span>{% endif %}
+                  {% if o.rivals %}<span class="pill">Rivals</span>{% endif %}
+                  {% if o.scores %}<span class="tm">{{ o.scores }}</span>{% endif %}
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    {% endfor %}
+
+    <section>
+      <div class="actionrow">
+        <button type="submit" class="seal">
+          {% if mine %}Change my votes{% else %}Cast my votes{% endif %}</button>
+      </div>
+    </section>
+  </form>
+
+  {% else %}
+  {# ---- what the league said ---- #}
+  {% for c in crests %}
+    <section>
+      <h2>{{ c.name }}</h2>
+      {% set r = result.get(c.crest_id) %}
+      {% if not r %}
+        <p class="note">Nobody voted on this one.</p>
+      {% else %}
+        {% if r.tied %}
+          <p class="note">A tie at the top. The commissioner settles it.</p>
+        {% endif %}
+        <table class="keepers tally">
+          <tbody>
+          {% for row in r.tally %}
+            <tr class="{% if row.winner %}won{% endif %}">
+              <td class="count">{{ row.votes }}</td>
+              <td class="name">{{ row.username }}</td>
+              <td>{{ row.detail }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </section>
+  {% endfor %}
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

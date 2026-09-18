@@ -19,6 +19,7 @@ from psycopg_pool import ConnectionPool
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import crests as crestrules
+from app import honours
 from app import rosters as rosterrules
 from app import standings
 from app import summaries
@@ -162,6 +163,23 @@ def portrait_url(username):
 templates.env.globals["static_url"] = static_url
 templates.env.globals["portrait_url"] = portrait_url
 templates.env.filters["league_field"] = league_field
+
+
+def league_day(ts):
+    """A timestamp as the league reads it: its own date, in its own zone.
+
+    Printed straight, a deadline set for the last night of December comes out
+    as the first of January, because the column is stored in UTC and eleven
+    at night in Toronto is four in the morning in London. league_window has
+    said so since the keeper windows; this is the same thing for one date.
+    """
+    if not ts:
+        return ""
+    d = ts.astimezone(LEAGUE_TZ)
+    return "%s %d" % (d.strftime("%b"), d.day)
+
+
+templates.env.filters["league_day"] = league_day
 def crest_when(row):
     """When a crest was won, and what earned it, on one line.
 
@@ -3063,6 +3081,166 @@ POSITION_ORDER = {p: i for i, p in
                   enumerate(("QB", "RB", "WR", "TE", "K", "DEF"))}
 
 
+# --------------------------------------------------------------- the vote
+
+def poll_for(conn, season=None):
+    """The poll for a season, or the one that is open if no season is named."""
+    if season:
+        rows = query(conn, """
+            select * from crest_polls where season_year = %s
+        """, (season,))
+    else:
+        rows = query(conn, """
+            select * from crest_polls
+            order by (closed_at is null and closes_at > now()) desc,
+                     season_year desc limit 1
+        """)
+    return rows[0] if rows else None
+
+
+def poll_is_open(poll):
+    """Open until it is closed or its date passes. One rule, asked in one
+    place, so the page and the post can never disagree about it."""
+    if not poll or poll["closed_at"]:
+        return False
+    return poll["closes_at"] > datetime.datetime.now(datetime.timezone.utc)
+
+
+def poll_result(conn, poll):
+    """Every honour's count, most votes first, and whether it ties.
+
+    The tie is reported rather than resolved: awarding is still the manual
+    grant, and a tie is exactly the thing a commissioner is for.
+    """
+    rows = query(conn, """
+        select v.crest_id, v.candidate, v.detail, v.choice_owner_id,
+               count(*) as votes, o.username
+        from crest_votes v
+        join owners o on o.owner_id = v.choice_owner_id
+        where v.poll_id = %s
+        group by v.crest_id, v.candidate, v.detail, v.choice_owner_id, o.username
+        order by count(*) desc, o.username
+    """, (poll["poll_id"],))
+    out = {}
+    for r in rows:
+        out.setdefault(r["crest_id"], []).append(r)
+    for crest_id, tally in out.items():
+        top = tally[0]["votes"]
+        for r in tally:
+            r["winner"] = r["votes"] == top
+        # A tie only matters at the top.
+        out[crest_id] = {"tally": tally,
+                         "tied": sum(1 for r in tally if r["votes"] == top) > 1}
+    return out
+
+
+@app.get("/vote", response_class=HTMLResponse)
+def vote_page(request: Request, season: int = 0, msg: str = "", error: str = ""):
+    """The four honours nobody can earn, put to the twelve people who hold
+    opinions about them.
+
+    One ballot, four questions, one vote each. The ballots are built from the
+    season rather than nominated, because the candidates are already known:
+    the twelve team names, the twelve managers, each side of each trade, and
+    every defeat by ten points or fewer.
+    """
+    me = request.session.get("owner_id")
+    with get_db() as conn:
+        poll = poll_for(conn, season or None)
+        if not poll:
+            return templates.TemplateResponse(
+                request=request, name="vote.html",
+                context={"poll": None, "open": False, "ballots": {},
+                         "crests": [], "mine": {}, "result": {},
+                         "turnout": 0, "voters": 0})
+
+        crests = query(conn, """
+            select crest_id, code, name, description from crests
+            where active and award_mode = 'manual' order by sort_order
+        """)
+        def q(sql, p=()):
+            return query(conn, sql, p)
+        ballots = honours.ballots(q, poll["season_year"])
+        mine = {r["crest_id"]: r["candidate"] for r in query(conn, """
+            select crest_id, candidate from crest_votes
+            where poll_id = %s and owner_id = %s
+        """, (poll["poll_id"], me or 0))}
+        voters = query(conn, """
+            select count(distinct owner_id) as n from crest_votes
+            where poll_id = %s
+        """, (poll["poll_id"],))[0]["n"]
+        seats = query(conn, """
+            select count(*) as n from teams where season_year = %s
+        """, (poll["season_year"],))[0]["n"]
+
+        live = poll_is_open(poll)
+        result = {} if live else poll_result(conn, poll)
+
+    return templates.TemplateResponse(
+        request=request, name="vote.html",
+        context={"poll": poll, "open": live, "ballots": ballots,
+                 "crests": crests, "mine": mine, "result": result,
+                 "voters": voters, "seats": seats,
+                 "msg": msg, "error": error})
+
+
+@app.post("/vote")
+async def vote_cast(request: Request):
+    """One vote each per honour, changeable until the poll closes."""
+    me = request.session.get("owner_id")
+    if not me:
+        raise HTTPException(status_code=403, detail="Sign in to vote")
+    from urllib.parse import quote
+    form = await request.form()
+
+    with get_db() as conn:
+        poll = poll_for(conn, int(form.get("season") or 0) or None)
+        if not poll_is_open(poll):
+            return RedirectResponse(
+                url="/vote?error=" + quote("That vote is closed."),
+                status_code=303)
+
+        def q(sql, p=()):
+            return query(conn, sql, p)
+        ballots = honours.ballots(q, poll["season_year"])
+        crests = query(conn, """
+            select crest_id, code from crests
+            where active and award_mode = 'manual'
+        """)
+
+        cast = 0
+        with conn.cursor() as cur:
+            for c in crests:
+                picked = form.get("crest_%d" % c["crest_id"])
+                if not picked:
+                    continue
+                # The candidate has to be on the ballot it claims to be on.
+                # The form came through a browser, and a vote for something
+                # nobody could see would be a crest granted out of nowhere.
+                found = next((b for b in ballots.get(c["code"], [])
+                              if b["candidate"] == picked), None)
+                if not found:
+                    continue
+                cur.execute("""
+                    insert into crest_votes
+                        (poll_id, crest_id, owner_id, choice_owner_id,
+                         candidate, detail)
+                    values (%s, %s, %s, %s, %s, %s)
+                    on conflict (poll_id, crest_id, owner_id) do update
+                       set choice_owner_id = excluded.choice_owner_id,
+                           candidate = excluded.candidate,
+                           detail = excluded.detail,
+                           cast_at = now()
+                """, (poll["poll_id"], c["crest_id"], me,
+                      found["owner_id"], found["candidate"], found["detail"]))
+                cast += 1
+        conn.commit()
+
+    told = "%d vote%s recorded. Change them any time before it closes." % (
+        cast, "" if cast == 1 else "s")
+    return RedirectResponse(url="/vote?msg=" + quote(told), status_code=303)
+
+
 @app.get("/rosters", response_class=HTMLResponse)
 def rosters_page(request: Request, season: int = 0, who: str = ""):
     """Who holds whom, worked out where it can be and stored where it cannot.
@@ -3408,9 +3586,19 @@ def admin_crests(request: Request, season: int = 0):
             where c.award_mode = 'manual'
             order by oc.season_year desc, c.sort_order
         """)
+        poll = poll_for(conn, season)
+        vote = {"poll": poll, "open": poll_is_open(poll), "result": {},
+                "voters": 0}
+        if poll:
+            vote["voters"] = query(conn, """
+                select count(distinct owner_id) as n from crest_votes
+                where poll_id = %s
+            """, (poll["poll_id"],))[0]["n"]
+            if not vote["open"]:
+                vote["result"] = poll_result(conn, poll)
     return templates.TemplateResponse(
         request=request, name="admin_crests.html",
-        context={"years": years, "season": season, "manual": manual,
+        context={"vote": vote,"years": years, "season": season, "manual": manual,
                  "owners": owners, "given": given})
 
 
@@ -3449,6 +3637,54 @@ async def admin_crests_grant(request: Request):
     return RedirectResponse(
         url=f"/admin/crests?season={season}&msg=" +
             quote(f"{name} awarded to {who} for {season}."),
+        status_code=303)
+
+
+@app.post("/admin/crests/poll")
+async def admin_crests_poll(request: Request):
+    """Open the league's vote on a season, or close it and see the count.
+
+    Closing is what reveals the result -- to everyone at once, the
+    commissioner included. Awarding is still the grant above: a poll decides
+    who should hold a crest and the commissioner writes it down, which is
+    what leaves a tie something to be settled by.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    doing = form.get("action")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            if doing == "open":
+                closes = (form.get("closes") or "").strip()
+                if not closes:
+                    return RedirectResponse(
+                        url="/admin/crests?season=%d&error=%s"
+                            % (season, quote("Give the vote a closing date.")),
+                        status_code=303)
+                cur.execute("""
+                    insert into crest_polls (season_year, opened_by, closes_at)
+                    values (%s, %s, %s)
+                    on conflict (season_year) do update
+                       set closes_at = excluded.closes_at, closed_at = null
+                """, (season, request.session.get("owner_id"),
+                      league_moment(closes)))
+                told = "The %d vote is open." % season
+            elif doing == "close":
+                cur.execute("""
+                    update crest_polls set closed_at = now()
+                    where season_year = %s and closed_at is null
+                """, (season,))
+                told = ("The %d vote is closed and the count is on the page."
+                        % season)
+            else:
+                told = ""
+        conn.commit()
+    return RedirectResponse(
+        url="/admin/crests?season=%d&msg=%s" % (season, quote(told)),
         status_code=303)
 
 

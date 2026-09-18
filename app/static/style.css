@@ -1318,6 +1318,32 @@ label.second { margin-top: var(--s4); }
 /* Why a block was not understood, immediately above the block itself. */
 .note.why { margin-bottom: var(--s1); color: var(--loss); font-style: normal; }
 
+/* ---- the vote ---- */
+/* One choice to a line, the whole line clickable. A ballot of twenty-seven
+   defeats is read down the left edge, so the name comes first and the story
+   after it. */
+.ballot { margin: 0; padding: 0; list-style: none; }
+.ballot li + li { border-top: 1px solid var(--rule); }
+.ballot label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin: 0;
+  padding: var(--s2) var(--s1);
+  font-weight: 400;
+  cursor: pointer;
+}
+.ballot label:hover { background: var(--gold-ghost); }
+.ballot input { flex: 0 0 auto; }
+.ballot .who { flex: 0 0 5.5rem; font-weight: 600; }
+.ballot .what { flex: 1 1 auto; color: var(--ink-muted); }
+.ballot .tm { display: inline; flex: 0 0 auto; }
+
+/* The count, once it is allowed to be seen. */
+.tally .count { width: 3rem; font-weight: 700; text-align: right; }
+.tally td { text-align: left; }
+.tally tr.won td { color: var(--gold-deep); font-weight: 600; }
+
 /* ---- rosters ---- */
 .squadteam { margin: 0 0 var(--s2); }
 .squad { margin: 0; padding: 0; list-style: none; font-size: var(--t-sm); }

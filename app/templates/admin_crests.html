@@ -86,5 +86,77 @@
       </div>
     {% endif %}
   </section>
+
+  {# ---- the league's vote ----
+     The four here are opinions, and twelve people hold them. A poll decides
+     who should have one; the grant above is still what gives it, which is
+     what leaves a tie somebody to settle it. #}
+  <section>
+    <h2>The league&rsquo;s vote</h2>
+    {% if not vote.poll %}
+      <p class="note">No vote called for {{ season }}. Opening one puts four
+        questions to the league at <a href="/vote">the vote</a>, built from the
+        season itself: the twelve names, the twelve managers, each side of each
+        trade, and every defeat by ten points or fewer.</p>
+      <form method="post" action="/admin/crests/poll" class="picker">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="action" value="open">
+        <span class="pickfield">
+          <label for="closes">Closes</label>
+          <input type="datetime-local" id="closes" name="closes" required>
+        </span>
+        <button type="submit" class="seal">Open the vote</button>
+      </form>
+
+    {% elif vote.open %}
+      <p class="note">Open until
+        {{ vote.poll.closes_at|league_day }}.
+        {{ vote.voters }} have voted. Nobody sees a count until it closes,
+        including you.</p>
+      <form method="post" action="/admin/crests/poll">
+        <input type="hidden" name="season" value="{{ season }}">
+        <input type="hidden" name="action" value="close">
+        <div class="actionrow">
+          <button type="submit" class="seal"
+                  data-confirm="Close the vote now? The count becomes visible to the whole league and no more votes can be cast.">
+            Close it now</button>
+        </div>
+      </form>
+
+    {% else %}
+      <p class="note">Closed. {{ vote.voters }} took part, and the league can
+        read the count. Awarding is still yours &mdash; press the winner
+        through and it is granted the same way anything here is.</p>
+      {% for c in manual %}
+        {% set r = vote.result.get(c.crest_id) %}
+        {% if r %}
+          <p class="setup-head"><b>{{ c.name }}</b>
+            {% if r.tied %}<span class="pill">Tied</span>{% endif %}</p>
+          <table class="keepers tally">
+            <tbody>
+            {% for row in r.tally %}
+              <tr class="{% if row.winner %}won{% endif %}">
+                <td class="count">{{ row.votes }}</td>
+                <td class="name">{{ row.username }}</td>
+                <td>{{ row.detail }}</td>
+                <td class="got">
+                  {% if row.winner %}
+                    <form method="post" action="/admin/crests" class="inline">
+                      <input type="hidden" name="season" value="{{ season }}">
+                      <input type="hidden" name="crest_id" value="{{ c.crest_id }}">
+                      <input type="hidden" name="owner_id" value="{{ row.choice_owner_id }}">
+                      <input type="hidden" name="detail" value="{{ row.detail }}">
+                      <button type="submit" class="seal quiet">Award</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
