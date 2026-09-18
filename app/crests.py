@@ -321,7 +321,50 @@ def transactions(conn, seasons):
         """, (y, y)), "n"):
             out["wheeler_dealer"].append(
                 (r["owner_id"], y, None, f"{r['n']} trades", 0))
+
+    # ---- and the two that count across every season ----
+    # Career crests, so no season goes on the row. They read every complete
+    # season at once rather than summing the season awards: counting awards
+    # would make one crest depend on another having run first, and a rebuild
+    # would answer differently depending on the order it happened in.
+    done = [y for y in complete_seasons(conn, seasons) if y in have]
+    if done:
+        # Money. faab_amount is null for a free agent and for a plain waiver
+        # claim, so this is the sum of what was actually bid, and a manager
+        # who never bid is not in the running rather than tied at nothing.
+        for r in leaders(q(conn, """
+            select t.owner_id, sum(x.faab_amount) as spent
+            from transactions x join teams t on t.team_id = x.to_team_id
+            where x.season_year = any(%s) and x.kind = 'add'
+              and x.faab_amount is not null
+              and t.season_year = x.season_year
+            group by t.owner_id having sum(x.faab_amount) > 0
+        """, (done,)), "spent"):
+            out["most_faab"].append(
+                (r["owner_id"], None, None, "$%s spent" % _plain(r["spent"]), 0))
+
+        # And trades, counted the same way the season one counts them: a
+        # three-for-one is one trade, not four rows.
+        for r in leaders(q(conn, """
+            select t.owner_id, count(distinct (
+                       x.season_year, x.occurred_on,
+                       least(x.from_team_id, x.to_team_id),
+                       greatest(x.from_team_id, x.to_team_id))) as n
+            from transactions x join teams t
+              on t.team_id in (x.to_team_id, x.from_team_id)
+            where x.season_year = any(%s) and x.kind = 'trade'
+              and t.season_year = x.season_year
+            group by t.owner_id
+        """, (done,)), "n"):
+            out["most_trades"].append(
+                (r["owner_id"], None, None, "%d trades" % r["n"], 0))
     return out
+
+
+def _plain(n):
+    """A money amount without the trailing zeroes nobody reads."""
+    s = ("%.2f" % float(n)).rstrip("0").rstrip(".")
+    return s or "0"
 
 
 def rivalry(conn, seasons):
