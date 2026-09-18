@@ -4812,11 +4812,22 @@ def season_setup_steps(conn, year):
 def write_summary(conn, season, kind, body, model, week=None, matchup_id=None):
     """Store a generated summary, unpublished. Returns its id.
 
-    Never updates. A regeneration is a new row that sits beside the one it
-    hopes to replace until somebody prefers it, which is what makes
-    "generate again and see" a safe thing to do on a page the league reads.
+    Replaces the draft that was there, if there was one. Two per thing
+    written about is the whole allowance -- one draft and one published --
+    and a unique index enforces it, so writing without clearing the old draft
+    first is not a lost row, it is an error. See migration 045.
+
+    What has not changed is the part that mattered: a draft is still
+    invisible to the league, and publishing is still a separate act.
     """
     with conn.cursor() as cur:
+        cur.execute("""
+            delete from summaries
+            where season_year = %s and kind = %s
+              and week is not distinct from %s
+              and matchup_id is not distinct from %s
+              and published_at is null
+        """, (season, kind, week, matchup_id))
         cur.execute("""
             insert into summaries (season_year, kind, week, matchup_id, body, model)
             values (%s, %s, %s, %s, %s, %s)
@@ -5130,14 +5141,32 @@ async def admin_summary_publish(request: Request):
     week_back = int(form.get("week") or 0)
     back = "/admin/summaries?season=%d" % season
 
+    # Publishing replaces whatever was published for the same thing. Two
+    # statements rather than one: a data-modifying CTE that deletes and then
+    # updates the same table gives no ordering guarantee, and the unique
+    # index would reject the pair in whichever order it did not like.
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                update summaries set published_at = now()
+                select season_year, kind, week, matchup_id from summaries
                 where summary_id = %s and published_at is null
-                returning kind, week
             """, (sid,))
-            row = cur.fetchone()
+            target = cur.fetchone()
+            row = None
+            if target:
+                cur.execute("""
+                    delete from summaries
+                    where season_year = %(season_year)s and kind = %(kind)s
+                      and week is not distinct from %(week)s
+                      and matchup_id is not distinct from %(matchup_id)s
+                      and published_at is not null
+                """, target)
+                cur.execute("""
+                    update summaries set published_at = now()
+                    where summary_id = %s
+                    returning kind, week
+                """, (sid,))
+                row = cur.fetchone()
         conn.commit()
 
     if not row:

@@ -13,6 +13,10 @@ measure the generated ones against.
 Unpublished unless --publish is passed. Nothing reaches the season page until
 it is published, and that stays true for these.
 
+At most two summaries exist for any one thing written about: a draft and a
+published one. Writing replaces whichever of the two this row is, which for
+--publish means the text the league could already read is gone.
+
     --facts   print what a summary of that shape is allowed to talk about and
               stop. The same facts the prompt hands the model, so writing one
               by hand and generating one are working from the same notes.
@@ -75,7 +79,18 @@ def main():
         if not body:
             ap.error("%s is empty" % args.file)
 
+        # Two per thing written about, one of each state -- see migration
+        # 045. Whichever state this row is going into, the row already in it
+        # makes way.
         with conn.cursor() as cur:
+            cur.execute("""
+                delete from summaries
+                where season_year = %s and kind = %s
+                  and week is not distinct from %s
+                  and matchup_id is null
+                  and (published_at is not null) = %s
+            """, (args.season, args.kind, args.week, args.publish))
+            replaced = cur.rowcount
             cur.execute("""
                 insert into summaries
                     (season_year, kind, week, body, model, published_at)
@@ -86,10 +101,11 @@ def main():
             new_id = cur.fetchone()["summary_id"]
         conn.commit()
 
-    print("%s %s%s for %s: id %d, %d characters, %s"
+    print("%s %s%s for %s: id %d, %d characters, %s%s"
           % (args.model, args.kind,
              " %d" % args.week if args.week else "", args.season, new_id,
-             len(body), "published" if args.publish else "unpublished"))
+             len(body), "published" if args.publish else "unpublished",
+             ", replacing the one that was there" if replaced else ""))
 
 
 if __name__ == "__main__":
