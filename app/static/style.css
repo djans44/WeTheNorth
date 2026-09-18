@@ -1263,6 +1263,10 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 /* Keeper and admin listings. */
 .keepers td, .keepers th { padding: 0.4rem var(--s2); }
 .keepers .rd { font-weight: 700; width: 4rem; }
+/* A count under a header too long for .rd's four rems -- the schedule page's
+   "Times this season" was stacking onto three lines. No width, so the header
+   sets the column and the number sits under it. */
+.keepers .tally { font-weight: 700; white-space: nowrap; }
 .keepers .name { min-width: 12rem; }
 
 .owners-grid th, .owners-grid td { text-align: left; vertical-align: middle; }

@@ -48,16 +48,27 @@
     <p class="note">Fourteen weeks. Every manager plays three opponents twice and
       the rest once, favouring pairings that have met least often. Week 10 is
       rivalry week.</p>
-    {# A fresh seed each render, so the button is "roll another" rather than
-       "roll the same one again". #}
-    <div class="actionrow">
-      <form method="get" action="/admin/schedule" class="inline">
-        <input type="hidden" name="season" value="{{ season }}">
-        <input type="hidden" name="seed" value="{{ range(1, 999999) | random }}">
-        <button type="submit" class="seal">
-          {% if weeks %}Roll another{% else %}Roll a schedule{% endif %}</button>
-      </form>
-    </div>
+    {# Once a week has been scored there is no rolling: the generator lays out
+       a whole season and the save cannot fit one around weeks already played.
+       The button goes rather than greying out, and the reason takes its place;
+       a disabled control with no explanation is a puzzle. #}
+    {% if played %}
+      <p class="note">{{ season }} has scores entered, so its schedule is
+        settled. Rolling a new one would lay fourteen fresh weeks over the
+        weeks already played. Single matchups can still be changed on the
+        <a href="/admin/scores?season={{ season }}">score entry</a> page.</p>
+    {% else %}
+      {# A fresh seed each render, so the button is "roll another" rather than
+         "roll the same one again". #}
+      <div class="actionrow">
+        <form method="get" action="/admin/schedule" class="inline">
+          <input type="hidden" name="season" value="{{ season }}">
+          <input type="hidden" name="seed" value="{{ range(1, 999999) | random }}">
+          <button type="submit" class="seal">
+            {% if weeks %}Roll another{% else %}Roll a schedule{% endif %}</button>
+        </form>
+      </div>
+    {% endif %}
     {% if error %}<div class="errors">{{ error }}</div>{% endif %}
   </section>
 
@@ -74,12 +85,12 @@
   <section>
     <h2>Doubled opponents</h2>
     <table class="keepers">
-      <thead><tr><th>Pair</th><th>Times this season</th><th>Met before</th></tr></thead>
+      <thead><tr><th>Pair</th><th class="tally">Times this season</th><th>Met before</th></tr></thead>
       <tbody>
       {% for c in counts %}
         <tr>
           <td class="name">{{ c.a }} &amp; {{ c.b }}</td>
-          <td class="rd">{{ c.times }}</td>
+          <td class="tally">{{ c.times }}</td>
           <td>{{ c.before }}</td>
         </tr>
       {% endfor %}
@@ -96,17 +107,12 @@
        worth knowing before pressing a button in a red-topped box. #}
     <p class="note">Writes these as matchups with no scores, ready for weekly
       entry.
-      {% if replaceable or kept %}
-        {{ season }} has
-        {%- if replaceable %} {{ replaceable }} matchup{{ "s" if replaceable != 1 }}
-          with no scores, which this replaces{% endif %}
-        {%- if replaceable and kept %}, and{% endif %}
-        {%- if kept %} {{ kept }} {% if not replaceable %}matchup{{ "s" if kept != 1 }}
-          {% endif %}with scores already in, which saving leaves alone{% endif %}.
-      {% endif %}</p>
+      {%- if replaceable %} It replaces the {{ replaceable }} matchup{{ "s" if replaceable != 1 }}
+        {{ season }} has now, none of which have been played.{% endif %}</p>
     <form method="post" action="/admin/schedule/save">
       <input type="hidden" name="season" value="{{ season }}">
       <input type="hidden" name="seed" value="{{ seed }}">
+      <input type="hidden" name="pairs" value="{{ pairing_code }}">
       <label class="confirm"><input type="checkbox" name="confirm" value="1"> I mean it</label>
       <button type="submit" class="seal">Save schedule</button>
     </form>
@@ -116,13 +122,9 @@
   {# ---- what the season actually has ---- #}
   <section>
     <h2>The {{ season }} schedule</h2>
-    <p class="note">{{ saved|length }} week{{ "s" if saved|length != 1 }} saved,
-      {{ kept }} of {{ kept + replaceable }} matchup{{ "s" if (kept + replaceable) != 1 }}
-      played.
-      {%- if replaceable %} Rolling another replaces the {{ replaceable }} with no
-        scores in {{ "it" if replaceable == 1 else "them" }} yet.
-      {%- else %} Every matchup has scores, so rolling another would replace
-        nothing.{% endif %}</p>
+    <p class="note">{{ saved|length }} week{{ "s" if saved|length != 1 }},
+      {{ kept + replaceable }} matchup{{ "s" if (kept + replaceable) != 1 }},
+      {{ kept }} played.</p>
     {{ weekgrid(saved) }}
   </section>
 

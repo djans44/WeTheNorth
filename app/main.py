@@ -5899,6 +5899,18 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
 
         hist = meeting_history(conn, season)
 
+    # A schedule is a whole-season object. The generator lays out fourteen
+    # weeks at once and the save has no way to fit that around weeks already
+    # played: it deletes only the unscored rows, so a new pairing in a played
+    # week lands beside the played one instead of replacing it. Run against
+    # 2025 that turns 84 matchups into 159, with twelve games in a week and
+    # managers playing twice. So once a score is in, this page stops offering.
+    played = bool(query(conn, """
+        select 1 from matchups
+        where season_year = %s and game_type = 'regular'
+          and team_a_points is not null limit 1
+    """, (season,)))
+
     saved = []
     for r in saved_rows:
         if not saved or saved[-1]["week"] != r["week"]:
@@ -5919,8 +5931,10 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
         problem = ("Rivalries are not set for this season. "
                    "Generate them on the Rivals page first.")
 
-    weeks, err, counts = None, None, None
-    if seed and not problem:
+    team_of = {t["owner_id"]: t["team_id"] for t in teams_list}
+
+    weeks, err, counts, pairing_code = None, None, None, ""
+    if seed and not problem and not played:
         sched, err = generate_schedule(ids, hist, rival_pairs, seed)
         if sched:
             weeks = []
@@ -5936,74 +5950,107 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
                 if c > 1:
                     counts.append({"a": names[p[0]], "b": names[p[1]],
                                    "times": c, "before": hist.get(p, 0)})
+            # The pairings themselves go into the form. The seed was only a
+            # recipe, re-cooked at save time against whatever the meeting
+            # history, teams and rivalries were by then -- change a rivalry in
+            # another tab and you would have saved a schedule you never saw.
+            pairing_code = ",".join(
+                "%d:%d-%d" % ((w,) + tuple(sorted((team_of[a], team_of[b]))))
+                for w in sorted(sched) for a, b in sched[w])
 
     return templates.TemplateResponse(
         request=request, name="admin_schedule.html",
         context={"years": years, "season": season, "seed": seed,
                  "weeks": weeks, "counts": counts, "error": err or problem,
-                 "teams": teams_list, "saved": saved,
+                 "teams": teams_list, "saved": saved, "played": played,
+                 "pairing_code": pairing_code,
                  "replaceable": standing["replaceable"], "kept": standing["kept"]})
 
 
 @app.post("/admin/schedule/save")
 async def admin_schedule_save(request: Request):
+    """Write the schedule that was on screen.
+
+    It used to write the seed instead and regenerate from it here, which made
+    the saved schedule a function of the teams, the rivalries and the meeting
+    history as they stood at save time rather than at preview time. The
+    pairings come through the form now and this route only checks them.
+    """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     from urllib.parse import quote
     form = await request.form()
     season = int(form["season"])
-    seed = int(form["seed"])
+    seed = int(form.get("seed") or 0)
+
+    def back(err):
+        return RedirectResponse(
+            url=f"/admin/schedule?season={season}&seed={seed}&error=" + quote(err),
+            status_code=303)
 
     if not form.get("confirm"):
-        return RedirectResponse(
-            url=f"/admin/schedule?season={season}&seed={seed}&error=" +
-                quote("Tick the confirm box first"), status_code=303)
+        return back("Tick the confirm box first")
 
     with get_db() as conn:
-        teams_list = query(conn, """
-            select owner_id, team_id from teams where season_year = %s
-        """, (season,))
-        by_owner = {t["owner_id"]: t["team_id"] for t in teams_list}
-        rivals = query(conn, """
-            select owner_id, rival_owner_id from rivalries
-            where season_year = %s and owner_id < rival_owner_id
-        """, (season,))
-        hist = meeting_history(conn, season)
+        # The rule the page is built around, enforced where it cannot be got
+        # round -- a stale seeded tab, or a post by hand.
+        if query(conn, """
+            select 1 from matchups
+            where season_year = %s and game_type = 'regular'
+              and team_a_points is not null limit 1
+        """, (season,)):
+            return back("%d has scores entered. A schedule cannot be rolled over "
+                        "a season that has started." % season)
 
-        ids = list(by_owner)
-        pairs = [(r["owner_id"], r["rival_owner_id"]) for r in rivals]
-        sched, err = generate_schedule(ids, hist, pairs, seed)
-        if err:
-            return RedirectResponse(
-                url=f"/admin/schedule?season={season}&seed={seed}&error=" + quote(err),
-                status_code=303)
+        teams = {t["team_id"] for t in query(conn, """
+            select team_id from teams where season_year = %s
+        """, (season,))}
 
-        rows = []
-        for w, ms in sched.items():
-            for a, b in ms:
-                ta, tb = by_owner[a], by_owner[b]
-                if ta > tb:
-                    ta, tb = tb, ta
-                rows.append((season, w, "regular", ta, tb))
+        # Parse and check what came back rather than trust it: it arrived
+        # through a browser, and a bad pairing here becomes a season nobody
+        # can score.
+        rows, by_week = [], {}
+        for token in (form.get("pairs") or "").split(","):
+            try:
+                week, pair = token.split(":")
+                a, b = (int(x) for x in pair.split("-"))
+                week = int(week)
+            except ValueError:
+                return back("The schedule on the page could not be read. "
+                            "Roll another and save that.")
+            if a >= b or a not in teams or b not in teams or not 1 <= week <= 14:
+                return back("That schedule has a matchup that is not %d's. "
+                            "Roll another and save that." % season)
+            seen = by_week.setdefault(week, set())
+            if a in seen or b in seen:
+                return back("Week %d has a manager playing twice. Roll another "
+                            "and save that." % week)
+            seen.update((a, b))
+            rows.append((season, week, "regular", a, b))
+
+        want = len(teams) // 2
+        if len(by_week) != 14 or any(len(v) != len(teams) for v in by_week.values()):
+            return back("That schedule is not fourteen full weeks of %d games. "
+                        "Roll another and save that." % want)
 
         with conn.cursor() as cur:
+            # Nothing has been played -- checked above -- so the whole regular
+            # season goes, rather than the unscored part of it.
             cur.execute("""
                 delete from matchups
                 where season_year = %s and game_type = 'regular'
-                  and team_a_points is null
             """, (season,))
             cur.executemany("""
                 insert into matchups
                     (season_year, week, game_type, team_a_id, team_b_id)
                 values (%s, %s, %s, %s, %s)
-                on conflict (season_year, week, team_a_id, team_b_id) do nothing
             """, rows)
         conn.commit()
 
-    # The seed goes back with it, so the page that returns is the schedule
-    # that was just written rather than an empty picker and a toast.
+    # No seed: the page that returns shows the saved schedule, which is now
+    # the thing that was just written, rather than the proposal it came from.
     return RedirectResponse(
-        url=f"/admin/schedule?season={season}&seed={seed}&msg=" +
+        url=f"/admin/schedule?season={season}&msg=" +
             quote(f"{len(rows)} matchups saved"), status_code=303)
 
 
