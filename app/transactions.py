@@ -43,9 +43,16 @@ PLAYER = re.compile(
 MONTHS = {m: i for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], start=1)}
-# What Yahoo prints on the line after a dropped player. The player went
-# somewhere; which of the two it was does not change that the team let him go.
-GONE = ("to waivers", "to free agents")
+# What Yahoo prints on the line after a dropped player: "To Waivers", "To
+# Free Agents", "To Free Agent". Where he went does not change that the team
+# let him go, and chasing the wording one variant at a time is how this broke
+# twice -- the singular was rejected because only the plural was listed.
+#
+# So the test is structural rather than a list. In a six-line block this line
+# is the dropped player's destination by position, and every destination
+# Yahoo has ever printed begins with "to".
+def gone_line(line):
+    return line.lower().startswith("to ")
 
 
 def clean(line):
@@ -170,7 +177,7 @@ def parse(text, season, expect="adds"):
         if len(block) == 4:
             _, method_text, team, date = block
             dropped = None
-        elif len(block) == 6 and block[3].lower() in GONE:
+        elif len(block) == 6 and gone_line(block[3]):
             _, method_text, drop_line, _, team, date = block
             dropped = player_of(drop_line)
             if not dropped[0]:
