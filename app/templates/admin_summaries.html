@@ -58,9 +58,12 @@
   <section>
     <h2>{{ name|capitalize }}</h2>
 
-    {# Nothing written. An invitation rather than an apology: the button that
-       fixes it is directly below and says the same word. #}
-    {% if not draft and not published %}
+    {# Nothing written, and nothing stopping it being written. An invitation
+       rather than an apology: the button that fixes it is directly below and
+       says the same word. When something IS stopping it, that reason is the
+       only note on the page -- telling somebody to generate one and then
+       telling them they cannot is two messages arguing. #}
+    {% if not draft and not published and not blocked %}
       <p class="note">Nothing has been written. Generate one below.</p>
     {% endif %}
 
@@ -142,12 +145,9 @@
 
     </div>
 
-    {% if blocked %}
-      <p class="note">{{ blocked }}</p>
-    {% else %}
-      <p class="note">Written by {{ model }}, and takes around half a minute.
-        Nothing reaches the season page until it is published.</p>
-    {% endif %}
+    <p class="note">{% if blocked %}{{ blocked }}{% else %}Written by
+      {{ model }}, and takes around half a minute. Nothing reaches the season
+      page until it is published.{% endif %}</p>
   </section>
 
   <section>

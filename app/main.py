@@ -5056,11 +5056,20 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
             where season_year = %s and kind = 'week' and week is not null
         """, (season,))}
         # Whether the year is finished decides whether a recap is a thing that
-        # can be written or a thing to wait for.
-        finished = bool(query(conn, """
-            select 1 from season_results
-            where season_year = %s and champion is not null
-        """, (season,)))
+        # can be written or a thing to wait for. season_results reads the
+        # champion off the championship game, so "no champion" has two quite
+        # different causes -- the game has not been scored, or the bracket has
+        # not been drawn and there is no such game. Saying which saves the
+        # reader inferring the wrong one.
+        final = query(conn, """
+            select count(*) as drawn,
+                   count(*) filter (where team_a_points is not null
+                                      and team_b_points is not null) as played
+            from matchups
+            where season_year = %s and game_type = 'championship'
+        """, (season,))
+        final = final[0] if final else {"drawn": 0, "played": 0}
+        finished = bool(final["played"])
 
         # A week has to be chosen before there is a target at all. Landing on
         # the newest week with scores beats landing on nothing.
@@ -5091,8 +5100,12 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
     if not summaries.available():
         blocked = "No GEMINI_API_KEY is set in this environment."
     elif kind == "season" and not finished:
-        blocked = ("%s has no champion yet. A recap is written from the final "
-                   "table and the bracket." % season)
+        blocked = ("%s has no bracket yet, so there is no championship game "
+                   "to read a champion from. A recap is written from the "
+                   "final table and the bracket." % season
+                   if not final["drawn"] else
+                   "%s's championship game has no score yet. A recap is "
+                   "written from the final table and the bracket." % season)
     elif kind == "week" and not weeks:
         blocked = "No week of %s has scores yet." % season
 
