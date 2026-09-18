@@ -9,12 +9,18 @@ dependencies and no HTTP client beyond urllib, and adding an SDK to Render for
 one endpoint would cost more than it saves.
 """
 import json
+import logging
 import os
 import time
 import urllib.error
 import urllib.request
 
 from app import standings
+
+# The same logger main.py uses, so these land in Render's stream
+# beside the request that caused them rather than in a channel of
+# their own that nobody is reading.
+log = logging.getLogger("uvicorn.error")
 
 # Pinned rather than an alias. `gemini-flash-latest` would move under us, and
 # the summaries table records which model wrote each row -- a name that means
@@ -209,14 +215,32 @@ BACKOFF = 8
 def ask(prompt, temperature=0.95):
     """One summary, retrying the failures that are worth retrying. Raises
     SummaryError with something readable otherwise, because every caller is
-    wrapping this and showing it to an admin."""
+    wrapping this and showing it to an admin.
+
+    Every attempt is logged, win or lose. A retry used to be invisible: the
+    admin saw one toast at the end and the only evidence that three calls had
+    been made was the stopwatch. Working out whether a failure was the model
+    shedding load or our own timeout being too short took an afternoon and a
+    guess, and a line here would have said it outright.
+    """
     last = None
+    began = time.time()
     for attempt in range(ATTEMPTS):
         try:
-            return _ask_once(prompt, temperature)
+            out = _ask_once(prompt, temperature)
+            log.info("gemini ok: attempt %d of %d, %.1fs, prompt %d chars, "
+                     "reply %d chars", attempt + 1, ATTEMPTS,
+                     time.time() - began, len(prompt), len(out))
+            return out
         except SummaryError as e:
             last = e
-            if getattr(e, "retryable", False) and attempt < ATTEMPTS - 1:
+            again = getattr(e, "retryable", False) and attempt < ATTEMPTS - 1
+            log.warning("gemini attempt %d of %d failed after %.1fs "
+                        "(prompt %d chars, %s): %s",
+                        attempt + 1, ATTEMPTS, time.time() - began,
+                        len(prompt),
+                        "retrying" if again else "giving up", e)
+            if again:
                 time.sleep(BACKOFF * (attempt + 1))
                 continue
             raise

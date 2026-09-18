@@ -5631,6 +5631,11 @@ async def admin_summary_generate(request: Request):
         try:
             _, missed = write_one_summary(conn, season, kind, week)
         except summaries.SummaryError as e:
+            # The toast says this once and then deletes itself from the URL,
+            # so without this line a failure leaves no trace at all -- the
+            # background writer logs its own and this path did not.
+            log.warning("could not write the %s summary for %s%s: %s",
+                        kind, season, " week %s" % week if week else "", e)
             return RedirectResponse(
                 url=summaries_url(season, kind, week, error=str(e)),
                 status_code=303)
