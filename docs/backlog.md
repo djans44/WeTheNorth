@@ -211,15 +211,21 @@ worth finding before keeper selection runs off it.
 Worth doing in that order, because each piece is useful before the next
 exists:
 
-1. **Show the transactions.** They have been loaded since 2025 and are
-   displayed nowhere. A manager's page and a league-wide log, newest first.
-   The data is already there; this is a page, not a pipeline. **Next up** --
-   both loaders below are now built, so nothing blocks this.
-2. **Derive the current roster.** Draft picks plus transactions up to a date.
-   Needs the draft loaded for the season, which 2026 does not have yet --
-   see the loader below. Shown per team, and it is the thing that makes a
-   mid-season site feel live rather than historical.
-3. **Validate the final rosters against it.** The end-of-year import stops
+1. ~~**Show the transactions.**~~ **Done** -- `/transactions`, under History.
+   The whole season newest first, an add and the drop that made room for it
+   read as one move, and a filter strip for one manager.
+2. ~~**Derive the current roster.**~~ **Done** -- `/rosters`, its own nav
+   item. From 2026 it is the draft with every move since applied to it;
+   2022-2025 cannot be derived, because their transactions were loaded as
+   adds with no drops against them, so those show the stored snapshot and
+   the page says which of the two it is. One squad at a time as well as all
+   twelve.
+
+   Worth carrying into step 3: **roster size proves nothing.** IR slots mean
+   thirteen to fifteen are all legitimate, so a squad being a player over is
+   not evidence of a missing move. A size check was built, cried wolf over
+   six ordinary 2026 rosters, and was taken out again.
+3. **Validate the final rosters against it.** *The only step left.* The end-of-year import stops
    overwriting and starts reconciling: here is what the record says the
    roster is, here is what Yahoo says, here is the difference. Keeper cost
    basis reads `transactions` directly (`keeper_cost_basis`, migration 023),
