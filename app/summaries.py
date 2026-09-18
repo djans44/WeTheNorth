@@ -55,6 +55,12 @@ About one sentence in four or five carries the old diction. The rest is
 plain. Laid on thickly it is a costume; left off entirely it is a match
 report.
 
+That ratio does not change with the length of the piece. A week's account is
+a third the size of a preview and carries the same voice: a short report
+packed with scores is exactly where the register gets squeezed out, and a
+weekly that reads as a results service has lost the thing that made anybody
+want to read it.
+
 It lives in the connective tissue and never in the numbers. Scores, records
 and crest names stay exactly as they are -- eleven and three, 1966 points,
 Warden of the North -- and the archaism goes around them:
