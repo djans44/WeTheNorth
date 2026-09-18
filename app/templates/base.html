@@ -52,12 +52,11 @@
       </li>
       <li class="has-menu">
         <a href="/history"
-           {% if path in ('/history', '/crests', '/transactions', '/vote') %}class="on"{% endif %}>History</a>
+           {% if path in ('/history', '/crests', '/transactions') %}class="on"{% endif %}>History</a>
         <ul class="submenu">
           <li><a href="/history">League history</a></li>
           <li><a href="/crests">Crests of honour</a></li>
           <li><a href="/transactions">Transactions</a></li>
-          <li><a href="/vote">The vote</a></li>
         </ul>
       </li>
       <li class="has-menu">
@@ -75,6 +74,19 @@
       </li>
       <li><a href="/rosters"
              {% if path == '/rosters' %}class="on"{% endif %}>Rosters</a></li>
+      {# The badge counts assemblies sitting that this manager has not spoken
+         at. A vote you can miss by not thinking to look is a vote that gets
+         eight replies, so the nav says so. #}
+      {% set unvoted = nav_unvoted(request.session.get("owner_id")) %}
+      <li class="has-menu">
+        <a href="/assembly"
+           {% if path.startswith('/assembly') %}class="on"{% endif %}>Assembly{%
+           if unvoted %}<span class="badge">{{ unvoted }}</span>{% endif %}</a>
+        <ul class="submenu">
+          <li><a href="/assembly">Open deliberations</a></li>
+          <li><a href="/assembly/proclamations">Proclamations</a></li>
+        </ul>
+      </li>
       <li class="has-menu">
         <a href="/draft-order" {% if path.startswith('/draft') %}class="on"{% endif %}>Draft</a>
         <ul class="submenu">

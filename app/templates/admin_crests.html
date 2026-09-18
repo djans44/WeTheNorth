@@ -92,10 +92,10 @@
      who should have one; the grant above is still what gives it, which is
      what leaves a tie somebody to settle it. #}
   <section>
-    <h2>The league&rsquo;s vote</h2>
+    <h2>The assembly</h2>
     {% if not vote.poll %}
-      <p class="note">No vote called for {{ season }}. Opening one puts four
-        questions to the league at <a href="/vote">the vote</a>, built from the
+      <p class="note">No assembly called for {{ season }}. Opening one puts four
+        questions to the league at <a href="/assembly">the assembly</a>, built from the
         season itself: the twelve names, the twelve managers, each side of each
         trade, and every defeat by ten points or fewer.</p>
       <form method="post" action="/admin/crests/poll" class="picker">
@@ -105,7 +105,7 @@
           <label for="closes">Closes</label>
           <input type="datetime-local" id="closes" name="closes" required>
         </span>
-        <button type="submit" class="seal">Open the vote</button>
+        <button type="submit" class="seal">Call the assembly</button>
       </form>
 
     {% elif vote.open %}
@@ -118,15 +118,23 @@
         <input type="hidden" name="action" value="close">
         <div class="actionrow">
           <button type="submit" class="seal"
-                  data-confirm="Close the vote now? The count becomes visible to the whole league and no more votes can be cast.">
-            Close it now</button>
+                  data-confirm="Rise the assembly now? The count becomes visible to the whole league and nothing more can be said.">
+            Rise the assembly</button>
         </div>
       </form>
 
     {% else %}
-      <p class="note">Closed. {{ vote.voters }} took part, and the league can
-        read the count. Awarding is still yours &mdash; press the winner
-        through and it is granted the same way anything here is.</p>
+      <p class="note">Risen. {{ vote.voters }} spoke, and the league can read
+        the count at the <a href="/assembly/proclamations?season={{ season }}">proclamations</a>.
+        Nothing is held until you proclaim it.</p>
+      <form method="post" action="/admin/crests/proclaim">
+        <input type="hidden" name="season" value="{{ season }}">
+        <div class="actionrow">
+          <button type="submit" class="seal"
+                  data-confirm="Proclaim the results? Each honour the assembly decided is granted to whoever it named, replacing anything held for that crest this season. A tie is left for you.">
+            Proclaim the results</button>
+        </div>
+      </form>
       {% for c in manual %}
         {% set r = vote.result.get(c.crest_id) %}
         {% if r %}

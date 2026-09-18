@@ -1318,7 +1318,25 @@ label.second { margin-top: var(--s4); }
 /* Why a block was not understood, immediately above the block itself. */
 .note.why { margin-bottom: var(--s1); color: var(--loss); font-style: normal; }
 
-/* ---- the vote ---- */
+/* A count riding on a nav item: how many assemblies are sitting that you
+   have not spoken at. Gold, because it is an invitation rather than a
+   warning -- nothing is wrong, there is simply something to say. */
+.sitenav .badge {
+  display: inline-block;
+  min-width: 1.15rem;
+  margin-left: 0.35rem;
+  padding: 0 0.25rem;
+  border-radius: 0.6rem;
+  background: var(--gold-deep);
+  color: var(--panel-bg);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+  vertical-align: 0.08em;
+}
+
+/* ---- the assembly ---- */
 /* One choice to a line, the whole line clickable. A ballot of twenty-seven
    defeats is read down the left edge, so the name comes first and the story
    after it. */

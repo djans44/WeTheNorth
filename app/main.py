@@ -611,8 +611,35 @@ def nav_seasons():
     return _season_cache["rows"]
 
 
+def nav_unvoted(owner_id):
+    """How many open assemblies this manager has not answered.
+
+    A badge on the nav, so a vote that is open is a thing you are told about
+    rather than a page you have to think to visit. One assembly runs at a
+    time, so this is almost always nought or one -- it counts rather than
+    assuming, because nothing stops two years being open at once.
+
+    Not cached. It changes the moment someone votes, and a stale badge
+    telling a manager to vote again after they have is worse than the query.
+    """
+    if not owner_id:
+        return 0
+    try:
+        with get_db() as conn:
+            return query(conn, """
+                select count(*) as n from crest_polls p
+                where p.closed_at is null and p.closes_at > now()
+                  and not exists (
+                      select 1 from crest_votes v
+                      where v.poll_id = p.poll_id and v.owner_id = %s)
+            """, (owner_id,))[0]["n"]
+    except Exception:
+        return 0
+
+
 templates.env.globals["nav_owners"] = nav_owners
 templates.env.globals["nav_seasons"] = nav_seasons
+templates.env.globals["nav_unvoted"] = nav_unvoted
 
 
 def initials_for(username, last_name=None, override=None):
@@ -3134,8 +3161,8 @@ def poll_result(conn, poll):
     return out
 
 
-@app.get("/vote", response_class=HTMLResponse)
-def vote_page(request: Request, season: int = 0, msg: str = "", error: str = ""):
+@app.get("/assembly", response_class=HTMLResponse)
+def assembly_page(request: Request, season: int = 0, msg: str = "", error: str = ""):
     """The four honours nobody can earn, put to the twelve people who hold
     opinions about them.
 
@@ -3149,7 +3176,7 @@ def vote_page(request: Request, season: int = 0, msg: str = "", error: str = "")
         poll = poll_for(conn, season or None)
         if not poll:
             return templates.TemplateResponse(
-                request=request, name="vote.html",
+                request=request, name="assembly.html",
                 context={"poll": None, "open": False, "ballots": {},
                          "crests": [], "mine": {}, "result": {},
                          "turnout": 0, "voters": 0})
@@ -3174,18 +3201,17 @@ def vote_page(request: Request, season: int = 0, msg: str = "", error: str = "")
         """, (poll["season_year"],))[0]["n"]
 
         live = poll_is_open(poll)
-        result = {} if live else poll_result(conn, poll)
 
     return templates.TemplateResponse(
-        request=request, name="vote.html",
+        request=request, name="assembly.html",
         context={"poll": poll, "open": live, "ballots": ballots,
-                 "crests": crests, "mine": mine, "result": result,
+                 "crests": crests, "mine": mine,
                  "voters": voters, "seats": seats,
                  "msg": msg, "error": error})
 
 
-@app.post("/vote")
-async def vote_cast(request: Request):
+@app.post("/assembly")
+async def assembly_vote(request: Request):
     """One vote each per honour, changeable until the poll closes."""
     me = request.session.get("owner_id")
     if not me:
@@ -3197,7 +3223,7 @@ async def vote_cast(request: Request):
         poll = poll_for(conn, int(form.get("season") or 0) or None)
         if not poll_is_open(poll):
             return RedirectResponse(
-                url="/vote?error=" + quote("That vote is closed."),
+                url="/assembly?error=" + quote("That vote is closed."),
                 status_code=303)
 
         def q(sql, p=()):
@@ -3238,7 +3264,52 @@ async def vote_cast(request: Request):
 
     told = "%d vote%s recorded. Change them any time before it closes." % (
         cast, "" if cast == 1 else "s")
-    return RedirectResponse(url="/vote?msg=" + quote(told), status_code=303)
+    return RedirectResponse(url="/assembly?msg=" + quote(told), status_code=303)
+
+
+@app.get("/assembly/proclamations", response_class=HTMLResponse)
+def proclamations_page(request: Request, season: int = 0):
+    """What the assembly decided, once it has decided it.
+
+    Counts only. Who voted for what is nobody's business but theirs -- the
+    point of a secret ballot is that a manager can say the truth about a
+    friend's team name.
+    """
+    with get_db() as conn:
+        years = [r["season_year"] for r in query(conn, """
+            select season_year from crest_polls
+            where closed_at is not null order by season_year desc
+        """)]
+        if not years:
+            return templates.TemplateResponse(
+                request=request, name="proclamations.html",
+                context={"years": [], "season": 0, "poll": None,
+                         "crests": [], "result": {}, "held": {}, "voters": 0})
+        if season not in years:
+            season = years[0]
+        poll = poll_for(conn, season)
+        crests = query(conn, """
+            select crest_id, code, name, description from crests
+            where active and award_mode = 'manual' order by sort_order
+        """)
+        result = poll_result(conn, poll)
+        voters = query(conn, """
+            select count(distinct owner_id) as n from crest_votes
+            where poll_id = %s
+        """, (poll["poll_id"],))[0]["n"]
+        # What was actually granted, which is the vote made real. Until the
+        # commissioner confirms, the count is a result and not yet an honour.
+        held = {r["crest_id"]: r for r in query(conn, """
+            select oc.crest_id, oc.detail, o.username
+            from owner_crests oc join owners o on o.owner_id = oc.owner_id
+            where oc.season_year = %s
+        """, (season,))}
+
+    return templates.TemplateResponse(
+        request=request, name="proclamations.html",
+        context={"years": years, "season": season, "poll": poll,
+                 "crests": crests, "result": result, "held": held,
+                 "voters": voters})
 
 
 @app.get("/rosters", response_class=HTMLResponse)
@@ -3686,6 +3757,73 @@ async def admin_crests_poll(request: Request):
     return RedirectResponse(
         url="/admin/crests?season=%d&msg=%s" % (season, quote(told)),
         status_code=303)
+
+
+@app.post("/admin/crests/proclaim")
+async def admin_crests_proclaim(request: Request):
+    """Turn a closed assembly's count into the four crests it decided.
+
+    One press rather than four, because the vote already said who each one
+    belongs to. It grants exactly what the grant form grants -- same table,
+    same replace-rather-than-add, same awarded_by -- so an honour proclaimed
+    this way is indistinguishable afterwards from one written by hand, which
+    is the point: the poll decides, the commissioner still gives.
+
+    A tie is left alone and named. Two candidates level is the one thing a
+    count cannot settle, and settling it is what a commissioner is for.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+
+    with get_db() as conn:
+        poll = poll_for(conn, season)
+        if not poll or not poll["closed_at"]:
+            return RedirectResponse(
+                url="/admin/crests?season=%d&error=%s"
+                    % (season, quote("That assembly has not risen yet.")),
+                status_code=303)
+
+        result = poll_result(conn, poll)
+        given, tied = 0, []
+        with conn.cursor() as cur:
+            for crest_id, r in result.items():
+                if r["tied"]:
+                    tied.append(crest_id)
+                    continue
+                win = r["tally"][0]
+                cur.execute("""
+                    delete from owner_crests oc using crests c
+                     where c.crest_id = oc.crest_id and c.award_mode = 'manual'
+                       and oc.crest_id = %s and oc.season_year = %s
+                """, (crest_id, season))
+                cur.execute("""
+                    insert into owner_crests
+                        (owner_id, crest_id, season_year, detail, awarded_by)
+                    values (%s, %s, %s, %s, %s)
+                """, (win["choice_owner_id"], crest_id, season, win["detail"],
+                      request.session.get("owner_id")))
+                given += 1
+        conn.commit()
+
+        names = [r["name"] for r in query(conn, """
+            select name from crests where crest_id = any(%s) order by sort_order
+        """, (tied,))] if tied else []
+
+    told = "%d honour%s proclaimed" % (given, "" if given == 1 else "s")
+    if names:
+        told += ", and %s left tied for you to settle" % _listed_names(names)
+    return RedirectResponse(
+        url="/admin/crests?season=%d&msg=%s" % (season, quote(told + ".")),
+        status_code=303)
+
+
+def _listed_names(names):
+    if len(names) == 1:
+        return names[0]
+    return "%s and %s" % (", ".join(names[:-1]), names[-1])
 
 
 @app.post("/admin/crests/revoke")

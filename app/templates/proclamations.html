@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Proclamations {{ season }} | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    {% if years %}
+      <details class="headpick">
+        <summary>
+          <h1>{{ leaf(20) }}Proclamations {{ season }}</h1>
+        </summary>
+        <ul>
+          {% for y in years %}
+            <li>
+              <a href="/assembly/proclamations?season={{ y }}"
+                 {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% else %}
+      <h1>{{ leaf(20) }}Proclamations</h1>
+    {% endif %}
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  {% if not years %}
+    <section>
+      <p class="note">No assembly has risen yet. When one does, what it
+        decided is set down here &mdash; every count, and the four honours it
+        put into hands.</p>
+    </section>
+
+  {% else %}
+  <section>
+    <p class="note">{{ voters }} spoke. The counts stand below; who said what
+      is theirs to tell, not this page's &mdash; that is the point of asking
+      in private.</p>
+  </section>
+
+  {% for c in crests %}
+    <section>
+      <h2>{{ c.name }}</h2>
+      <p class="note">{{ c.description }}</p>
+      {% set r = result.get(c.crest_id) %}
+      {% set holder = held.get(c.crest_id) %}
+
+      {% if holder %}
+        {# Proclaimed. The vote decided it and the commissioner set it down,
+           and that is the line worth reading first. #}
+        <p class="decree">{{ holder.username }}
+          {%- if holder.detail %}, {{ holder.detail }}{% endif %}</p>
+      {% elif r and r.tied %}
+        <p class="note">A tie, and not yet settled.</p>
+      {% elif r %}
+        <p class="note">Counted, and not yet proclaimed.</p>
+      {% endif %}
+
+      {% if not r %}
+        <p class="note">Nothing was said on this one.</p>
+      {% else %}
+        <table class="keepers tally">
+          <tbody>
+          {% for row in r.tally %}
+            <tr class="{% if row.winner %}won{% endif %}">
+              <td class="count">{{ row.votes }}</td>
+              <td class="name">{{ row.username }}</td>
+              <td>{{ row.detail }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </section>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}
