@@ -3058,6 +3058,93 @@ def draft_context(conn, season, text="", previewed=False, positions=None):
     return ctx
 
 
+@app.get("/transactions", response_class=HTMLResponse)
+def transactions_page(request: Request, season: int = 0, who: str = ""):
+    """Every move of a season, newest first.
+
+    An add and the drop that made room for it arrive as two rows sharing a
+    moment and a manager, which is how Yahoo prints them and how they are
+    argued about afterwards -- "he cut Doubs for that" is one event, not two.
+    So they are put back together here rather than listed apart.
+    """
+    with get_db() as conn:
+        years = [r["season_year"] for r in query(conn, """
+            select distinct season_year from transactions order by season_year desc
+        """)]
+        if not years:
+            return templates.TemplateResponse(
+                request=request, name="transactions.html",
+                context={"years": [], "season": 0, "moves": [], "owners": [],
+                         "who": "", "tally": {}})
+        if season not in years:
+            season = years[0]
+
+        rows = query(conn, """
+            select x.kind, x.method, x.faab_amount, x.occurred_on, x.occurred_raw,
+                   p.full_name, p.position,
+                   ot.username as to_who, ofr.username as from_who
+            from transactions x
+            join players p on p.player_id = x.player_id
+            left join teams tt on tt.team_id = x.to_team_id
+            left join owners ot on ot.owner_id = tt.owner_id
+            left join teams ft on ft.team_id = x.from_team_id
+            left join owners ofr on ofr.owner_id = ft.owner_id
+            where x.season_year = %s
+            order by x.occurred_on desc, x.transaction_id desc
+        """, (season,))
+        owners = [r["username"] for r in query(conn, """
+            select distinct o.username
+            from transactions x
+            join teams t on t.team_id in (x.to_team_id, x.from_team_id)
+            join owners o on o.owner_id = t.owner_id
+            where x.season_year = %s order by o.username
+        """, (season,))]
+
+    # An add, and the drop that shares its moment and its manager, are one
+    # move. Keyed on the raw string Yahoo printed, which carries the minute.
+    moves, index = [], {}
+    for r in rows:
+        whose = r["to_who"] or r["from_who"]
+        key = (r["occurred_raw"], whose, r["kind"] == "trade")
+        if key not in index:
+            index[key] = {"when": r["occurred_on"], "raw": r["occurred_raw"],
+                          "who": whose, "trade": r["kind"] == "trade",
+                          "in": [], "out": []}
+            moves.append(index[key])
+        side = "out" if r["kind"] == "drop" else "in"
+        index[key][side].append(r)
+
+    def touches(move, name):
+        """A trade is filed under whoever received the player, so filtering on
+        the manager a move is filed under would hide the half of every trade
+        they gave away."""
+        low = name.lower()
+        if move["who"] and move["who"].lower() == low:
+            return True
+        return any(low in {(r["to_who"] or "").lower(),
+                           (r["from_who"] or "").lower()}
+                   for r in move["in"] + move["out"])
+
+    if who:
+        moves = [m for m in moves if touches(m, who)]
+
+    tally = {"add": 0, "drop": 0, "trade": 0}
+    for r in rows:
+        if not who or who.lower() in {(r["to_who"] or "").lower(),
+                                      (r["from_who"] or "").lower()}:
+            tally[r["kind"]] = tally.get(r["kind"], 0) + 1
+    # Whether the season has drops at all, which is a different question from
+    # whether the manager being looked at has any. 2025 was loaded before
+    # drops were recorded and has only the few pasted since.
+    season_drops = sum(1 for r in rows if r["kind"] == "drop")
+
+    return templates.TemplateResponse(
+        request=request, name="transactions.html",
+        context={"years": years, "season": season, "moves": moves,
+                 "owners": owners, "who": who, "tally": tally,
+                 "season_drops": season_drops})
+
+
 @app.get("/draft-results", response_class=HTMLResponse)
 def draft_results(request: Request, season: int = 0):
     """What the draft came to, round by round.

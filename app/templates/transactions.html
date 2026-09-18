@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Transactions {{ season }} | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    {% if years %}
+      <details class="headpick">
+        <summary>
+          <h1>{{ leaf(20) }}Transactions {{ season }}</h1>
+        </summary>
+        <ul>
+          {% for y in years %}
+            <li>
+              <a href="/transactions?season={{ y }}{% if who %}&who={{ who }}{% endif %}"
+                 {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% else %}
+      <h1>{{ leaf(20) }}Transactions</h1>
+    {% endif %}
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  {% if not years %}
+    <section>
+      <p class="note">No moves have been recorded yet. Once a week's
+        transactions are loaded they are read here, newest first.</p>
+    </section>
+
+  {% else %}
+  <section>
+    <p class="note">
+      {{ tally.add }} added, {{ tally.drop }} dropped{% if tally.trade %},
+      {{ tally.trade }} traded{% endif %}{% if who %}, by {{ who }}{% endif %}.
+      {% if not season_drops %}Drops were not recorded for this season.{% endif %}
+    </p>
+
+    {# One manager, or all of them. A link each rather than a dropdown: there
+       are twelve, they fit, and a link says where it goes. #}
+    <p class="whostrip">
+      <a href="/transactions?season={{ season }}"
+         {% if not who %}class="on"{% endif %}>Everyone</a>
+      {% for o in owners %}
+        <a href="/transactions?season={{ season }}&who={{ o }}"
+           {% if who and who.lower() == o.lower() %}class="on"{% endif %}>{{ o }}</a>
+      {% endfor %}
+    </p>
+  </section>
+
+  <section>
+    {% if not moves %}
+      <p class="note">Nothing here for {{ who }} in {{ season }}.</p>
+    {% endif %}
+    <ol class="ledger">
+      {% for m in moves %}
+        <li>
+          <p class="when">
+            <b>{{ m.who }}</b>
+            <span class="tm">{{ m.raw }}</span>
+            {% if m.trade %}<span class="pill">Trade</span>{% endif %}
+          </p>
+          <ul class="sides">
+            {% for r in m["in"] %}
+              <li class="gained">
+                <span class="mark">in</span>
+                <span class="who">{{ r.full_name }}</span>
+                <span class="tm">{{ r.position }}</span>
+                {% if r.kind == "trade" %}
+                  <span class="tm">from {{ r.from_who }}</span>
+                {% elif r.method == "faab" %}
+                  <span class="tm">${{ r.faab_amount|int }}</span>
+                {% elif r.method %}
+                  <span class="tm">{{ r.method.replace("_", " ") }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+            {% for r in m["out"] %}
+              <li class="lost">
+                <span class="mark">out</span>
+                <span class="who">{{ r.full_name }}</span>
+                <span class="tm">{{ r.position }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

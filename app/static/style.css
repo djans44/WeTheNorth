@@ -1305,6 +1305,37 @@ label.second { margin-top: var(--s4); }
 /* Why a block was not understood, immediately above the block itself. */
 .note.why { margin-bottom: var(--s1); color: var(--loss); font-style: normal; }
 
+/* ---- the transaction log ---- */
+/* Who is filtered to, as links rather than a dropdown: twelve names fit on
+   a line or two, and a link says where it goes before you press it. */
+.whostrip { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); margin: 0; }
+.whostrip a { font-size: var(--t-sm); color: var(--ink-soft); text-decoration: none; }
+.whostrip a:hover { color: var(--accent); }
+.whostrip a.on { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--gold); }
+
+/* One move to a row: who, when, and what went each way. */
+.ledger { margin: 0; padding: 0; list-style: none; }
+.ledger > li {
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.ledger .when { margin: 0 0 0.2rem; }
+.ledger .when .tm { display: inline; margin-left: var(--s2); }
+.sides { margin: 0; padding: 0; list-style: none; font-size: var(--t-sm); }
+.sides li { line-height: 1.7; }
+.sides .tm { display: inline; margin-left: 0.4rem; }
+/* The direction, in a fixed column so in and out line up down the page and
+   a run of them can be read without reading the words. */
+.sides .mark {
+  display: inline-block;
+  width: 2.2rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+.sides .gained .who { font-weight: 600; }
+.sides .lost .who { color: var(--ink-soft); }
+.sides .lost .mark { color: var(--loss); }
+
 /* ---- draft results ---- */
 /* A round, or a manager's haul. The numbering is the pick order and the
    browser draws it, so the markup carries no numbers to fall out of step. */
