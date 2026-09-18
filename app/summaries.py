@@ -51,9 +51,23 @@ before anyone can argue with it.
 
 THE REGISTER
 
-About one sentence in four or five carries the old diction. The rest is
-plain. Laid on thickly it is a costume; left off entirely it is a match
-report.
+About one sentence in three carries it. The rest is plain. Laid on thickly it
+is a costume; left off entirely it is a match report, and a match report is
+what this comes out as by default.
+
+It is carried by the syntax and not by the vocabulary. Dropping "the realm"
+and "the reckoning" into modern sentences produces modern sentences with two
+odd words in them -- that version was rejected twice before anyone could say
+why. What carries it is inversion ("Three of the six games did the reckoning
+give away", "To Matt fell the highest score of the day", "So opens the
+roll"), subjectless passives ("For this were given Warden of the North"),
+elliptical fragments ("The Week's Banner, first of the year, to that
+sigil"), hortatives ("Let none say afterward"), clefts ("It was Tom who
+understood the bargain") and archaic negation ("That is no omen", "A first
+pick mends no December").
+
+Two of those within a few words of each other is one too many. Where a
+paragraph already opens with an inversion, the rest of it can be plain.
 
 That ratio does not change with the length of the piece. A week's account is
 a third the size of a preview and carries the same voice: a short report
