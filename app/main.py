@@ -4563,9 +4563,19 @@ async def admin_keeper_review(request: Request):
     season = int(form["season"])
     approve = form.get("action") == "approve"
 
+    # Rejecting deletes, so an empty selection must not come back saying
+    # "0 rejected and reopened" as though it had done the thing asked.
+    chosen = form.getlist("submission")
+    if not chosen:
+        return RedirectResponse(
+            url=f"/admin/keepers?season={season}&error=" +
+                quote("Nothing was ticked, so nothing was "
+                      + ("approved." if approve else "rejected.")),
+            status_code=303)
+
     with get_db() as conn:
         with conn.cursor() as cur:
-            for sid in form.getlist("submission"):
+            for sid in chosen:
                 if approve:
                     cur.execute("""
                         update keeper_submissions
@@ -4579,7 +4589,7 @@ async def admin_keeper_review(request: Request):
                     """, (int(sid), season))
         conn.commit()
 
-    n = len(form.getlist("submission"))
+    n = len(chosen)
     word = "approved" if approve else "rejected and reopened"
     return RedirectResponse(
         url=f"/admin/keepers?season={season}&msg=" + quote(f"{n} {word}"),
@@ -4958,9 +4968,20 @@ async def admin_keeper_reset(request: Request):
             url=f"/admin/keepers?season={season}&error=" +
                 quote("Tick the confirm box first"), status_code=303)
 
+    # The manager list is built from keeper_eligibility, which is empty for a
+    # season that predates keepers. An empty <select> posts no owner_id at
+    # all, and `scope == "owner" and owner_id` then fell through to the else
+    # -- so "Reset this manager" quietly reset the whole season. Refuse
+    # instead: the two buttons say different things and must do them.
+    if scope == "owner" and not owner_id:
+        return RedirectResponse(
+            url=f"/admin/keepers?season={season}&error=" +
+                quote(f"No manager to reset: {season} has no keeper "
+                      "eligibility of its own."), status_code=303)
+
     with get_db() as conn:
         with conn.cursor() as cur:
-            if scope == "owner" and owner_id:
+            if scope == "owner":
                 oid = int(owner_id)
                 cur.execute("""
                     delete from keeper_submissions

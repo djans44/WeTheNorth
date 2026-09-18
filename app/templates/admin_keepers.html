@@ -131,8 +131,14 @@
         </tbody>
       </table>
       <button type="submit" name="action" value="approve">Approve selected</button>
-      <button type="submit" name="action" value="reject" class="ghost">Reject and reopen</button>
-      <span class="tm">Rejecting deletes the submission. Their plan stays, so they can resubmit.</span>
+      {# The confirm is on the button, not the form: approve is in the same
+         form and must not ask. #}
+      <button type="submit" name="action" value="reject" class="ghost"
+              data-confirm="Reject the ticked submissions? They are deleted, not labelled. Each manager's plan stays, so they can submit again while the round is open.">
+        Reject and reopen</button>
+      <span class="tm">Every row is ticked to start with, because approving is
+        the usual act. Rejecting deletes the submission; their plan stays, so
+        they can resubmit.</span>
     </form>
     {% else %}
       <p class="note">Nothing waiting.</p>
@@ -156,7 +162,9 @@
             <form method="post" action="/admin/keepers/void" class="inline">
               <input type="hidden" name="season" value="{{ season }}">
               <input type="hidden" name="contract_id" value="{{ v.contract_id }}">
-              <button type="submit" name="action" value="cancel" class="linkish">cancel</button>
+              <button type="submit" name="action" value="cancel" class="linkish"
+                      data-confirm="Cancel {{ v.username }}&rsquo;s void of {{ v.full_name }}? The contract stands again and they must keep him.">
+                cancel</button>
             </form>
             {% if v.confirmed_at %}
             <form method="post" action="/admin/keepers/void" class="inline">
@@ -226,7 +234,7 @@
       <input type="hidden" name="season" value="{{ season }}">
       <p class="picker">
         <label for="reset_owner">Manager</label>
-        <select id="reset_owner" name="owner_id">
+        <select id="reset_owner" name="owner_id" {% if not all_owners %}disabled{% endif %}>
           {% for o in all_owners %}
             <option value="{{ o.owner_id }}">{{ o.username }}</option>
           {% endfor %}
@@ -235,8 +243,18 @@
           <input type="checkbox" name="confirm" value="1"> I mean it
         </label>
       </p>
-      <button type="submit" name="scope" value="owner" class="ghost">Reset this manager</button>
-      <button type="submit" name="scope" value="season" class="ghost">Reset all of {{ season }}</button>
+      {# Disabled rather than merely empty, and the button with it: an empty
+         select posts no owner_id, which is how "Reset this manager" used to
+         reach the whole season. The route refuses it too. #}
+      <button type="submit" name="scope" value="owner" class="ghost"
+              {% if not all_owners %}disabled{% endif %}>Reset this manager</button>
+      <button type="submit" name="scope" value="season" class="ghost"
+              data-confirm="Reset all of {{ season }}? Every submission, plan and void the season has is deleted and all three keeper rounds reopen. There is no way back.">
+        Reset all of {{ season }}</button>
+      {% if not all_owners %}
+        <p class="note">{{ season }} has no keeper eligibility of its own, so
+          there is no manager to reset one at a time.</p>
+      {% endif %}
     </form>
   </section>
 </div>
