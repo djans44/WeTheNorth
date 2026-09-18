@@ -236,16 +236,31 @@
   }
 
   // ---- a form that asks before it acts ----
-  // data-confirm on the form, its text the question. For the few posts that
-  // destroy something and have no undo. Enhancement only: without the script
-  // the form still submits, so the button's own wording has to be plain.
-  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
-    form.addEventListener("submit", function (e) {
-      if (!window.confirm(form.getAttribute("data-confirm"))) {
-        e.preventDefault();
-      }
-    });
-  });
+  // data-confirm names the question. On the form when the whole form is the
+  // destructive act, on the submit button when only one of a form's buttons
+  // is -- approve and reject sit in the same form, and only reject deletes.
+  // For the few posts that destroy something and have no undo. Enhancement
+  // only: without the script the form still submits, so the button's own
+  // wording has to be plain.
+  //
+  // One delegated listener rather than a loop over form[data-confirm],
+  // because that loop was the whole bug: four of the five confirms written
+  // on the site are on the button -- the assembly rising, the results being
+  // proclaimed, a summary removed, a keeper round forfeited -- and a handler
+  // bound only to forms never saw one of them. They all asked nothing and
+  // went straight through.
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (!form || form.tagName !== "FORM") { return; }
+    // The button wins where both carry one: it is the more specific of the
+    // two, and a form-wide question would be the wrong one to ask.
+    var asker = e.submitter && e.submitter.hasAttribute
+        && e.submitter.hasAttribute("data-confirm") ? e.submitter
+        : (form.hasAttribute("data-confirm") ? form : null);
+    if (asker && !window.confirm(asker.getAttribute("data-confirm"))) {
+      e.preventDefault();
+    }
+  }, true);
 
   // ---- timestamps in the reader's own clock ----
   // The server writes UTC because it cannot know where anyone is. Any <time>
