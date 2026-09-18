@@ -75,9 +75,17 @@
    another one and still be styled. #}
 {% macro sigilcharge(code) -%}
     {%- if code == "most_faab" %}
-      {#- A coin. Blunt on purpose: at 14px a stack of them is a smudge. -#}
-      <circle cx="10" cy="10" r="6.4"/>
-      <path class="cut" d="M6.2 8.8h7.6v1.2H6.2z M6.2 11h7.6v1.2H6.2z"/>
+      {#- A stack of coins, as the shield has always drawn it, but three
+          rather than six and in outline: the roundel is drawn at 84px on
+          the catalogue and at about 14px on a sigil, and six filled
+          discs at the small end are one blot. Strokes work here now --
+          .crest-roundel .line and .sigil-mark .line were added when the
+          Whisperers heads went missing. -#}
+      <g class="line" stroke-width="1.7">
+        <ellipse cx="10" cy="14.2" rx="5.6" ry="2.2"/>
+        <ellipse cx="10" cy="10" rx="5.6" ry="2.2"/>
+        <ellipse cx="10" cy="5.8" rx="5.6" ry="2.2"/>
+      </g>
     {%- elif code == "most_trades" %}
       {#- The shield's two half arrows, thicker: at 14px a fine shaft
           and a fine head both disappear. -#}
