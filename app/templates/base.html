@@ -92,14 +92,17 @@
       {% if request.session.get("is_admin") %}
       <li class="has-menu">
         <a href="/admin/scores" {% if path.startswith('/admin') %}class="on"{% endif %}>Admin</a>
+        {# Alphabetical by what the link says. The order used to be roughly
+           how often each was reached for, which only works while one person
+           remembers what that order was; eight items is past that. #}
         <ul class="submenu">
+          <li><a href="/admin/schedule">Create schedule</a></li>
+          <li><a href="/admin/crests">Crests</a></li>
           <li><a href="/admin/scores">Enter scores</a></li>
           <li><a href="/admin/keepers">Keeper admin</a></li>
-          <li><a href="/admin/crests">Crests</a></li>
-          <li><a href="/admin/rivals">Rivals</a></li>
-          <li><a href="/admin/schedule">Create schedule</a></li>
-          <li><a href="/admin/owners">Owners</a></li>
           <li><a href="/admin/season-setup">New season</a></li>
+          <li><a href="/admin/owners">Owners</a></li>
+          <li><a href="/admin/rivals">Rivals</a></li>
           <li><a href="/admin/summaries">Summaries</a></li>
         </ul>
       </li>
