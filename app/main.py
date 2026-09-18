@@ -1276,8 +1276,12 @@ CHAMP_ROUNDS = ("quarterfinal", "semifinal", "championship")
 # league" says nothing a reader cannot already see in the table below.
 # Warden of the North is the best regular-season record, which is what the
 # table is ordered on; Crowned is the championship game.
-WARDEN_PACE = "on course for Warden of the North"
-CROWN_PACE = "on course for Crowned"
+#
+# "in waiting" and "in line for" rather than "on course for": the last is a
+# modern sports idiom sitting beneath a heading that is not. Both of these are
+# the language of succession, which is the same thing a league table is.
+WARDEN_PACE = "Warden of the North in waiting"
+CROWN_PACE = "first in line for Crowned"
 
 
 def still_alive(games, week):
@@ -1594,15 +1598,25 @@ def season(request: Request, year: int, week: str | None = None):
                 who = champion_of(year - 1)
                 aside = who["title"] if who else None
             banner = {
-                "title": "How it went",
+                # The annalistic form -- thus begins, thus passed, thus
+                # ended -- which is how a chronicle marks its divisions. The
+                # first attempt at this used "at the close" and "the year
+                # ahead": short noun phrases, correct English, and period
+                # neutral. The site's own flavoured headings lean archaic
+                # (Mightiest weeks, Cruellest defeats, Longest winter) and
+                # these did not.
+                # A year still being played has not ended, and saying it has
+                # on every in-progress season page is a small lie the heading
+                # tells before the prose gets a word in.
+                "title": "Thus ended the year" if finished else
+                         "Thus stands the year",
                 "body": season_summary["body"] if season_summary else None,
                 # A finished season says the account is missing; one still
                 # being played says when it arrives. "Once the last game is
                 # played" would be a lie on every season that ended years ago.
-                "waiting": "No account of the season has been set down yet."
+                "waiting": "Nothing has yet been set down of the year."
                            if finished else
-                           "The account of the season is written once the "
-                           "year is done.",
+                           "The year is not yet ended, and so not yet told.",
                 "username": who["username"] if who else None,
                 "aside": aside if who else None,
             }
@@ -1615,10 +1629,10 @@ def season(request: Request, year: int, week: str | None = None):
             """, (year,))
             who = champion_of(year - 1)
             banner = {
-                "title": "The year ahead",
+                "title": "Thus begins the year",
                 "aside": who["title"] if who else None,
                 "body": rows[0]["body"] if rows else None,
-                "waiting": "No word on the year ahead has been set down yet.",
+                "waiting": "Nothing has yet been set down of the year to come.",
                 "username": who["username"] if who else None,
             }
         else:
@@ -1638,9 +1652,9 @@ def season(request: Request, year: int, week: str | None = None):
                     who = next((r for r in standings_after(conn, year, last_regular)
                                 if r["username"] in alive), None)
             banner = {
-                "title": "An account of week %d" % (shown - 1),
+                "title": "Thus passed week %d" % (shown - 1),
                 "body": week_summaries.get(shown - 1),
-                "waiting": "No account of week %d has been set down yet."
+                "waiting": "Nothing has yet been set down of week %d."
                            % (shown - 1),
                 "username": who["username"] if who else None,
                 "aside": aside if who else None,
