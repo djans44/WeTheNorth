@@ -159,13 +159,16 @@
       <path d="M8.1 14.2h3.8v1.5H8.1z M8.9 13.1l-2.4 1.85 2.4 1.85z"/>
       {%- elif code == "most_trades" %}   {#- Master of Whisperers -#}
       {#- Two half arrows passing each other, one each way: the plainest
-          sign there is for an exchange. Half heads rather than full
-          ones, so the pair reads as two things moving past each other
-          rather than as one double-headed arrow. -#}
-      <path d="M2 6.6h11v1.8H2z"/>
-      <path d="M13 3L18 7.5H13z"/>
-      <path d="M7 11.6h11v1.8H7z"/>
-      <path d="M7 12.5H2l5 4.5z"/>
+          sign there is for an exchange. The head is a single stroke off
+          the tip rather than a filled barb -- a barb at this size is a
+          wedge, and two wedges pointing opposite ways read as a shape
+          rather than as movement. -#}
+      <path d="M2 6.6h15v1.8H2z"/>
+      <path d="M6.8 11.6h15v-1.8h-15z" transform="translate(-4.8,3.8)"/>
+      <g class="line" stroke-width="1.8" stroke-linecap="butt">
+        <path d="M17.1 7.5L12.3 2.9"/>
+        <path d="M2.9 12.5l4.8 4.6"/>
+      </g>
       {%- elif code == "rivalry_week_high" %}   {#- The Vengeful -#}
       <path d="M19 1L17.96 4.16 3.66 18.46 1.54 16.34 15.84 2.04z M1 1L2.04 4.16 16.34 18.46 18.46 16.34 4.16 2.04z M2.9 13.4h5.6v1.8H2.9z M11.5 13.4h5.6v1.8h-5.6z"/>
       {%- elif code == "best_team_name" %}   {#- Named in Song -#}

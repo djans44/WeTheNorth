@@ -79,12 +79,14 @@
       <circle cx="10" cy="10" r="6.4"/>
       <path class="cut" d="M6.2 8.8h7.6v1.2H6.2z M6.2 11h7.6v1.2H6.2z"/>
     {%- elif code == "most_trades" %}
-      {#- The shield's two half arrows, thicker: at 14px a thin shaft
-          and a fine barb both disappear. -#}
-      <path d="M2 5.6h10v2.4H2z"/>
-      <path d="M12 2.2L17.4 6.8H12z"/>
-      <path d="M8 12h10v2.4H8z"/>
-      <path d="M8 13.2H2.6l5.4 4.6z"/>
+      {#- The shield's two half arrows, thicker: at 14px a fine shaft
+          and a fine head both disappear. -#}
+      <path d="M2 5.6h14v2.4H2z"/>
+      <path d="M4 12h14v2.4H4z"/>
+      <g class="line" stroke-width="2.4" stroke-linecap="butt">
+        <path d="M16.1 6.8L11.4 2.2"/>
+        <path d="M3.9 13.2l4.7 4.6"/>
+      </g>
     {%- elif code == "reigning_champion" %}
       <path d="M2.8 15.6V5.2l4 3.4L10 3.4l3.2 5.2 4-3.4v10.4z"/>
     {%- elif code == "best_record" %}

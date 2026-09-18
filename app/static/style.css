@@ -2167,6 +2167,12 @@ label.second { margin-top: var(--s4); }
   stroke-width: 2;
 }
 .crest-roundel .charge { fill: var(--parchment); fill-rule: evenodd; }
+/* The shield has had this since the first charge drawn with a stroke;
+   the roundel and the sigil mark never did, so a crest whose charge
+   used one lost it everywhere except the catalogue shield. Master of
+   Whisperers drew two shafts and no heads. */
+.crest-roundel .line { fill: none; stroke: var(--parchment); }
+.sigil-mark .line { fill: none; stroke: currentColor; }
 .crest-roundel.gold   { --crest-cat: var(--gold-deep); }
 .crest-roundel.silver { --crest-cat: var(--silver); }
 .crest-roundel.bronze { --crest-cat: var(--bronze); }
