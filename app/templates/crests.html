@@ -86,6 +86,32 @@
                   {% endfor %}
                 </ol>
               </details>
+
+            {# A title counted across a whole career does not move on a
+               Tuesday, so these two have no weekly spells -- only where they
+               stood at each season's close. The route has always worked that
+               list out and nothing has ever drawn it. #}
+            {% elif c.previous %}
+              <details class="awards">
+                <summary>
+                  Held before by
+                  {{ c.previous|map(attribute='username')|unique|list|length }}
+                  {% if c.previous|map(attribute='username')|unique|list|length == 1 %}manager{% else %}managers{% endif %}
+                  <span class="crest-more" aria-hidden="true"></span>
+                </summary>
+                <ol class="crest-log">
+                  {% for p in c.previous %}
+                    <li>
+                      <span class="when">to {{ p.season_year }}</span>
+                      <span class="avatar-line">
+                        {{ avatar(p.owner_id, 30) }}
+                        <a href="/team/{{ p.username|lower }}">{{ p.username }}</a>
+                      </span>
+                      {% if p.detail %}<span class="tm">{{ p.detail }}</span>{% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
+              </details>
             {% endif %}
           </div>
         </div>

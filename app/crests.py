@@ -330,63 +330,69 @@ def transactions(conn, seasons):
             out["wheeler_dealer"].append(
                 (r["owner_id"], y, None, f"{r['n']} trades", 0))
 
-    # ---- and the two that count across every season ----
-    # Career crests, so no season goes on the row, and every complete season
-    # is read rather than the ones this run was asked for. A season recompute
-    # asks for one year; working "most ever" out of it would answer that the
-    # most anyone ever spent is what they spent in 2023. held() reads all of
-    # history for the same reason.
-    #
-    # They read the transactions rather than summing the season awards:
-    # counting awards would make one crest depend on another having run
-    # first, and a rebuild would answer differently depending on the order it
-    # happened in.
+    return out
+
+
+def market_titles(conn, upto=None):
+    """Master of Coin and Master of Whisperers, as they stood at a moment.
+
+    `upto` is a season to count through, or None for "as things stand". The
+    same shape as held(): compute() calls it once with no cut for the current
+    holder, and once per completed season so the title has a history. Without
+    that these two had a holder and nothing else -- Josh led the spending
+    after 2022 and Matt the dealing after 2023, and the page could not say so.
+
+    No weekly rows. A transaction carries a date and not a week, and a title
+    counting a whole career does not move on a Tuesday in any meaningful way.
+
+    They read the transactions rather than summing the season awards:
+    counting awards would make one crest depend on another having run first,
+    and a rebuild would answer differently depending on the order it ran in.
+    """
+    out = collections.defaultdict(list)
+    have = {r["season_year"] for r in
+            q(conn, "select distinct season_year from transactions")}
     every = [r["season_year"] for r in
              q(conn, "select distinct season_year from seasons")]
-    done = [y for y in complete_seasons(conn, every) if y in have]
-    if done:
-        # Money. faab_amount is null for a free agent and for a plain waiver
-        # claim, so this is the sum of what was actually bid.
-        #
-        # A floor and then seniority. Twenty-one dollars is the least it can
-        # be won with, so nobody holds it for a single opening bid while the
-        # league is young, and level totals go to whoever got there first --
-        # a manager reaches their total at their last winning bid, so the
-        # earliest of those takes it. Held until somebody genuinely passes
-        # them rather than draws level.
-        for r in lowest(leaders(q(conn, """
-            select t.owner_id, sum(x.faab_amount) as spent,
-                   max(x.occurred_on) as reached
-            from transactions x join teams t on t.team_id = x.to_team_id
-            where x.season_year = any(%s) and x.kind = 'add'
-              and x.faab_amount is not null
-              and t.season_year = x.season_year
-            group by t.owner_id having sum(x.faab_amount) >= %s
-        """, (done, COIN_FLOOR)), "spent"), "reached"):
-            out["most_faab"].append(
-                (r["owner_id"], None, None, "$%s spent" % _plain(r["spent"]), 0))
+    done = [y for y in complete_seasons(conn, every)
+            if y in have and (upto is None or y <= upto)]
+    if not done:
+        return out
 
-        # And trades, counted the way the season crest counts them: a
-        # three-for-one is one trade, not four rows. Three at least, then the
-        # same seniority rule -- level counts go to whoever reached the count
-        # first, which is the date of their last trade.
-        for r in lowest(leaders(q(conn, """
-            with dealt as (
-                select distinct x.season_year, x.occurred_on,
-                       least(x.from_team_id, x.to_team_id) as lo,
-                       greatest(x.from_team_id, x.to_team_id) as hi
-                from transactions x
-                where x.season_year = any(%s) and x.kind = 'trade'
-            )
-            select o.owner_id, count(*) as n, max(d.occurred_on) as reached
-            from dealt d
-            join teams t on t.season_year = d.season_year
-                        and t.team_id in (d.lo, d.hi)
-            join owners o on o.owner_id = t.owner_id
-            group by o.owner_id having count(*) >= %s
-        """, (done, WHISPER_FLOOR)), "n"), "reached"):
-            out["most_trades"].append(
-                (r["owner_id"], None, None, "%d trades" % r["n"], 0))
+    # Money. faab_amount is null for a free agent and for a plain waiver
+    # claim, so this sums what was actually bid. A floor, then whoever
+    # reached the leading total first -- see COIN_FLOOR.
+    for r in lowest(leaders(q(conn, """
+        select t.owner_id, sum(x.faab_amount) as spent,
+               max(x.occurred_on) as reached
+        from transactions x join teams t on t.team_id = x.to_team_id
+        where x.season_year = any(%s) and x.kind = 'add'
+          and x.faab_amount is not null
+          and t.season_year = x.season_year
+        group by t.owner_id having sum(x.faab_amount) >= %s
+    """, (done, COIN_FLOOR)), "spent"), "reached"):
+        out["most_faab"].append(
+            (r["owner_id"], upto, None, "$%s spent" % _plain(r["spent"]), 0))
+
+    # And trades, counted the way the season crest counts them: a
+    # three-for-one is one trade, not four rows.
+    for r in lowest(leaders(q(conn, """
+        with dealt as (
+            select distinct x.season_year, x.occurred_on,
+                   least(x.from_team_id, x.to_team_id) as lo,
+                   greatest(x.from_team_id, x.to_team_id) as hi
+            from transactions x
+            where x.season_year = any(%s) and x.kind = 'trade'
+        )
+        select o.owner_id, count(*) as n, max(d.occurred_on) as reached
+        from dealt d
+        join teams t on t.season_year = d.season_year
+                    and t.team_id in (d.lo, d.hi)
+        join owners o on o.owner_id = t.owner_id
+        group by o.owner_id having count(*) >= %s
+    """, (done, WHISPER_FLOOR)), "n"), "reached"):
+        out["most_trades"].append(
+            (r["owner_id"], upto, None, "%d trades" % r["n"], 0))
     return out
 
 
@@ -664,6 +670,8 @@ def compute(conn, seasons, weeks_from=1):
     # Who holds each title now.
     for code, rows in held(conn).items():
         awards[code] += rows
+    for code, rows in market_titles(conn).items():
+        awards[code] += rows
 
     done = set(complete_seasons(conn, seasons))
     for y in seasons:
@@ -671,6 +679,8 @@ def compute(conn, seasons, weeks_from=1):
         # one: an in-progress year has no close to record.
         if y in done:
             for code, rows in held(conn, y).items():
+                awards[code] += rows
+            for code, rows in market_titles(conn, y).items():
                 awards[code] += rows
         # And after every week played, playoffs included -- Bane of Their
         # Rival counts every meeting and some of those are playoff games.
