@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Transactions | We the North{% endblock %}
+
+{% macro moverow(r) %}
+  <tr>
+    <td class="kind">{{ r.kind }}</td>
+    <td class="name">{{ r.player }}</td>
+    <td class="pos">{{ r.position }}</td>
+    <td>{{ r.team }}{% if r.from_team %} <span class="tm">from {{ r.from_team }}</span>{% endif %}</td>
+    <td class="how">{% if r.method == "faab" %}${{ r.faab }}
+      {%- elif r.method %}{{ r.method.replace("_", " ") }}{% else %}&mdash;{% endif %}</td>
+    <td class="when">{{ r.date }}</td>
+  </tr>
+{% endmacro %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Transactions {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/transactions?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  <section>
+    <p class="note">Copy the transaction page from Yahoo and paste it whole.
+      Yahoo shows twenty-five at a time; paste the page as it stands rather
+      than trimming it to what looks new, because the rows already stored are
+      what prove nothing fell between this week and last.
+      {% if stored %}{{ season }} has {{ stored }} stored,
+        the most recent on {{ newest_stored.strftime("%-d %b") if newest_stored else "no date" }}.
+      {% else %}Nothing is stored for {{ season }} yet.{% endif %}</p>
+
+    <form method="post" action="/admin/transactions" class="writer">
+      <input type="hidden" name="season" value="{{ season }}">
+      <label for="text">What Yahoo shows</label>
+      <textarea id="text" name="text" rows="{{ 8 if previewed else 16 }}"
+                placeholder="Paste here.">{{ text }}</textarea>
+      <div class="actionrow">
+        <button type="submit" name="action" value="preview" class="seal">
+          {% if previewed %}Read it again{% else %}Read the paste{% endif %}</button>
+      </div>
+    </form>
+  </section>
+
+  {% if previewed %}
+  {# ---- what the paste turned out to be ----
+     Nothing is written by getting here. Each group is a different answer to
+     "what would happen", and the write is the button at the bottom. #}
+  <section>
+    <h2>What this would do</h2>
+
+    {% if stop %}<div class="errors"><b>Nothing written.</b> {{ stop }}</div>{% endif %}
+
+    {# The check that a paste cannot make on its own: it knows what is new,
+       not what is missing. An overlap with what is stored settles it. #}
+    {% if flow %}
+      {% if flow.state == "gap" %}
+        <div class="errors">
+          <b>There may be transactions missing.</b>
+          <p>Nothing in this paste is already stored, and the oldest of it is
+            {{ flow.oldest.strftime("%-d %b") if flow.oldest else "undated" }} &mdash;
+            later than the most recent one stored,
+            {{ flow.newest_stored.strftime("%-d %b") }}. Anything between those
+            two dates would be lost quietly, and a missing add is a wrong
+            keeper price in January. Scroll back a page on Yahoo and paste more
+            so the two overlap.</p>
+        </div>
+      {% elif flow.state == "first" %}
+        <p class="note">The first load for {{ season }}, so there is nothing to
+          overlap with.</p>
+      {% else %}
+        <p class="note ok">This paste overlaps what is stored, so nothing has
+          been missed between them.</p>
+      {% endif %}
+    {% endif %}
+
+    <p class="note"><b>{{ ready|length }}</b> new,
+      <b>{{ known|length }}</b> already stored{% if wanted %},
+      <b>{{ wanted|length }}</b> player{{ "s" if wanted|length != 1 }} to
+      create{% endif %}{% if unresolved %},
+      <b>{{ unresolved|length }}</b> unresolved{% endif %}{% if puzzles %},
+      <b>{{ puzzles|length }}</b> not understood{% endif %}.</p>
+  </section>
+
+  {% if unresolved %}
+  <section>
+    <h2>Names the league does not have</h2>
+    <p class="note">A manager renaming a team mid-season is the usual cause.
+      Rename the team on the <a href="/admin/owners">owners</a> page to match
+      what Yahoo prints, then read the paste again. Nothing can be written
+      while these are here.</p>
+    <table class="keepers">
+      <tbody>
+      {% for r in unresolved %}
+        <tr><td class="name">{{ r.player }}</td><td>{{ r.why }}</td>
+            <td class="when">{{ r.date }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if wanted %}
+  <section>
+    <h2>Players the league has never seen</h2>
+    <p class="note">A rookie picked up in September was drafted by nobody and
+      was on no roster in January, so this is expected every week. Check the
+      spelling &mdash; a misspelling here becomes a second player who never
+      goes away.</p>
+    <table class="keepers">
+      <tbody>
+      {% for name, position in wanted %}
+        <tr><td class="name">{{ name }}</td><td class="pos">{{ position }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if puzzles %}
+  <section>
+    <h2>Blocks that made no sense</h2>
+    <p class="note">These are shown rather than guessed at. If Yahoo has
+      changed the shape of something &mdash; a trade, most likely, which has
+      not been seen in this export yet &mdash; this is where it turns up.</p>
+    {% for p in puzzles %}
+      <pre class="raw">{% for line in p %}{{ line }}
+{% endfor %}</pre>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if ready %}
+  <section>
+    <h2>New</h2>
+    <table class="keepers moves">
+      <thead><tr><th>What</th><th>Player</th><th></th><th>Team</th>
+                 <th class="how">How</th><th class="when">When</th></tr></thead>
+      <tbody>{% for r in ready %}{{ moverow(r) }}{% endfor %}</tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if known %}
+  <section>
+    <h2>Already stored</h2>
+    <p class="note">Left alone. This is the overlap, and it is the reason
+      pasting the same page twice costs nothing.</p>
+    <table class="keepers moves quiet">
+      <tbody>{% for r in known %}{{ moverow(r) }}{% endfor %}</tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {# ---- the write ----
+     Each tickbox answers something the page said above it, and appears only
+     when there is something to answer. #}
+  <section class="danger">
+    <h2>Store them</h2>
+    <form method="post" action="/admin/transactions">
+      <input type="hidden" name="season" value="{{ season }}">
+      <textarea name="text" hidden>{{ text }}</textarea>
+      {% if wanted %}
+        <label class="confirm"><input type="checkbox" name="make_players" value="1">
+          Create the {{ wanted|length }} new player{{ "s" if wanted|length != 1 }}</label>
+      {% endif %}
+      {% if puzzles %}
+        <label class="confirm"><input type="checkbox" name="skip_puzzles" value="1">
+          Go on without the {{ puzzles|length }} block{{ "s" if puzzles|length != 1 }}
+          that made no sense</label>
+      {% endif %}
+      {% if flow and flow.state == "gap" %}
+        <label class="confirm"><input type="checkbox" name="accept_gap" value="1">
+          Store anyway, knowing there may be a gap</label>
+      {% endif %}
+      <div class="actionrow">
+        <button type="submit" name="action" value="apply" class="seal"
+                {% if not ready or unresolved %}disabled{% endif %}>
+          Store {{ ready|length }} transaction{{ "s" if ready|length != 1 }}</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

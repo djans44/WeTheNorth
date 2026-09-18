@@ -860,7 +860,25 @@ select, .entry input {
   border: 1px solid var(--ink);
 }
 
+/* The first textarea on the site. It takes the input's frame and ground so
+   a pasted page does not sit in a browser-default box on a parchment panel,
+   and a monospace face because what goes in it is lines from a screen, read
+   for their shape as much as their words. */
+textarea {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--panel-lift);
+  border: var(--frame);
+  resize: vertical;
+}
+
 input:focus-visible,
+textarea:focus-visible,
 button:focus-visible,
 select:focus-visible {
   outline: 3px solid var(--focus);
@@ -1272,6 +1290,33 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    "Times this season" was stacking onto three lines. No width, so the header
    sets the column and the number sits under it. */
 .keepers .tally { font-weight: 700; white-space: nowrap; }
+/* The transaction review. A move is read down the What column first -- add,
+   drop, trade -- so that column is the one set apart. */
+.moves .kind {
+  width: 4rem;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+  text-transform: lowercase;
+}
+.moves .pos { width: 3rem; font-size: var(--t-sm); color: var(--ink-soft); }
+/* Tables range right by default, which suits numbers. These columns are
+   names and read from the left. */
+.moves td, .moves th { text-align: left; }
+.moves .how, .moves .when, .moves th.how, .moves th.when { text-align: right; }
+.moves .how { width: 7rem; font-size: var(--t-sm); }
+.moves .when { width: 9rem; font-size: var(--t-sm); color: var(--ink-soft); }
+/* Already stored, and so not the point of the screen. */
+.moves.quiet td { color: var(--ink-soft); }
+/* A block the parser could not read, kept exactly as it was pasted: the
+   whole value of showing it is that it has not been tidied. */
+.raw {
+  margin: 0 0 var(--s3);
+  padding: var(--s3);
+  border-left: 3px solid var(--loss);
+  background: var(--panel-lift);
+  font-size: var(--t-sm);
+  white-space: pre-wrap;
+}
 .keepers .name { min-width: 12rem; }
 
 .owners-grid th, .owners-grid td { text-align: left; vertical-align: middle; }

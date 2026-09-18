@@ -11,6 +11,13 @@ Done and removed: the player-scoring note, now
 turned up, twelve commits; the `/draft-prep` audit, eight; the `/keepers`
 audit, four; the `/rules` audit, seven. All four pages are finished.
 
+Also done since, and left numbered here so the audit list keeps its numbers:
+**1 weekly summaries** and **2 season summaries** are built, generated for
+2022-2025 and published, with an admin page at `/admin/summaries` and at most
+one draft and one published version of each (migration 045). **5
+`/admin/scores`** and **11 `/admin/schedule`** have had their audits -- ten
+findings and six respectively, two of which were losing data.
+
 Two things came out of `/draft-prep` that belong to the whole site rather than
 to that page: the connection pool, written up in `PROJECT.md`, and per-season
 sigil rings on both draft pages. The admin pages that carry a season picker
@@ -180,7 +187,44 @@ to look at.
 The grant flow, built last. Worth an audit precisely because it is new and
 was never looked at with fresh eyes.
 
-## 13. Let the league vote on the four honours
+## 13. A roster tracked all year, not snapshotted at the end
+
+Adds, drops and trades together are a complete record of who moved where, so
+a roster does not have to be a thing that arrives once in January. Start from
+the draft, apply every transaction in order, and the roster is known on any
+date of the season. That turns the end-of-season load from the source of
+truth into a **check** on it: import the final rosters, compare against what
+the transactions say, and anything that disagrees is a gap in the record
+worth finding before keeper selection runs off it.
+
+Worth doing in that order, because each piece is useful before the next
+exists:
+
+1. **Show the transactions.** They have been loaded since 2025 and are
+   displayed nowhere. A manager's page and a league-wide log, newest first.
+   The data is already there; this is a page, not a pipeline.
+2. **Derive the current roster.** Draft picks plus transactions up to a date.
+   Needs the draft loaded for the season, which 2026 does not have yet --
+   see the loader below. Shown per team, and it is the thing that makes a
+   mid-season site feel live rather than historical.
+3. **Validate the final rosters against it.** The end-of-year import stops
+   overwriting and starts reconciling: here is what the record says the
+   roster is, here is what Yahoo says, here is the difference. Keeper cost
+   basis reads `transactions` directly (`keeper_cost_basis`, migration 023),
+   so a hole in the transaction record is a wrong keeper price -- this is
+   the check that catches it before anyone selects.
+
+Loaders for the two inputs, both of which are rows in item 4's table and
+should be built the same way as the transactions paste page:
+
+- **Rosters.** `rosters` today is an end-of-season snapshot, 2025 only.
+- **Draft results.** `draft_picks` has 2022-2025 and no 2026, which is why
+  a derived roster cannot be built for the current season yet.
+
+Both paste, preview, apply -- never a silent write -- as the transactions
+page does.
+
+## 14. Let the league vote on the four honours
 
 Named in Song, Legend of the Choosing, The Bargain of the Age, The Red Week.
 The commissioner is the right mechanism but the wrong decider — they are

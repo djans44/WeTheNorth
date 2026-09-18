@@ -21,6 +21,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import crests as crestrules
 from app import standings
 from app import summaries
+from app import transactions as txn
 from app.keeperrules import next_free_round
 
 load_dotenv()
@@ -2855,6 +2856,155 @@ async def admin_scores_save(request: Request):
     if crested == "failed":
         url += "&crests=failed"
     return RedirectResponse(url + ("#account" if started else ""), status_code=303)
+
+
+# ---------------------------------------------------------------- transactions
+
+def transaction_context(conn, season, text="", previewed=False):
+    """Everything the page shows, for a paste or for an empty box.
+
+    The parse and the matching are pure -- app/transactions.py -- so this is
+    the three lookups they need and nothing else.
+    """
+    years = query(conn, "select season_year from seasons order by season_year desc")
+    teams = {txn.norm(r["team_name"]): r["team_id"] for r in query(conn, """
+        select team_id, team_name from teams where season_year = %s
+    """, (season,))}
+    players = {}
+    for r in query(conn, "select player_id, full_name from players"):
+        players.setdefault(txn.norm(r["full_name"]), r["player_id"])
+    stored = query(conn, """
+        select count(*) as n, max(occurred_on) as newest
+        from transactions where season_year = %s
+    """, (season,))[0]
+    existing = {(r["season_year"], r["kind"], r["player_id"], r["to_team_id"],
+                 r["from_team_id"], r["occurred_raw"]) for r in query(conn, """
+        select season_year, kind, player_id, to_team_id, from_team_id,
+               occurred_raw
+        from transactions where season_year = %s
+    """, (season,))}
+
+    ctx = {"years": years, "season": season, "text": text,
+           "previewed": previewed, "stored": stored["n"],
+           "newest_stored": stored["newest"], "ready": [], "known": [],
+           "unresolved": [], "puzzles": [], "wanted": [], "flow": None}
+    if not text.strip():
+        return ctx
+
+    moves, puzzles = txn.parse(text, season)
+    ready, known, unresolved, wanted = txn.resolve(
+        moves, teams, players, existing, season)
+    ctx.update({"ready": ready, "known": known, "unresolved": unresolved,
+                "puzzles": puzzles,
+                "wanted": sorted(wanted.values()),
+                "flow": txn.continuity(ready, known, stored["newest"])})
+    return ctx
+
+
+@app.get("/admin/transactions", response_class=HTMLResponse)
+def admin_transactions(request: Request, season: int = 0, msg: str = "",
+                       error: str = ""):
+    """Paste what Yahoo shows; the page works out what is new.
+
+    Yahoo pages its transaction log at twenty-five, so pasting a whole season
+    late on is a chore nobody would keep up. Pasting the visible page every
+    week is not, and the overlap between one paste and the next is what makes
+    it safe: a row already stored is recognised and left alone.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"] if years else 0
+        ctx = transaction_context(conn, season)
+    return templates.TemplateResponse(request=request,
+                                      name="admin_transactions.html", context=ctx)
+
+
+@app.post("/admin/transactions")
+async def admin_transactions_post(request: Request):
+    """Look at it, then write it. Never one without the other.
+
+    Preview re-reads the paste rather than carrying a parsed payload, because
+    parsing is deterministic: the same text gives the same rows, and what is
+    applied is what was on the screen.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    text = form.get("text") or ""
+    apply_it = form.get("action") == "apply"
+
+    with get_db() as conn:
+        ctx = transaction_context(conn, season, text, previewed=True)
+
+        if not apply_it:
+            return templates.TemplateResponse(
+                request=request, name="admin_transactions.html", context=ctx)
+
+        # The four things that stop a write, each of which the preview has
+        # already shown. They are separate so the page can say which one.
+        stop = ""
+        if not ctx["ready"]:
+            stop = "Nothing new in that paste."
+        elif ctx["unresolved"]:
+            stop = ("%d move%s names a team the league does not have. Fix the "
+                    "team name first." % (len(ctx["unresolved"]),
+                                          "" if len(ctx["unresolved"]) == 1 else "s"))
+        elif ctx["wanted"] and not form.get("make_players"):
+            stop = "Tick the box to create the players that are new."
+        elif ctx["puzzles"] and not form.get("skip_puzzles"):
+            stop = "Tick the box to go ahead without the blocks that made no sense."
+        elif ctx["flow"] and ctx["flow"]["state"] == "gap" and not form.get("accept_gap"):
+            stop = ("There is a gap between this paste and what is stored. "
+                    "Scroll back a page and paste more, or tick the box.")
+        if stop:
+            ctx["stop"] = stop
+            return templates.TemplateResponse(
+                request=request, name="admin_transactions.html",
+                context=ctx, status_code=400)
+
+        made = 0
+        with conn.cursor() as cur:
+            # New players first: the rows about to be written point at them.
+            if ctx["wanted"]:
+                for name, position in ctx["wanted"]:
+                    cur.execute("""
+                        insert into players (full_name, position)
+                        values (%s, %s) returning player_id
+                    """, (name, position))
+                    made += 1
+                players = {}
+                for r in query(conn, "select player_id, full_name from players"):
+                    players.setdefault(txn.norm(r["full_name"]), r["player_id"])
+                for row in ctx["ready"]:
+                    if row["player_id"] is None:
+                        row["player_id"] = players.get(txn.norm(row["player"]))
+
+            # on conflict: the unique index is the real guard, and two
+            # people pasting the same page at once should be a no-op rather
+            # than an error page.
+            cur.executemany("""
+                insert into transactions
+                    (season_year, kind, method, faab_amount, player_id,
+                     to_team_id, from_team_id, occurred_on, occurred_raw)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                on conflict do nothing
+            """, [(season, r["kind"], r["method"], r["faab"], r["player_id"],
+                   r["to_team_id"], r["from_team_id"], r["on"], r["date"])
+                  for r in ctx["ready"]])
+        conn.commit()
+
+    told = "%d transaction%s stored" % (len(ctx["ready"]),
+                                        "" if len(ctx["ready"]) == 1 else "s")
+    if made:
+        told += ", %d new player%s created" % (made, "" if made == 1 else "s")
+    return RedirectResponse(
+        url="/admin/transactions?season=%d&msg=%s" % (season, quote(told + ".")),
+        status_code=303)
 
 
 @app.get("/admin/crests", response_class=HTMLResponse)
