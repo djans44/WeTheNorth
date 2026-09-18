@@ -65,14 +65,15 @@
            and nobody was going there to read it. The submenu is how you
            reach someone else. #}
         <a href="/team/{{ request.session['username']|lower }}"
-           {% if path.startswith('/team') or path == '/rosters' %}class="on"{% endif %}>Managers</a>
+           {% if path.startswith('/team') %}class="on"{% endif %}>Managers</a>
         <ul class="submenu">
-          <li><a href="/rosters">Rosters</a></li>
           {% for o in nav_owners() %}
             <li><a href="/team/{{ o.username|lower }}">{{ o.username }}</a></li>
           {% endfor %}
         </ul>
       </li>
+      <li><a href="/rosters"
+             {% if path == '/rosters' %}class="on"{% endif %}>Rosters</a></li>
       <li class="has-menu">
         <a href="/draft-order" {% if path.startswith('/draft') %}class="on"{% endif %}>Draft</a>
         <ul class="submenu">
