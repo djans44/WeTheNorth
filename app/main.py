@@ -4482,20 +4482,71 @@ def admin_keepers(request: Request, season: int = 0, preview: int = 0,
 async def admin_keeper_windows(request: Request):
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
     form = await request.form()
     season = int(form["season"])
 
     with get_db() as conn:
+        have = {r["phase"]: r for r in query(conn, """
+            select phase, opens_at, closes_at, resolved_at
+            from keeper_windows where season_year = %s
+        """, (season,))}
+
+        # Read the three rows and decide what each one is before writing any
+        # of them. A half-filled row used to be skipped in silence and the
+        # page still said "Windows saved", which is the same shape as the
+        # schedule page saving nothing and claiming it had.
+        wanted, clearing, problems = [], [], []
+        for n in (1, 2, 3):
+            opens = (form.get(f"w{n}_opens") or "").strip()
+            closes = (form.get(f"w{n}_closes") or "").strip()
+            was = have.get(n)
+            if not opens and not closes:
+                # Both emptied: the way to take a window off the season.
+                if was:
+                    if was["resolved_at"]:
+                        problems.append(f"Keeper {n} is resolved and cannot be cleared.")
+                    else:
+                        clearing.append(n)
+                continue
+            if not opens or not closes:
+                problems.append(f"Keeper {n} needs both a start and an end, "
+                                "or neither to clear it.")
+                continue
+            # Read as league time, not as whatever the database session
+            # happens to be set to. See league_moment.
+            opens, closes = league_moment(opens), league_moment(closes)
+            if closes <= opens:
+                problems.append(f"Keeper {n} closes before it opens.")
+                continue
+            # To the minute, which is all a datetime-local shows: a stored
+            # instant carrying seconds would otherwise read back as a change
+            # on every save and nag about a window nobody touched.
+            same = (was
+                    and was["opens_at"].replace(second=0, microsecond=0) == opens
+                    and was["closes_at"].replace(second=0, microsecond=0) == closes)
+            if was and was["resolved_at"]:
+                # Moving the dates of a round already settled changes nothing
+                # about what it did and only makes the record disagree.
+                if not same:
+                    problems.append(f"Keeper {n} is resolved. Reset the season "
+                                    "to reopen it before changing its dates.")
+                continue
+            if same:
+                continue
+            wanted.append((n, opens, closes))
+
+        if problems:
+            return RedirectResponse(
+                url=f"/admin/keepers?season={season}&error=" +
+                    quote(" ".join(problems)), status_code=303)
+        if not wanted and not clearing:
+            return RedirectResponse(
+                url=f"/admin/keepers?season={season}&msg=" +
+                    quote("Nothing changed."), status_code=303)
+
         with conn.cursor() as cur:
-            for n in (1, 2, 3):
-                opens = (form.get(f"w{n}_opens") or "").strip()
-                closes = (form.get(f"w{n}_closes") or "").strip()
-                if not opens or not closes:
-                    continue
-                # Read as league time, not as whatever the database session
-                # happens to be set to. See league_moment.
-                opens = league_moment(opens)
-                closes = league_moment(closes)
+            for n, opens, closes in wanted:
                 cur.execute("""
                     insert into keeper_windows (season_year, phase, opens_at, closes_at)
                     values (%s, %s, %s, %s)
@@ -4504,10 +4555,21 @@ async def admin_keeper_windows(request: Request):
                         closes_at = excluded.closes_at,
                         updated_at = now()
                 """, (season, n, opens, closes))
+            for n in clearing:
+                cur.execute("""
+                    delete from keeper_windows where season_year = %s and phase = %s
+                """, (season, n))
         conn.commit()
 
+    said = []
+    if wanted:
+        said.append("%d window%s saved" % (len(wanted), "" if len(wanted) == 1 else "s"))
+    if clearing:
+        said.append("Keeper %s cleared"
+                    % ", ".join(str(n) for n in clearing))
     return RedirectResponse(
-        url=f"/admin/keepers?season={season}&msg=Windows+saved", status_code=303)
+        url=f"/admin/keepers?season={season}&msg=" + quote(", ".join(said) + "."),
+        status_code=303)
 
 
 def refresh_keeper_crests(conn, season):
