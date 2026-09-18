@@ -1,91 +1,30 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% from "crestart.html" import crestshield %}
 {% block title %}Assembly admin | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
-    <h1>Assembly admin</h1>
-    <p class="lede">The four nobody can earn. No rule can settle the best team
-      name or the trade of the year, so the commissioner writes them down.
-      Everything else on the crests page works itself out from the scores.</p>
-  </header>
-
-  <section>
-    <h2>Give one</h2>
-    <p class="note">One holder per crest per season. Giving it again to
-      somebody else takes it off the first &mdash; there is nothing to undo
-      first.</p>
-
-    <form method="post" action="/admin/crests">
-      <p class="field">
-        <label for="crest_id">Crest</label>
-        <select id="crest_id" name="crest_id" required>
-          {% for c in manual %}
-            <option value="{{ c.crest_id }}">{{ c.name }} &mdash; {{ c.description }}</option>
-          {% endfor %}
-        </select>
-      </p>
-      <p class="field">
-        <label for="season">Season</label>
-        <select id="season" name="season">
-          {% for y in years %}
-            <option value="{{ y.season_year }}"
-                    {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-          {% endfor %}
-        </select>
-      </p>
-      <p class="field">
-        <label for="owner_id">Manager</label>
-        <select id="owner_id" name="owner_id" required>
-          {% for o in owners %}
-            <option value="{{ o.owner_id }}">{{ o.username }}</option>
-          {% endfor %}
-        </select>
-      </p>
-      <p class="field">
-        <label for="detail">Why</label>
-        <input id="detail" name="detail" maxlength="80"
-               placeholder="Handcuff my Cousins">
-      </p>
-      <p class="note">Optional, and it shows under the crest wherever it
-        appears. The team name, the player, the line that made it.</p>
-      <p class="checkline"><button type="submit">Award it</button></p>
-    </form>
-  </section>
-
-  <section>
-    <h2>Given</h2>
-    {% if not given %}
-      <p class="note">None yet. Four crests a year are waiting.</p>
-    {% else %}
-      <div class="catalogue">
-        {% for g in given %}
-          <div class="entry">
-            {{ crestshield(g.code, g.category, 56) }}
-            <div class="lines">
-              <h3>{{ g.crest }}</h3>
-              <p class="who">
-                <span class="lbl">{{ g.season_year }}</span>
-                <span class="avatar-line">
-                  {{ avatar(g.owner_id, 30) }}
-                  <a href="/team/{{ g.username|lower }}">{{ g.username }}</a>
-                </span>
-              </p>
-              {% if g.detail %}<p class="what">{{ g.detail }}</p>{% endif %}
-              <form method="post" action="/admin/crests/revoke" class="checkline">
-                <input type="hidden" name="owner_crest_id" value="{{ g.owner_crest_id }}">
-                <input type="hidden" name="season" value="{{ season }}">
-                <button type="submit">Take it back</button>
-                {% if g.by_whom %}<span class="tm">Given by {{ g.by_whom }}</span>{% endif %}
-              </form>
-            </div>
-          </div>
+  {# The year is the control that changes the year, as on every other admin
+     page. Without it this page ran on whatever ?season= happened to be, and
+     there was no way to reach the assembly of a year that had already
+     risen. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Assembly admin {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/crests?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
         {% endfor %}
-      </div>
-    {% endif %}
-  </section>
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
 
   {# ---- the assembly, in the order it happens ----
      Call it, look at what the league will be asked, let it sit, then settle
@@ -196,7 +135,9 @@
     <h2>What it decided</h2>
     <p class="note">The league can read the count at the
       <a href="/assembly/proclamations?season={{ season }}">proclamations</a>.
-      Nothing is held until you proclaim it, and a tie is yours to settle.</p>
+      Nothing is held until you proclaim it. Proclaim grants every honour the
+      count settled; a tie it leaves alone, and those are the only ones with a
+      button of their own.</p>
     {% for c in manual %}
       {% set r = vote.result.get(c.crest_id) %}
       {% if r %}
@@ -213,13 +154,18 @@
                 <td class="name">{{ row.username }}</td>
                 <td>{{ row.detail }}</td>
                 <td class="got">
-                  {% if row.winner %}
+                  {# Only a tie needs a hand. Everything else is settled by
+                     the count and granted by Proclaim below, so a button on
+                     an undisputed winner is an invitation to disagree with
+                     the league. #}
+                  {% if row.winner and r.tied %}
                     <form method="post" action="/admin/crests" class="inline">
                       <input type="hidden" name="season" value="{{ season }}">
                       <input type="hidden" name="crest_id" value="{{ c.crest_id }}">
                       <input type="hidden" name="owner_id" value="{{ row.choice_owner_id }}">
                       <input type="hidden" name="detail" value="{{ row.detail }}">
-                      <button type="submit" class="seal quiet">Award</button>
+                      <button type="submit" class="seal quiet">Break the tie
+                        this way</button>
                     </form>
                   {% endif %}
                 </td>
@@ -243,5 +189,41 @@
     </form>
   </section>
   {% endif %}
+  {# Every season, not just this one: four a year is a short enough
+     list to read whole, and last year's is how you remember what it
+     was called. Taking one back is here because this is where they
+     are, not because it is a thing to do lightly. #}
+  <section>
+    <h2>What is held</h2>
+    {% if not given %}
+      <p class="note">Nothing has been proclaimed yet. Four a year are
+        waiting on an assembly.</p>
+    {% else %}
+      <div class="catalogue">
+        {% for g in given %}
+          <div class="entry">
+            {{ crestshield(g.code, g.category, 56) }}
+            <div class="lines">
+              <h3>{{ g.crest }}</h3>
+              <p class="who">
+                <span class="lbl">{{ g.season_year }}</span>
+                <span class="avatar-line">
+                  {{ avatar(g.owner_id, 30) }}
+                  <a href="/team/{{ g.username|lower }}">{{ g.username }}</a>
+                </span>
+              </p>
+              {% if g.detail %}<p class="what">{{ g.detail }}</p>{% endif %}
+              <form method="post" action="/admin/crests/revoke" class="checkline">
+                <input type="hidden" name="owner_crest_id" value="{{ g.owner_crest_id }}">
+                <input type="hidden" name="season" value="{{ season }}">
+                <button type="submit">Take it back</button>
+                {% if g.by_whom %}<span class="tm">Given by {{ g.by_whom }}</span>{% endif %}
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
