@@ -1304,6 +1304,27 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
 label.second { margin-top: var(--s4); }
 /* Why a block was not understood, immediately above the block itself. */
 .note.why { margin-bottom: var(--s1); color: var(--loss); font-style: normal; }
+
+/* ---- draft results ---- */
+/* A round, or a manager's haul. The numbering is the pick order and the
+   browser draws it, so the markup carries no numbers to fall out of step. */
+.picks {
+  margin: 0;
+  padding-left: 1.6rem;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+}
+.picks li { margin-bottom: 0.15rem; }
+.picks .who { margin-right: 0.35rem; }
+.picks .rd {
+  display: inline-block;
+  width: 1.4rem;
+  color: var(--ink-soft);
+}
+/* Kept, not drafted. Gold is the site's one accent and this is the one thing
+   on the board worth pointing at: a keeper cost a round rather than a pick. */
+.picks li.kept .who, .kept { color: var(--gold-deep); font-weight: 600; }
+.picks li.kept::marker { color: var(--gold-deep); }
 /* Tables range right by default, which suits numbers. These columns are
    names and read from the left. */
 .moves td, .moves th { text-align: left; }

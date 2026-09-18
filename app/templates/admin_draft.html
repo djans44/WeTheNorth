@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Draft results | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Draft results {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/draft?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  <section>
+    <p class="note">Copy the draft board from Yahoo and paste it whole, round
+      headings and all. The keeper badge beside a name is read from the paste,
+      so which picks were kept comes across on its own.
+      {% if stored %}{{ season }} already has {{ stored }} picks over
+        {{ stored_rounds }} rounds, {{ stored_kept }} of them keepers.
+      {% else %}Nothing is stored for {{ season }} yet.{% endif %}</p>
+
+    <form method="post" action="/admin/draft">
+      <input type="hidden" name="season" value="{{ season }}">
+      <label for="text">The board</label>
+      <textarea id="text" name="text" rows="{{ 8 if previewed else 16 }}"
+                placeholder="Round 1&#10;1.&#9;Bijan Robinson&#9;It's Me Mr. Jaxon! Hee-Hee!"
+                >{{ text }}</textarea>
+      <div class="actionrow">
+        <button type="submit" name="action" value="preview" class="seal">
+          Validate the board</button>
+      </div>
+    </form>
+  </section>
+
+  {% if previewed %}
+  <section>
+    <h2>What this would do</h2>
+    {% if stop %}<div class="errors"><b>Nothing written.</b> {{ stop }}</div>{% endif %}
+
+    {% if problems %}
+      <div class="errors">
+        <b>The board does not check out.</b>
+        <ul>{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul>
+      </div>
+    {% elif picks %}
+      <p class="note ok">{{ picks|length }} picks over {{ rounds|length }} rounds,
+        every manager once a round and nobody drafted twice.</p>
+    {% endif %}
+
+    <p class="note"><b>{{ picks|length }}</b> picks,
+      <b>{{ picks|selectattr("keeper")|list|length }}</b> of them keepers{% if wanted %},
+      <b>{{ wanted|length }}</b> player{{ "s" if wanted|length != 1 }} the league
+      has never seen{% endif %}{% if puzzles %},
+      <b>{{ puzzles|length }}</b> line{{ "s" if puzzles|length != 1 }} not
+      understood{% endif %}.</p>
+  </section>
+
+  {% if puzzles %}
+  <section>
+    <h2>Lines that made no sense</h2>
+    <p class="note">Nothing is written while any line is unread &mdash; a board
+      with a hole in it is worse than no board.</p>
+    {% for p in puzzles %}
+      <p class="note why">{{ p.why }}</p>
+      <pre class="raw">{{ p.line }}</pre>
+    {% endfor %}
+  </section>
+  {% endif %}
+  {% endif %}
+
+  {# ---- the write, and the one thing the board cannot tell us ---- #}
+  {% if previewed and picks %}
+  <form method="post" action="/admin/draft">
+    <input type="hidden" name="season" value="{{ season }}">
+    <textarea name="text" hidden>{{ text }}</textarea>
+
+    {% if wanted %}
+    <section>
+      <h2>Players the league has never seen</h2>
+      <p class="note">A draft board carries no positions, so these cannot be
+        created from the paste alone. Choose one for each; the row will not
+        save without it.</p>
+      <table class="keepers">
+        <tbody>
+        {% for w in wanted %}
+          <tr>
+            <td class="name"><label for="pos{{ loop.index }}">{{ w.name }}</label></td>
+            <td class="pos">
+              <select id="pos{{ loop.index }}" name="pos_{{ w.key }}">
+                <option value="">&mdash;</option>
+                {% for p in choices %}
+                  <option value="{{ p }}"
+                    {% if positions.get(w.key) == p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    <section class="danger">
+      <h2>Save the board</h2>
+      <p class="note">A draft is one object, so it is written entire: saving
+        replaces every pick {{ season }} has rather than adding to them.</p>
+      {% if stored %}
+        <label class="confirm"><input type="checkbox" name="replace" value="1">
+          Replace the {{ stored }} picks already stored for {{ season }}</label>
+      {% endif %}
+      <div class="actionrow">
+        <button type="submit" name="action" value="save" class="seal"
+                {% if problems or puzzles %}disabled{% endif %}>
+          Save {{ picks|length }} picks</button>
+      </div>
+    </section>
+  </form>
+  {% endif %}
+
+  {% if previewed and rounds %}
+  <section>
+    <h2>The board</h2>
+    <p class="note">A name in gold was kept rather than drafted.</p>
+    {% for n, row in rounds %}
+      <h3>Round {{ n }}</h3>
+      <table class="keepers moves">
+        <tbody>
+        {% for p in row %}
+          <tr>
+            <td class="kind">{{ p.pick }}</td>
+            <td class="name {% if p.keeper %}kept{% endif %}">{{ p.player }}</td>
+            <td>{{ p.team }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -21,6 +21,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import crests as crestrules
 from app import standings
 from app import summaries
+from app import draft as draftboard
 from app import transactions as txn
 from app.keeperrules import next_free_round
 
@@ -3013,6 +3014,188 @@ async def admin_transactions_post(request: Request):
         told += ", %d new player%s created" % (made, "" if made == 1 else "s")
     return RedirectResponse(
         url="/admin/transactions?season=%d&msg=%s" % (season, quote(told + ".")),
+        status_code=303)
+
+
+# ----------------------------------------------------------------- draft board
+
+def draft_context(conn, season, text="", previewed=False, positions=None):
+    """The board as pasted, checked against the season it claims to be."""
+    years = query(conn, "select season_year from seasons order by season_year desc")
+    teams = {draftboard.norm(r["team_name"]): r["team_id"] for r in query(conn, """
+        select team_id, team_name from teams where season_year = %s
+    """, (season,))}
+    players = {}
+    for r in query(conn, "select player_id, full_name from players"):
+        players.setdefault(draftboard.norm(r["full_name"]), r["player_id"])
+    stored = query(conn, """
+        select count(*) as n, count(*) filter (where is_keeper) as kept,
+               max(round) as rounds
+        from draft_picks where season_year = %s
+    """, (season,))[0]
+
+    ctx = {"years": years, "season": season, "text": text,
+           "previewed": previewed, "stored": stored["n"],
+           "stored_kept": stored["kept"], "stored_rounds": stored["rounds"],
+           "picks": [], "puzzles": [], "problems": [], "wanted": [],
+           "rounds": [], "positions": positions or {},
+           "choices": draftboard.POSITIONS}
+    if not text.strip():
+        return ctx
+
+    picks, puzzles = draftboard.parse(text)
+    problems = draftboard.check(picks, teams,
+                                {"year": season, "count": len(teams)})
+    rows, wanted = draftboard.resolve(picks, teams, players)
+    # Laid out round by round, the way a board is read.
+    by_round = {}
+    for r in rows:
+        by_round.setdefault(r["round"], []).append(r)
+    ctx.update({"picks": rows, "puzzles": puzzles, "problems": problems,
+                "wanted": wanted,
+                "rounds": [(n, sorted(by_round[n], key=lambda p: p["pick"]))
+                           for n in sorted(by_round)]})
+    return ctx
+
+
+@app.get("/draft-results", response_class=HTMLResponse)
+def draft_results(request: Request, season: int = 0):
+    """What the draft came to, round by round.
+
+    Draft order is who picks when, draft prep is what to do about it, and this
+    is the third thing: what actually happened. It reads draft_picks, which is
+    also the source of every keeper cost basis, so a season showing nothing
+    here is a season whose keeper prices cannot be worked out.
+    """
+    with get_db() as conn:
+        years = [r["season_year"] for r in query(conn, """
+            select distinct season_year from draft_picks order by season_year desc
+        """)]
+        if not years:
+            return templates.TemplateResponse(
+                request=request, name="draft_results.html",
+                context={"years": [], "season": 0, "rounds": [], "teams": [],
+                         "kept": 0})
+        if season not in years:
+            season = years[0]
+        rows = query(conn, """
+            select d.round, d.pick_in_round, d.is_keeper,
+                   p.full_name, p.position,
+                   t.team_name, o.username, o.owner_id
+            from draft_picks d
+            join teams t on t.team_id = d.team_id
+            join owners o on o.owner_id = t.owner_id
+            left join players p on p.player_id = d.player_id
+            where d.season_year = %s
+            order by d.round, d.pick_in_round
+        """, (season,))
+
+    by_round, by_team = {}, {}
+    for r in rows:
+        by_round.setdefault(r["round"], []).append(r)
+        by_team.setdefault((r["owner_id"], r["team_name"], r["username"]),
+                           []).append(r)
+    return templates.TemplateResponse(
+        request=request, name="draft_results.html",
+        context={"years": years, "season": season,
+                 "rounds": [(n, by_round[n]) for n in sorted(by_round)],
+                 "teams": sorted(((k, v) for k, v in by_team.items()),
+                                 key=lambda kv: kv[0][2]),
+                 "kept": sum(1 for r in rows if r["is_keeper"])})
+
+
+@app.get("/admin/draft", response_class=HTMLResponse)
+def admin_draft(request: Request, season: int = 0, msg: str = "", error: str = ""):
+    """Paste the board, see what it says, then save it."""
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"] if years else 0
+        ctx = draft_context(conn, season)
+    return templates.TemplateResponse(request=request, name="admin_draft.html",
+                                      context=ctx)
+
+
+@app.post("/admin/draft")
+async def admin_draft_post(request: Request):
+    """Check it, then write it. A draft is a whole season at once.
+
+    Unlike transactions, which arrive a week at a time and accumulate, a board
+    is one object: it is saved entire or not at all, and saving replaces the
+    season's picks rather than adding to them.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    text = form.get("text") or ""
+    save_it = form.get("action") == "save"
+    # A position for each player the league has never seen, chosen on the
+    # review screen because the board does not carry one.
+    positions = {k[4:]: v for k, v in form.items()
+                 if k.startswith("pos_") and v}
+
+    with get_db() as conn:
+        ctx = draft_context(conn, season, text, previewed=True,
+                            positions=positions)
+        if not save_it:
+            return templates.TemplateResponse(
+                request=request, name="admin_draft.html", context=ctx)
+
+        stop = ""
+        missing = [w for w in ctx["wanted"]
+                   if positions.get(w["key"]) not in draftboard.POSITIONS]
+        if ctx["problems"]:
+            stop = "The board does not check out. Nothing has been written."
+        elif ctx["puzzles"]:
+            stop = "Some lines could not be read. Nothing has been written."
+        elif missing:
+            stop = ("Choose a position for %d player%s the league has never seen."
+                    % (len(missing), "" if len(missing) == 1 else "s"))
+        elif ctx["stored"] and not form.get("replace"):
+            stop = ("%d already has a draft of %d picks. Tick the box to replace it."
+                    % (season, ctx["stored"]))
+        if stop:
+            ctx["stop"] = stop
+            return templates.TemplateResponse(
+                request=request, name="admin_draft.html", context=ctx,
+                status_code=400)
+
+        made = 0
+        with conn.cursor() as cur:
+            for w in ctx["wanted"]:
+                cur.execute("""
+                    insert into players (full_name, position) values (%s, %s)
+                """, (w["name"], positions[w["key"]]))
+                made += 1
+            if made:
+                players = {}
+                for r in query(conn, "select player_id, full_name from players"):
+                    players.setdefault(draftboard.norm(r["full_name"]), r["player_id"])
+                for p in ctx["picks"]:
+                    if p["player_id"] is None:
+                        p["player_id"] = players.get(draftboard.norm(p["player"]))
+
+            # The whole board at once: the slot and player keys are unique per
+            # season, so a partial rewrite would collide with itself.
+            cur.execute("delete from draft_picks where season_year = %s", (season,))
+            cur.executemany("""
+                insert into draft_picks
+                    (season_year, round, pick_in_round, team_id, player_id,
+                     is_keeper)
+                values (%s, %s, %s, %s, %s, %s)
+            """, [(season, p["round"], p["pick"], p["team_id"], p["player_id"],
+                   p["keeper"]) for p in ctx["picks"]])
+        conn.commit()
+
+    told = "%d picks saved" % len(ctx["picks"])
+    if made:
+        told += ", %d new player%s created" % (made, "" if made == 1 else "s")
+    return RedirectResponse(
+        url="/admin/draft?season=%d&msg=%s" % (season, quote(told + ".")),
         status_code=303)
 
 

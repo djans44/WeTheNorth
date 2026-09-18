@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Draft results {{ season }} | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  {# The year is the control that changes the year, as on every other page
+     with more than one of them, and only seasons with a board are offered. #}
+  <header class="page-head tight stuck">
+    {% if years %}
+      <details class="headpick">
+        <summary>
+          <h1>{{ leaf(20) }}Draft results {{ season }}</h1>
+        </summary>
+        <ul>
+          {% for y in years %}
+            <li>
+              <a href="/draft-results?season={{ y }}"
+                 {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% else %}
+      <h1>{{ leaf(20) }}Draft results</h1>
+    {% endif %}
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  {% if not years %}
+    {# An invitation, not an apology: the board is a paste away. #}
+    <section>
+      <p class="note">No draft has been recorded yet. Once a board is loaded it
+        is read here, round by round and roster by roster.</p>
+    </section>
+
+  {% else %}
+  <section>
+    <p class="note">{{ rounds|length }} rounds, {{ teams|length }} managers.
+      {% if kept %}{{ kept }} of these were kept rather than drafted, and are
+        marked.{% else %}No keepers this year.{% endif %}</p>
+  </section>
+
+  {# ---- by round, which is how a draft is watched ---- #}
+  <section>
+    <h2>Round by round</h2>
+    <div class="week-grid">
+      {% for n, row in rounds %}
+        <div class="week-card">
+          <h3>Round {{ n }}</h3>
+          <ol class="picks">
+            {% for p in row %}
+              <li{% if p.is_keeper %} class="kept"{% endif %}>
+                <span class="who">{{ p.full_name or "&mdash;" }}</span>
+                <span class="tm">{{ p.username }}</span>
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ---- and by roster, which is how it is argued about afterwards ---- #}
+  <section>
+    <h2>By manager</h2>
+    <div class="week-grid">
+      {% for key, row in teams %}
+        <div class="week-card">
+          <h3>{{ key[2] }}<span class="tm"> {{ key[1] }}</span></h3>
+          <ol class="picks">
+            {% for p in row %}
+              <li{% if p.is_keeper %} class="kept"{% endif %}>
+                <span class="rd">{{ p.round }}</span>
+                <span class="who">{{ p.full_name or "&mdash;" }}</span>
+                <span class="tm">{{ p.position }}</span>
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
