@@ -19,6 +19,7 @@ from psycopg_pool import ConnectionPool
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import crests as crestrules
+from app import rosters as rosterrules
 from app import standings
 from app import summaries
 from app import draft as draftboard
@@ -3056,6 +3057,81 @@ def draft_context(conn, season, text="", previewed=False, positions=None):
                 "rounds": [(n, sorted(by_round[n], key=lambda p: p["pick"]))
                            for n in sorted(by_round)]})
     return ctx
+
+
+POSITION_ORDER = {p: i for i, p in
+                  enumerate(("QB", "RB", "WR", "TE", "K", "DEF"))}
+
+
+@app.get("/rosters", response_class=HTMLResponse)
+def rosters_page(request: Request, season: int = 0):
+    """Who holds whom, worked out where it can be and stored where it cannot.
+
+    From 2026 a roster is the draft with every move since applied to it. The
+    seasons before that were loaded as adds with no drops, so applying them
+    would only ever add -- those show the end-of-season snapshot instead, and
+    the page says which of the two it is looking at.
+    """
+    with get_db() as conn:
+        years = [r["season_year"] for r in query(conn, """
+            select season_year from seasons order by season_year desc
+        """)]
+        if season not in years:
+            season = years[0] if years else 0
+
+        snapshot = query(conn, """
+            select r.team_id, r.player_id, r.acquired,
+                   p.full_name, p.position
+            from rosters r join players p on p.player_id = r.player_id
+            where r.season_year = %s
+        """, (season,))
+        picks = query(conn, """
+            select d.team_id, d.player_id, d.round, d.is_keeper,
+                   p.full_name, p.position
+            from draft_picks d
+            left join players p on p.player_id = d.player_id
+            where d.season_year = %s order by d.round, d.pick_in_round
+        """, (season,))
+        moves = query(conn, """
+            select x.kind, x.player_id, x.to_team_id, x.occurred_on,
+                   p.full_name, p.position
+            from transactions x join players p on p.player_id = x.player_id
+            where x.season_year = %s
+            order by x.occurred_on, x.transaction_id
+        """, (season,))
+        sides = query(conn, """
+            select t.team_id, t.team_name, o.username
+            from teams t join owners o on o.owner_id = t.owner_id
+            where t.season_year = %s order by o.username
+        """, (season,))
+
+    # The snapshot is the record where there is one. Deriving needs a draft
+    # and moves of its own, and without either there is nothing honest to show.
+    if snapshot:
+        source = "snapshot"
+        squads = {}
+        for r in snapshot:
+            squads.setdefault(r["team_id"], []).append(
+                {"player_id": r["player_id"], "full_name": r["full_name"],
+                 "position": r["position"], "how": r["acquired"] or "",
+                 "round": None, "when": None})
+    elif picks and moves:
+        source = "derived"
+        squads = rosterrules.derive(picks, moves)
+    else:
+        source = "none"
+        squads = {}
+
+    odd, usual = rosterrules.odd_sizes(squads)
+    for team in squads.values():
+        team.sort(key=lambda r: (POSITION_ORDER.get(r["position"], 9),
+                                 r["full_name"] or ""))
+
+    return templates.TemplateResponse(
+        request=request, name="rosters.html",
+        context={"years": years, "season": season, "source": source,
+                 "sides": sides, "squads": squads, "odd": odd, "usual": usual,
+                 "moves": len(moves), "picks": len(picks)})
 
 
 @app.get("/transactions", response_class=HTMLResponse)

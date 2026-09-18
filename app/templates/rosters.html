@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Rosters {{ season }} | We the North{% endblock %}
+
+{% block content %}
+<div class="page wide">
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Rosters {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/rosters?season={{ y }}"
+               {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  <section>
+    {# Which of the two this is, said plainly. A derived roster and a stored
+       one are different claims and should not look alike. #}
+    {% if source == "derived" %}
+      <p class="note">Worked out from the draft and the {{ moves }} moves
+        since, so this is the roster as the record stands rather than a
+        snapshot anybody took.</p>
+    {% elif source == "snapshot" %}
+      <p class="note">The roster as it stood at the end of {{ season }}, as
+        loaded. It cannot be worked out from the moves for this season, because
+        those were recorded as additions with no drops against them.</p>
+    {% else %}
+      <p class="note">No roster for {{ season }}. Its draft is here but its
+        moves are not, and a roster cannot be worked out from one without the
+        other. Loading the end-of-season roster would give it one.</p>
+    {% endif %}
+
+    {# Only for a derived roster. A snapshot is simply what was loaded --
+       squads genuinely end a season at different sizes -- so measuring it
+       against its own average would cry wolf every year. #}
+    {% if odd and source == "derived" %}
+      {# The loudest sign that a move never made it in. Not a verdict: a squad
+         genuinely can sit a player short for a day. #}
+      <div class="errors">
+        <b>{{ odd|length }} roster{{ "s" if odd|length != 1 }} of an odd size.</b>
+        <p>Most hold {{ usual }}. A waiver claim is one in and one out, so a
+          squad that has drifted is usually a move that was never loaded &mdash;
+          an add whose drop scrolled off the page before it was pasted.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if squads %}
+  <section>
+    <div class="week-grid">
+      {% for s in sides %}
+        {% set squad = squads.get(s.team_id, []) %}
+        <div class="week-card">
+          <h3>{{ s.username }}
+            <span class="tm">{{ squad|length }}</span></h3>
+          <p class="tm squadteam">{{ s.team_name }}</p>
+          <ul class="squad">
+            {% for p in squad %}
+              <li>
+                <span class="pos">{{ p.position }}</span>
+                <span class="who">{{ p.full_name }}</span>
+                {% if p.how == "kept" %}<span class="tm kept">kept</span>
+                {% elif p.how == "drafted" and p.round %}<span class="tm">rd {{ p.round }}</span>
+                {% elif p.how == "traded" %}<span class="tm">traded</span>
+                {% elif p.how == "added" %}<span class="tm">added</span>
+                {% elif p.how %}<span class="tm">{{ p.how }}</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

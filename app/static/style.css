@@ -1305,6 +1305,21 @@ label.second { margin-top: var(--s4); }
 /* Why a block was not understood, immediately above the block itself. */
 .note.why { margin-bottom: var(--s1); color: var(--loss); font-style: normal; }
 
+/* ---- rosters ---- */
+.squadteam { margin: 0 0 var(--s2); }
+.squad { margin: 0; padding: 0; list-style: none; font-size: var(--t-sm); }
+.squad li { display: flex; gap: 0.45rem; align-items: baseline; line-height: 1.7; }
+/* A fixed column, so the positions line up and a squad can be read for its
+   shape -- three running backs and no tight end -- without reading it. */
+.squad .pos {
+  flex: 0 0 2.2rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+.squad .who { flex: 1 1 auto; }
+.squad .tm { display: inline; flex: 0 0 auto; }
+.squad .tm.kept { color: var(--gold-deep); font-weight: 600; }
+
 /* ---- the transaction log ---- */
 /* Who is filtered to, as links rather than a dropdown: twelve names fit on
    a line or two, and a link says where it goes before you press it. */
