@@ -5786,7 +5786,17 @@ def _one_matching(ids, pool, rng):
 def generate_schedule(ids, hist, rival_pairs, seed, weeks=14, rival_week=10,
                       min_gap=2):
     """Weeks 1-11 a full round robin with rivalry week pinned, 12-14 the
-    rematches, and no pair meeting within `min_gap` weeks."""
+    rematches, and no pair meeting within `min_gap` weeks.
+
+    The ids are sorted first, so the same seed gives the same schedule
+    whatever order the caller read them in. It did not, and that mattered:
+    the page previewed a schedule from owners ordered by username and the
+    save regenerated it from a query with no order by at all. The two happen
+    to agree today. Shuffling the ids and keeping the seed produces a
+    different schedule every time, so the agreement was luck and the day it
+    broke would have saved a schedule nobody had seen.
+    """
+    ids = sorted(ids)
     rng = _random.Random(seed)
     doubles = _choose_doubles(ids, hist, rng)
     if not doubles:
@@ -5869,6 +5879,14 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
             where season_year = %s and game_type = 'regular'
             group by week order by week
         """, (season,))
+        # What saving would actually destroy, and what it would leave. Saying
+        # "weeks with scores are left alone" is true and is not a number.
+        standing = query(conn, """
+            select count(*) filter (where team_a_points is null) as replaceable,
+                   count(*) filter (where team_a_points is not null) as kept
+            from matchups
+            where season_year = %s and game_type = 'regular'
+        """, (season,))[0]
 
         hist = meeting_history(conn, season)
 
@@ -5907,7 +5925,8 @@ def admin_schedule(request: Request, season: int = 0, seed: int = 0):
         request=request, name="admin_schedule.html",
         context={"years": years, "season": season, "seed": seed,
                  "weeks": weeks, "counts": counts, "error": err or problem,
-                 "existing": existing, "teams": teams_list})
+                 "existing": existing, "teams": teams_list,
+                 "replaceable": standing["replaceable"], "kept": standing["kept"]})
 
 
 @app.post("/admin/schedule/save")
@@ -5940,7 +5959,7 @@ async def admin_schedule_save(request: Request):
         sched, err = generate_schedule(ids, hist, pairs, seed)
         if err:
             return RedirectResponse(
-                url=f"/admin/schedule?season={season}&error=" + quote(err),
+                url=f"/admin/schedule?season={season}&seed={seed}&error=" + quote(err),
                 status_code=303)
 
         rows = []
@@ -5965,8 +5984,10 @@ async def admin_schedule_save(request: Request):
             """, rows)
         conn.commit()
 
+    # The seed goes back with it, so the page that returns is the schedule
+    # that was just written rather than an empty picker and a toast.
     return RedirectResponse(
-        url=f"/admin/schedule?season={season}&msg=" +
+        url=f"/admin/schedule?season={season}&seed={seed}&msg=" +
             quote(f"{len(rows)} matchups saved"), status_code=303)
 
 

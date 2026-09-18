@@ -783,6 +783,19 @@ h3 {
 
 .danger { border-top: 3px solid var(--loss); }
 .danger h2 { color: var(--loss); }
+/* The tickbox beside an irreversible button. It was borrowing .void, which is
+   the keeper-selection class for voiding a contract and only happened to be
+   small muted text; a reader checking what styled the confirm on the schedule
+   page landed in the keeper rules. Same three declarations, own name. */
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-right: var(--s3);
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
 
 .errors {
   margin-bottom: var(--s4);

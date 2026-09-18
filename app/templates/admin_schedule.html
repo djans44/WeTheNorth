@@ -1,31 +1,47 @@
 {% extends "base.html" %}
+{% from "macros.html" import leaf %}
 {% block title %}Schedule | We the North{% endblock %}
 
 {% block content %}
 <div class="page wide">
-  <header class="page-head">
-    <h1>Create schedule</h1>
-    <p class="lede">Fourteen weeks. Every manager plays three opponents twice and
-      the rest once, favouring pairings that have met least often. Week 10 is
-      rivalry week.</p>
+  {# The same header every page with a year to switch wears: the year is the
+     control that changes the year, in a <details> so it needs no script, with
+     the h1 inside the summary so the outline survives. Switching years drops
+     the seed, which is right -- a schedule belongs to the year it was rolled
+     for, and carrying one across would show a schedule for the wrong teams. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Schedule {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/schedule?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section>
+    <p class="note">Fourteen weeks. Every manager plays three opponents twice and
+      the rest once, favouring pairings that have met least often. Week 10 is
+      rivalry week.</p>
+    {# A fresh seed each time the page renders, so the button is "roll another"
+       rather than "roll the same one again". #}
     <form method="get" action="/admin/schedule" class="picker">
-      <label for="season">Season</label>
-      <select id="season" name="season">
-        {% for y in years %}
-          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-        {% endfor %}
-      </select>
+      <input type="hidden" name="season" value="{{ season }}">
       <input type="hidden" name="seed" value="{{ range(1, 999999) | random }}">
-      <button type="submit">Generate schedule</button>
+      <button type="submit" class="seal">
+        {% if weeks %}Roll a different schedule{% else %}Generate a schedule{% endif %}</button>
     </form>
     {% if error %}<div class="errors">{{ error }}</div>{% endif %}
     {% if existing %}
       <p class="note">{{ season }} already has regular season matchups in weeks
-        {% for e in existing %}{{ e.week }}{% if not loop.last %}, {% endif %}{% endfor %}.
-        Saving replaces only those with no scores entered.</p>
+        {% for e in existing %}{{ e.week }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
     {% endif %}
   </section>
 
@@ -66,13 +82,24 @@
 
   <section class="danger">
     <h2>Save</h2>
+    {# What saving costs, in rows rather than in adjectives. "Weeks with scores
+       are left alone" is true and is not a number, and the number is the thing
+       worth knowing before pressing a button in a red-topped box. #}
     <p class="note">Writes these as matchups with no scores, ready for weekly
-      entry. Weeks with scores already recorded are left alone.</p>
+      entry.
+      {% if replaceable or kept %}
+        {{ season }} has
+        {%- if replaceable %} {{ replaceable }} matchup{{ "s" if replaceable != 1 }}
+          with no scores, which this replaces{% endif %}
+        {%- if replaceable and kept %}, and{% endif %}
+        {%- if kept %} {{ kept }} {% if not replaceable %}matchup{{ "s" if kept != 1 }}
+          {% endif %}with scores already in, which saving leaves alone{% endif %}.
+      {% endif %}</p>
     <form method="post" action="/admin/schedule/save">
       <input type="hidden" name="season" value="{{ season }}">
       <input type="hidden" name="seed" value="{{ seed }}">
-      <label class="void"><input type="checkbox" name="confirm" value="1"> I mean it</label>
-      <button type="submit">Save schedule</button>
+      <label class="confirm"><input type="checkbox" name="confirm" value="1"> I mean it</label>
+      <button type="submit" class="seal">Save schedule</button>
     </form>
   </section>
   {% endif %}
