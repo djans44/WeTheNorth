@@ -3390,7 +3390,8 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
 
 
 @app.get("/transactions", response_class=HTMLResponse)
-def transactions_page(request: Request, season: int = 0, who: str = ""):
+def transactions_page(request: Request, season: int = 0, who: str = "",
+                     kind: str = ""):
     """Every move of a season, newest first.
 
     An add and the drop that made room for it arrive as two rows sharing a
@@ -3458,12 +3459,25 @@ def transactions_page(request: Request, season: int = 0, who: str = ""):
 
     if who:
         moves = [m for m in moves if touches(m, who)]
+    # A trade and a waiver claim are different kinds of afternoon, and looking
+    # for one through the other is the whole reason to filter. Everything that
+    # is not a trade is one bucket: a free agent and a waiver claim differ
+    # only in whether anyone else wanted him.
+    if kind == "trade":
+        moves = [m for m in moves if m["trade"]]
+    elif kind == "add":
+        moves = [m for m in moves if not m["trade"]]
 
     tally = {"add": 0, "drop": 0, "trade": 0}
     for r in rows:
-        if not who or who.lower() in {(r["to_who"] or "").lower(),
-                                      (r["from_who"] or "").lower()}:
-            tally[r["kind"]] = tally.get(r["kind"], 0) + 1
+        if who and who.lower() not in {(r["to_who"] or "").lower(),
+                                       (r["from_who"] or "").lower()}:
+            continue
+        if kind == "trade" and r["kind"] != "trade":
+            continue
+        if kind == "add" and r["kind"] == "trade":
+            continue
+        tally[r["kind"]] = tally.get(r["kind"], 0) + 1
     # Whether the season has drops at all, which is a different question from
     # whether the manager being looked at has any. 2025 was loaded before
     # drops were recorded and has only the few pasted since.
@@ -3472,8 +3486,9 @@ def transactions_page(request: Request, season: int = 0, who: str = ""):
     return templates.TemplateResponse(
         request=request, name="transactions.html",
         context={"years": years, "season": season, "moves": moves,
-                 "owners": owners, "who": who, "tally": tally,
-                 "season_drops": season_drops})
+                 "owners": owners, "who": who, "kind": kind, "tally": tally,
+                 "season_drops": season_drops,
+                 "any_trades": any(r["kind"] == "trade" for r in rows)})
 
 
 @app.get("/draft-results", response_class=HTMLResponse)

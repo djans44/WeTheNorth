@@ -34,26 +34,44 @@
   {% else %}
   <section>
     <p class="note">
-      {{ tally.add }} added, {{ tally.drop }} dropped{% if tally.trade %},
-      {{ tally.trade }} traded{% endif %}{% if who %}, by {{ who }}{% endif %}.
+      {% if kind == "trade" %}{{ tally.trade }} traded
+      {%- else %}{{ tally.add }} added, {{ tally.drop }} dropped
+        {%- if tally.trade %}, {{ tally.trade }} traded{% endif %}
+      {%- endif %}{% if who %}, by {{ who }}{% endif %}.
       {% if not season_drops %}Drops were not recorded for this season.{% endif %}
     </p>
 
-    {# One manager, or all of them. A link each rather than a dropdown: there
-       are twelve, they fit, and a link says where it goes. #}
+    {# Two strips, and each link carries the other's choice, or picking a
+       manager would throw away the kind you were looking at. A link each
+       rather than a dropdown: twelve names fit, and a link says where it
+       goes before you press it. #}
+    {% set carry_kind = "&kind=" ~ kind if kind else "" %}
+    {% set carry_who = "&who=" ~ who if who else "" %}
     <p class="whostrip">
-      <a href="/transactions?season={{ season }}"
+      <a href="/transactions?season={{ season }}{{ carry_kind }}"
          {% if not who %}class="on"{% endif %}>Everyone</a>
       {% for o in owners %}
-        <a href="/transactions?season={{ season }}&who={{ o }}"
+        <a href="/transactions?season={{ season }}&who={{ o }}{{ carry_kind }}"
            {% if who and who.lower() == o.lower() %}class="on"{% endif %}>{{ o }}</a>
       {% endfor %}
     </p>
+    {% if any_trades %}
+      <p class="whostrip kinds">
+        <a href="/transactions?season={{ season }}{{ carry_who }}"
+           {% if not kind %}class="on"{% endif %}>Everything</a>
+        <a href="/transactions?season={{ season }}&kind=add{{ carry_who }}"
+           {% if kind == "add" %}class="on"{% endif %}>Waivers and free agents</a>
+        <a href="/transactions?season={{ season }}&kind=trade{{ carry_who }}"
+           {% if kind == "trade" %}class="on"{% endif %}>Trades</a>
+      </p>
+    {% endif %}
   </section>
 
   <section>
     {% if not moves %}
-      <p class="note">Nothing here for {{ who }} in {{ season }}.</p>
+      <p class="note">Nothing here
+        {%- if kind == "trade" %} traded{% elif kind == "add" %} on waivers{% endif %}
+        {%- if who %} for {{ who }}{% endif %} in {{ season }}.</p>
     {% endif %}
     <ol class="ledger">
       {% for m in moves %}

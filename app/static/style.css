@@ -1405,6 +1405,9 @@ label.second { margin-top: var(--s4); }
 .whostrip a { font-size: var(--t-sm); color: var(--ink-soft); text-decoration: none; }
 .whostrip a:hover { color: var(--accent); }
 .whostrip a.on { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--gold); }
+/* The second strip, under the first. Set apart a little so two rows of
+   links read as two questions rather than one long list of names. */
+.whostrip.kinds { margin-top: var(--s2); }
 
 /* One move to a row: who, when, and what went each way. */
 .ledger { margin: 0; padding: 0; list-style: none; }
