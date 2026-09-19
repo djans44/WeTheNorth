@@ -1,25 +1,29 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% block title %}Keeper admin | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
-    <h1>Keeper admin</h1>
-    <p class="lede">Windows, review, and phase resolution.</p>
-  </header>
-
-  <section>
-    <form method="get" action="/admin/keepers" class="picker">
-      <label for="season">Season</label>
-      <select id="season" name="season">
+  {# The season belongs in the title, not in a panel of its own below it:
+     every page here is about one season and a picker that loads on the
+     choice needs no button. `stuck` keeps the head in view, which matters
+     on a page whose settled table is thirty-six rows. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Keeper admin {{ season }}</h1>
+      </summary>
+      <ul>
         {% for y in years %}
-          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
+          <li>
+            <a href="/admin/keepers?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
         {% endfor %}
-      </select>
-      <button type="submit">Load</button>
-    </form>
-  </section>
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
 
   {% if over %}
   <section>
@@ -43,7 +47,7 @@
       <input type="hidden" name="season" value="{{ season }}">
       <table class="keepers windows">
         <thead>
-          <tr><th>Phase</th><th>Opens</th><th>Closes</th><th>State</th><th></th></tr>
+          <tr><th>Round</th><th>Opens</th><th>Closes</th><th>State</th><th></th></tr>
         </thead>
         <tbody>
         {% for n in [1, 2, 3] %}
@@ -82,7 +86,7 @@
     <h2>Closing Keeper {{ preview }}</h2>
     <p class="note">Nothing has been written. Review, then confirm.</p>
     <table class="keepers">
-      <thead><tr><th>Manager</th><th>Action</th><th>Player</th><th>Round</th><th>Note</th></tr></thead>
+      <thead><tr><th>Manager</th><th>Action</th><th>Player</th><th>Cost</th><th>Note</th></tr></thead>
       <tbody>
       {% for a in actions %}
         <tr>
@@ -114,7 +118,7 @@
       <input type="hidden" name="season" value="{{ season }}">
       <table class="keepers">
         <thead>
-          <tr><th></th><th>Phase</th><th>Manager</th><th>Player</th><th>Round</th>
+          <tr><th></th><th>Round</th><th>Manager</th><th>Player</th><th>Round</th>
               <th>Term</th><th>Origin</th><th>Note</th><th></th></tr>
         </thead>
         <tbody>
@@ -212,7 +216,7 @@
   <section>
     <h2>Settled</h2>
     <table class="keepers">
-      <thead><tr><th>Phase</th><th>Manager</th><th>Player</th><th>Round</th><th>Origin</th><th>Status</th></tr></thead>
+      <thead><tr><th>Round</th><th>Manager</th><th>Player</th><th>Cost</th><th>Origin</th><th>Status</th></tr></thead>
       <tbody>
       {% for s in settled %}
         <tr>
@@ -233,7 +237,7 @@
     <h2>Reset</h2>
     <p class="note">Deletes submissions, plans and voids. Contracts, rosters and
       drafts are untouched, so eligibility rebuilds itself from the underlying data.
-      Resetting the whole season also reopens every phase.</p>
+      Resetting the whole season also reopens every keeper round.</p>
     <form method="post" action="/admin/keepers/reset">
       <input type="hidden" name="season" value="{{ season }}">
       <p class="picker">

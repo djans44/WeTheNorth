@@ -4231,7 +4231,7 @@ def resolve_keeper_phase(conn, season, phase, apply=False):
         """, (season, phase))
         win = cur.fetchone()
         if not win:
-            return [], f"No window defined for {season} phase {phase}."
+            return [], f"{season} has no window for keeper round {phase}."
         if win["resolved_at"]:
             return [], f"Keeper {phase} was already resolved."
         if phase > 1:
@@ -5071,7 +5071,7 @@ async def admin_keeper_reset(request: Request):
                     update keeper_windows set resolved_at = null, updated_at = now()
                     where season_year = %s
                 """, (season,))
-                what = f"all of {season} reset, phases reopened"
+                what = f"all of {season} reset, keeper rounds reopened"
         conn.commit()
 
     return RedirectResponse(
