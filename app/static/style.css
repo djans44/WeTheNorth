@@ -333,6 +333,23 @@ section:last-child { border-bottom: 0; }
 }
 .headpick > ul a:hover { color: var(--accent); background: var(--gold-ghost); }
 .headpick > ul a[aria-current] { color: var(--ink); font-weight: 600; }
+/* A year this manager has already spoken at. Drawn with borders like the
+   chevron above rather than set as a character, and placed absolutely so
+   the year stays centred under the leaf: the tick answers "which of these
+   still want me", it is not part of the label. */
+.headpick > ul a.spoke { position: relative; }
+.headpick > ul a.spoke::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--s2);
+  width: 0.28rem;
+  height: 0.55rem;
+  margin-top: -0.36rem;
+  border-right: 2px solid var(--gold-deep);
+  border-bottom: 2px solid var(--gold-deep);
+  transform: rotate(45deg);
+}
 
 /* h1 is centred site-wide, so the sigil and the name centre as one group. */
 .page-head h1.titled {

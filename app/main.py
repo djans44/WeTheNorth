@@ -3187,6 +3187,31 @@ def poll_for(conn, season=None):
     return rows[0] if rows else None
 
 
+def assembly_years(conn, owner_id):
+    """Every assembly, newest first, whether it is sitting, and whether this
+    manager has spoken at it.
+
+    One rule in one place. The mark in the year picker and the season a vote
+    sends you to next are the same question asked twice, and they would be
+    worth disagreeing about if they were worked out separately.
+
+    Spoken means a vote of theirs exists on that poll, not that they answered
+    all four. A manager who deliberately leaves an honour blank has still
+    had their say, and anything stricter would send them back to the same
+    ballot every time they voted anywhere else.
+    """
+    return query(conn, """
+        select p.season_year, p.poll_id,
+               (p.closed_at is null and p.opens_at <= now()
+                and p.closes_at > now()) as sitting,
+               exists (select 1 from crest_votes v
+                       where v.poll_id = p.poll_id
+                         and v.owner_id = %s) as spoken
+        from crest_polls p
+        order by p.season_year desc
+    """, (owner_id or 0,))
+
+
 def poll_state(poll):
     """Where an assembly is: scheduled, sitting, risen, or nothing at all.
 
@@ -3313,9 +3338,7 @@ def assembly_page(request: Request, season: int = 0, msg: str = "", error: str =
         # once -- the league opened four the week the page went live -- and
         # without this list the page showed whichever poll_for picked and
         # the other three were reachable only by typing ?season= by hand.
-        years = query(conn, """
-            select season_year from crest_polls order by season_year desc
-        """)
+        years = assembly_years(conn, me)
         poll = poll_for(conn, season or None)
         if not poll:
             return templates.TemplateResponse(
@@ -3400,9 +3423,22 @@ async def assembly_vote(request: Request):
                 cast += 1
         conn.commit()
 
+        # Where to go next, worked out after the commit so the season just
+        # voted on counts as spoken. Four assemblies can sit at once and the
+        # league is being asked for all of them at once, so a vote lands on
+        # the newest one still waiting on this manager rather than back on
+        # the one they have just finished. When none is waiting it is the
+        # newest, which is the page they would have got anyway.
+        years = assembly_years(conn, me)
+        waiting = next((y for y in years if y["sitting"] and not y["spoken"]), None)
+        goto = (waiting or years[0])["season_year"] if years else poll["season_year"]
+
     told = "%d vote%s recorded. Change them any time before it closes." % (
         cast, "" if cast == 1 else "s")
-    return RedirectResponse(url="/assembly?msg=" + quote(told), status_code=303)
+    if goto != poll["season_year"]:
+        told += " %d is still waiting on you." % goto
+    return RedirectResponse(url="/assembly?season=%d&msg=%s" % (goto, quote(told)),
+                            status_code=303)
 
 
 @app.get("/assembly/proclamations", response_class=HTMLResponse)

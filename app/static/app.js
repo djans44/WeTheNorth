@@ -2,8 +2,18 @@
   // ---- keep scroll position across form posts ----
   var KEY = "wtn:scroll:" + window.location.pathname;
 
-  document.addEventListener("submit", function () {
-    try { sessionStorage.setItem(KEY, String(window.scrollY)); } catch (e) {}
+  // data-scroll="top" opts a form out. The default is right for a form you
+  // post from the middle of a long page -- enter scores, a keeper plan --
+  // and wrong for one whose answer is a different page: the assembly ballot
+  // sends a vote on to the next season still waiting, and being put halfway
+  // down somebody else's questions is nowhere to arrive.
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (form && form.getAttribute && form.getAttribute("data-scroll") === "top") {
+      try { sessionStorage.removeItem(KEY); } catch (err) {}
+      return;
+    }
+    try { sessionStorage.setItem(KEY, String(window.scrollY)); } catch (err) {}
   }, true);
 
   window.addEventListener("load", function () {

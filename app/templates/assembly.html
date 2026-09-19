@@ -18,7 +18,11 @@
         <ul>
           {% for y in years %}
             <li>
+              {# The tick says this manager has already spoken there. Four
+                 can sit at once, so which ones still want you is the thing
+                 the list is being opened to find out. #}
               <a href="/assembly?season={{ y.season_year }}"
+                 {% if y.spoken %}class="spoke" title="You have spoken"{% endif %}
                  {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
             </li>
           {% endfor %}
@@ -43,6 +47,13 @@
   {% else %}
   <section>
     {% if open %}
+      {# Whether you are one of the voters counted below. Four assemblies
+         sit at once and they look alike, so "have I done this one" is the
+         first thing a manager arriving here wants answered. #}
+      {% if mine %}
+        <p class="note ok">You have spoken at this assembly &mdash;
+          {{ mine|length }} of {{ crests|length }} answered.</p>
+      {% endif %}
       <p class="note">Four questions, one answer each. Change any of them as
         often as you like until the assembly rises on
         {{ poll.closes_at|league_day }}.
@@ -62,7 +73,11 @@
 
   {% if open %}
   {# ---- the ballot ---- #}
-  <form method="post" action="/assembly">
+  {# data-scroll="top": app.js otherwise puts you back where you were, which
+     is right for a form you post from the middle of a page and wrong here --
+     a vote can land you on a different season's ballot entirely, and halfway
+     down somebody else's questions is nowhere to arrive. #}
+  <form method="post" action="/assembly" data-scroll="top">
     <input type="hidden" name="season" value="{{ poll.season_year }}">
     {% for c in crests %}
       <section>
