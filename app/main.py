@@ -2975,6 +2975,35 @@ async def admin_scores_save(request: Request):
 
 # ---------------------------------------------------------------- transactions
 
+def latest_move_said(rows):
+    """The newest stored move as one line, in the words the page uses.
+
+    Every row sharing the newest moment, because an add and the drop that
+    made room for it are one move and naming only one of them would send an
+    admin looking for a paste that is already in.
+    """
+    if not rows:
+        return "", ""
+    when = rows[0]["occurred_raw"] or ""
+    # A trade is two managers at one moment, so it is said from both ends
+    # rather than filed under whoever happens to sort first.
+    swaps = [r for r in rows if r["kind"] == "trade"]
+    if swaps:
+        return when, "; ".join(
+            "%s received %s from %s" % (r["to_who"], r["full_name"], r["from_who"])
+            for r in swaps)
+    who = next((r["to_who"] or r["from_who"] for r in rows), None)
+    got = [r["full_name"] for r in rows if r["kind"] == "add"]
+    gone = [r["full_name"] for r in rows if r["kind"] == "drop"]
+    parts = []
+    if got:
+        parts.append("added " + ", ".join(got))
+    if gone:
+        parts.append("dropped " + ", ".join(gone))
+    said = ", ".join(parts)
+    return when, ("%s %s" % (who, said)) if who else said
+
+
 def transaction_context(conn, season, text="", trades="", previewed=False):
     """Everything the page shows, for a paste or for an empty box.
 
@@ -2999,9 +3028,31 @@ def transaction_context(conn, season, text="", trades="", previewed=False):
         from transactions where season_year = %s
     """, (season,))}
 
+    # The last move already in, said the way Yahoo says it. A week's paste
+    # starts wherever the previous one stopped, and "34 stored, the most
+    # recent on Sep 12" does not tell you which Sep 12 move that was -- there
+    # were four. occurred_raw carries the minute, so it can be read straight
+    # off against the top of Yahoo's own page.
+    latest = query(conn, """
+        select x.kind, x.occurred_raw, p.full_name,
+               ot.username as to_who, ofr.username as from_who
+        from transactions x
+        join players p on p.player_id = x.player_id
+        left join teams tt on tt.team_id = x.to_team_id
+        left join owners ot on ot.owner_id = tt.owner_id
+        left join teams ft on ft.team_id = x.from_team_id
+        left join owners ofr on ofr.owner_id = ft.owner_id
+        where x.season_year = %s and x.occurred_raw = (
+            select occurred_raw from transactions
+            where season_year = %s """ + MOVE_ORDER_DESC + """ limit 1)
+        """ + MOVE_ORDER_DESC, (season, season))
+    latest_when, latest_said = latest_move_said(latest)
+
     ctx = {"years": years, "season": season, "text": text, "trades": trades,
            "previewed": previewed, "stored": stored["n"],
-           "newest_stored": stored["newest"], "ready": [], "known": [],
+           "newest_stored": stored["newest"],
+           "latest_when": latest_when, "latest_said": latest_said,
+           "ready": [], "known": [],
            "unresolved": [], "puzzles": [], "wanted": [], "flow": None}
     if not text.strip() and not trades.strip():
         return ctx

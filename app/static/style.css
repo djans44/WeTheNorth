@@ -575,6 +575,10 @@ h3 {
   font-size: 0.9rem;
   color: var(--ink-muted);
 }
+/* Where the last paste got to, on the transaction import. A note carries no
+   bottom margin, which left this line closer to the box below than to the
+   instructions it finishes. */
+.note.lastin { margin-bottom: var(--s4); }
 .note.ok    { color: var(--win); font-weight: 600; font-style: normal; }
 .note.error { color: var(--loss); font-weight: 600; font-style: normal; }
 

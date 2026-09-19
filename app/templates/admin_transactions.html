@@ -38,9 +38,21 @@
       Yahoo shows twenty-five at a time; paste the page as it stands rather
       than trimming it to what looks new, because the rows already stored are
       what prove nothing fell between this week and last.
-      {% if stored %}{{ season }} has {{ stored }} stored,
-        the most recent on {{ newest_stored.strftime("%b") ~ " " ~ newest_stored.day if newest_stored else "no date" }}.
+      {% if stored %}{{ season }} has {{ stored }} stored.
       {% else %}Nothing is stored for {{ season }} yet.{% endif %}</p>
+
+    {# Where the last paste got to, said the way Yahoo says it. The count
+       alone did not answer the only question an admin opens this page with,
+       and a date did not either: four things happened on Sep 12. The raw
+       string carries the minute and the move names the player, so it can be
+       read straight off against the top of Yahoo's own log. #}
+    {% if latest_said %}
+      {# occurred_raw is nullable, and a row without one would otherwise
+         render "Last in -- : ...". #}
+      <p class="note lastin"><b>Last in</b>
+        {%- if latest_when %} &mdash; {{ latest_when }}{% endif %}:
+        {{ latest_said }}.</p>
+    {% endif %}
 
     {# Two boxes rather than one. Each is parsed as the thing it holds, so a
        trade cannot be read as an add by a parser willing to try; a block in
