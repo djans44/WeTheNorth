@@ -663,13 +663,14 @@ h3 {
 }
 .pickhead .note,
 .pickhead .draftstate { flex: 1 1 18rem; margin: 0; }
-/* The gap under the band separates it from whatever shares its section.
-   Keeper results has nothing under it any more -- its picker went up into
-   the title -- and the gap read as the page having lost something. A
-   modifier rather than :only-child: the band is the only child of its
-   section on the draft order, draft prep and keeper pages too, and those
-   still have a picker in it. */
-.pickhead.stateonly { margin-bottom: 0; }
+/* The gap under the band is separation from whatever follows it in the
+   same section, so it is wanted exactly when something does. Now that the
+   season pickers have gone up into the page titles the band is usually the
+   last thing in its section, and the gap read as the page having lost
+   something. Still drawn where it earns itself: the draft order's paused-
+   updates note, the season setup lede, and the history and team pages,
+   where the band heads a list rather than standing alone. */
+.pickhead:last-child { margin-bottom: 0; }
 
 /* .field sets a 9rem label column for the admin forms, which left "Show"
    marooned from its own dropdown. margin-left:auto rather than

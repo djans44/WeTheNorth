@@ -12,16 +12,29 @@
      slots to pick from. The header freezes and condenses like the season,
      history and manager pages, so whose turn it is stays on screen. #}
   <header class="page-head tight stuck">
-    <h1>{{ leaf(20) }}Draft order</h1>
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Draft order {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/draft-order?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
     {# Only reachable once the header has condensed, which is to say once
        there is somewhere to go back from. A plain anchor, so it works with
        the script off and the browser does the scrolling. #}
     <a class="to-top" href="#top">Top</a>
   </header>
 
-  {# Where the season stands on the left, the season you are looking at on
-     the right, on one line. All three states share the left slot, so the
-     answer to "has this happened yet" is always in the same place. #}
+  {# Where the season stands. All three states share this slot, so the
+     answer to "has this happened yet" is always in the same place. The
+     season you are looking at used to sit on the right of this line and is
+     now in the title, which is where every other page keeps it. #}
   <section>
     <div class="pickhead">
       {% if not rows %}
@@ -42,18 +55,6 @@
           <span class="sub">All {{ entrants }} slots taken.</span>
         </p>
       {% endif %}
-
-      {# loadonpick: app.js hides the button and loads on change. The button
-         stays in the markup so the form still works with the script off. #}
-      <form method="get" action="/draft-order" class="picker loadonpick">
-        <label for="season">Season</label>
-        <select id="season" name="season">
-          {% for y in years %}
-            <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-          {% endfor %}
-        </select>
-        <button type="submit" class="seal">Load</button>
-      </form>
     </div>
 
     {# app.js reloads the page every ten seconds while this is here, and stops

@@ -1,34 +1,47 @@
 {% extends "base.html" %}
+{% from "macros.html" import leaf %}
 {% block title %}New season | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
-    <h1>New season</h1>
-    <p class="lede">Everything needed to stand up a league year, in the order
-      the code forces. Each generator reads the output of the one before it,
-      so a step that is not ready says what is in its way rather than
-      disappearing.</p>
+  {# The year is the control that changes the year, as on every other admin
+     page. It was a labelled dropdown and a Load button in the band below. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}New season {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/season-setup?season={{ y }}"
+               {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section>
     <div class="pickhead">
       {# none / set / live are the modifiers this component has: nothing yet,
-         settled, and the one that wants someone to act. #}
+         settled, and the one that wants someone to act. The season it names
+         is in the title now, so the sub says what is left rather than
+         repeating the year beside it. #}
       <p class="draftstate {% if done == total %}set{% elif done %}live{% else %}none{% endif %}">
         <span>{{ done }} of {{ total }} done</span>
-        <span class="sub">{{ season }}</span>
+        <span class="sub">{% if done == total %}{{ season }} is stood up.
+          {% else %}{{ total - done }} to go.{% endif %}</span>
       </p>
-      <form method="get" action="/admin/season-setup" class="picker loadonpick">
-        <label for="season">Season</label>
-        <select id="season" name="season">
-          {% for y in years %}
-            <option value="{{ y }}" {% if y == season %}selected{% endif %}>{{ y }}</option>
-          {% endfor %}
-        </select>
-        <button type="submit" class="seal">Load</button>
-      </form>
     </div>
+    {# The lede, which used to sit under the title. It belongs with the steps
+       it describes rather than above a band that answers a different
+       question. #}
+    <p class="note">Everything needed to stand up a league year, in the order
+      the code forces. Each generator reads the output of the one before it,
+      so a step that is not ready says what is in its way rather than
+      disappearing.</p>
   </section>
 
   <section>

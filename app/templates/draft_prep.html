@@ -13,17 +13,29 @@
      draft order pages. This is the longest page on the site -- thirteen
      rounds by twelve managers -- so it has the most to gain from it. #}
   <header class="page-head tight stuck">
-    <h1>{{ leaf(20) }}Draft prep</h1>
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Draft prep {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/draft-prep?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
     {# Only reachable once the header has condensed, which is to say once
        there is somewhere to go back from. A plain anchor, so it works with
        the script off and the browser does the scrolling. #}
     <a class="to-top" href="#top">Top</a>
   </header>
 
-  {# Where the season stands on the left, the season you are looking at on
-     the right, the same line the draft order page uses. It matters more here
-     than there: until every slot is taken the pick numbers below are
-     provisional, and nothing on the page said so. #}
+  {# Where the season stands, the same line the draft order page uses. It
+     matters more here than there: until every slot is taken the pick numbers
+     below are provisional, and nothing on the page said so. The season being
+     looked at is in the title, as on every other page. #}
   <section>
     <div class="pickhead">
       {% if not entrants %}
@@ -43,18 +55,6 @@
           <span class="sub">All {{ team_count }} slots taken.</span>
         </p>
       {% endif %}
-
-      {# loadonpick: app.js hides the button and loads on change. The button
-         stays in the markup so the form still works with the script off. #}
-      <form method="get" action="/draft-prep" class="picker loadonpick">
-        <label for="season">Season</label>
-        <select id="season" name="season">
-          {% for y in years %}
-            <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-          {% endfor %}
-        </select>
-        <button type="submit" class="seal">Load</button>
-      </form>
     </div>
   </section>
 
