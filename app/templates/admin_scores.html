@@ -167,14 +167,22 @@
 
     {# The ring turns while the thread works, and the page looks again on its
        own. The link stays for the script being off, and for after the dozen
-       looks run out. #}
-    {% if account.state == "writing" %}
-      <p class="note waiting" data-recheck="6">Being written now. It takes about
+       looks run out.
+
+       Asked before the account below rather than instead of it: writing
+       again while a draft is already there is the common case, and the note
+       used to be skipped entirely then, so the one time an admin most wanted
+       the page to refresh itself was the one time it did not. What is there
+       now stays readable while the new one is written. #}
+    {% if account.writing %}
+      <p class="note waiting" data-recheck="6">{% if account.row %}A new one is
+        being written{% else %}Being written now{% endif %}. It takes about
         half a minute, and this page will look again on its own &mdash; or
         <a href="/admin/scores?season={{ season }}&week={{ week }}&mode={{ mode }}#account">look
         now</a>.</p>
+    {% endif %}
 
-    {% elif account.state in ("draft", "published") %}
+    {% if account.row %}
       <article class="written">
         <p class="setup-head">
           <b>Week {{ week }}</b>
@@ -218,11 +226,15 @@
             <input type="hidden" name="week" value="{{ week }}">
             <input type="hidden" name="mode" value="{{ mode }}">
             <button type="submit" class="seal quiet"
-                    {% if not account.have_key %}disabled{% endif %}>
+                    {% if not account.have_key or account.writing %}disabled{% endif %}>
               Write it again</button>
           </form>
         </div>
       </article>
+
+    {% elif account.writing %}
+      {# The note above is the whole of it: nothing written yet, and the
+         first one on its way. #}
 
     {% elif not account.complete %}
       <p class="note">Week {{ week }} is not finished. The account writes
