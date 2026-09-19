@@ -4,15 +4,32 @@
 
 {% block content %}
 <div class="page">
+  {# The year is the control that changes the year, as on every other page
+     with more than one of them. It used to be a labelled dropdown and a Load
+     button in the band below, which is the older shape and the only one of
+     its kind left on a results page. #}
   <header class="page-head tight stuck">
-    <h1>{{ leaf(20) }}Keeper results</h1>
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Keeper results {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/keepers/results?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
     <a class="to-top" href="#top">Top</a>
   </header>
 
-  {# Where the season stands on the left, the season you are reading on the
-     right, the same line the draft pages use. #}
+  {# Where the season stands. The picker that used to sit on the right of
+     this line has gone up into the title; the band is the state alone now,
+     and its rule runs the width of the panel. #}
   <section>
-    <div class="pickhead">
+    <div class="pickhead stateonly">
       {# A season with no keeper rounds at all is answered first: it is
          finished too, and "settled, nobody kept" is a stranger way to say
          the league did not run keepers that year. #}
@@ -39,16 +56,6 @@
             resolved. Contracts already hold their place.</span>
         </p>
       {% endif %}
-
-      <form method="get" action="/keepers/results" class="picker loadonpick">
-        <label for="season">Season</label>
-        <select id="season" name="season">
-          {% for y in years %}
-            <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-          {% endfor %}
-        </select>
-        <button type="submit" class="seal">Load</button>
-      </form>
     </div>
   </section>
 
