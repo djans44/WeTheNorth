@@ -15,8 +15,10 @@ Also done since, and left numbered here so the audit list keeps its numbers:
 **1 weekly summaries** and **2 season summaries** are built, generated for
 2022-2025 and published, with an admin page at `/admin/summaries` and at most
 one draft and one published version of each (migration 045). **5
-`/admin/scores`** and **11 `/admin/schedule`** have had their audits -- ten
-findings and six respectively, two of which were losing data.
+`/admin/scores`**, **6 `/admin/keepers`** and **11 `/admin/schedule`** have
+had their audits -- ten findings, seven and six respectively, three of which
+were losing data. **13 the year-round roster** is complete to its last step,
+and **14 the assembly** is built and the league is voting in it.
 
 Two things came out of `/draft-prep` that belong to the whole site rather than
 to that page: the connection pool, written up in `PROJECT.md`, and per-season
@@ -121,7 +123,7 @@ rest: `/admin/transactions` and `/admin/draft`. What they settled --
 | Owners | `owners` | Emails are the credential and are deliberately not in git |
 | Players | `players` | ~359 rows. **No Yahoo id** — `player_id` is a local identity column and every importer matches on `lower(full_name)`. See `docs/features/player-scoring.md` |
 | ~~Draft picks~~ | `draft_picks` | **Done** -- `/admin/draft`. Reads both board shapes; the keeper badge is a private-use glyph and has to be read before the icons are stripped |
-| Rosters | `rosters` | End-of-season snapshot; what keepers are drawn from |
+| ~~Rosters~~ | `rosters` | **Done** -- `/admin/rosters`. Paste all twelve; it reconciles them against the draft and every move since before it writes, which is step 3 of item 13 |
 | ~~Transactions~~ | `transactions` | **Done** -- `/admin/transactions`. A week at a time, idempotent on a natural key, and it says so when a paste may have a gap |
 | Matchups | `matchups` | Score entry already exists; a bulk import is for a season's history |
 | ADP | `player_adp` | Locked at signing for 3-year contract pricing |
@@ -152,13 +154,22 @@ recomputes the crests as well.
 The one admin page used every week during a season, so it earns the most
 polish.
 
-## 6. Audit `/admin/keepers`
+## 6. ~~Audit `/admin/keepers`~~ **Done**
 
-Windows, review and phase resolution in one page. Approving and rejecting
-submissions, and running a resolution that turns plans into submissions.
+Seven findings, five commits. The three that mattered: "Reset this manager"
+reset the whole season when the manager list was empty, rejecting deleted a
+submission with nothing in front of it, and saving windows accepted a
+half-filled row, a closes-before-opens, and a resolved round's dates while
+always saying "Windows saved".
 
-Rejecting deletes and reopens rather than labelling, which is worth checking
-reads clearly, because it is destructive and does not look it.
+It also turned up one that was not this page's: `data-confirm` was bound to
+`form[data-confirm]` and four of the five confirms on the site are written on
+the button, so the assembly rising, the results being proclaimed, a summary
+removed and a keeper round forfeited all asked nothing. Fixed in `app.js`.
+
+The Phase-versus-keeper-round naming the `/rules` audit left for this page is
+settled: Round in every column header, Cost for the column that was a second
+Round.
 
 ## 7. Audit `/admin/keepers/edit/{sid}`
 
@@ -198,6 +209,12 @@ to look at.
 The grant flow, built last. Worth an audit precisely because it is new and
 was never looked at with fresh eyes.
 
+**Mostly overtaken.** Item 14 rebuilt this page as Assembly admin: a year to
+pick, the five steps in the order they happen, results that stay hidden until
+the assembly rises, and manual granting narrowed to settling a tie. That was
+a rework to a brief rather than an audit, so what is left is the fresh-eyes
+pass over what it became -- smaller than the other four, and worth doing last.
+
 ## 13. A roster tracked all year, not snapshotted at the end
 
 Adds, drops and trades together are a complete record of who moved where, so
@@ -225,29 +242,49 @@ exists:
    thirteen to fifteen are all legitimate, so a squad being a player over is
    not evidence of a missing move. A size check was built, cried wolf over
    six ordinary 2026 rosters, and was taken out again.
-3. **Validate the final rosters against it.** *The only step left.* The end-of-year import stops
-   overwriting and starts reconciling: here is what the record says the
-   roster is, here is what Yahoo says, here is the difference. Keeper cost
-   basis reads `transactions` directly (`keeper_cost_basis`, migration 023),
-   so a hole in the transaction record is a wrong keeper price -- this is
-   the check that catches it before anyone selects.
+3. ~~**Validate the final rosters against it.**~~ **Done** -- `/admin/rosters`.
+   Paste all twelve and it says, per manager, who is on the roster and not in
+   the record and who is in the record and not on the roster, before it
+   writes anything. 2025 reconciles clean, which is the draft import, the
+   transaction import, the roster parser and the derivation all agreeing at
+   once. Keeper cost basis reads `transactions` directly
+   (`keeper_cost_basis`, migration 023), so a hole in the transaction record
+   is a wrong keeper price, and this is the check that catches it before
+   anyone selects.
 
-Loaders for the two inputs:
+**Item 13 is finished.** Both loaders are built: draft results, with 2026
+loaded, and rosters. `rosters` has stopped being the source of truth and is
+now the thing the record is checked against.
 
-- **Draft results.** Built, and 2026 is loaded. This was the blocker on
-  step 2 and it is gone.
-- **Rosters.** Still a row in item 4. `rosters` is an end-of-season
-  snapshot, 2025 only -- and under this item it stops being the source of
-  truth and becomes the thing step 3 reconciles against.
+## 14. ~~Let the league vote on the four honours~~ **Done**
 
-## 14. Let the league vote on the four honours
+The Assembly: its own nav heading, open deliberations and proclamations, a
+badge counting the assemblies sitting that a manager has not spoken at, and
+Assembly admin to call one, watch the ballot, rise it and proclaim what it
+decided. No nomination round in the end -- the candidates are already known,
+so the ballot is built from the season: the twelve team names, each side of
+each trade, every defeat by ten points or fewer, and every late pick still
+held at the close.
 
-Named in Song, Legend of the Choosing, The Bargain of the Age, The Red Week.
-The commissioner is the right mechanism but the wrong decider — they are
-opinions and twelve people have them.
+Two of the four ballots grow while the assembly sits, so a vote records how
+many candidates it was cast against; a manager is told when there are more to
+look at and is never made to change their mind, and a vote for a candidate
+that has since left the ballot becomes an abstention rather than counting for
+somebody who is no longer eligible. Winners are still written as ordinary
+manual grants with `awarded_by` set, and a tie is reported for the
+commissioner to settle rather than broken by the count.
 
-A poll would fit the existing schema without touching `owner_crests`: one
-round of nominations, one of votes, a closing date, and the winner written
-as an ordinary manual grant with `awarded_by` set to whoever ran it.
-`/admin/crests` stays as the fallback and as the thing a poll ultimately
-calls.
+Four assemblies are sitting now, one per season 2022-2025.
+
+## 15. The last week's account is written and shown nowhere
+
+A week's account appears on the *following* week's panel -- the banner reads
+`week_summaries.get(shown - 1)` under "Thus passed week N". The last week of
+a season has no following week, so 2025's week 17 account exists, is
+published, and renders on no page at all. Checked: it is on none of weeks
+14-17 or the season view.
+
+The season view has its own season summary in that slot, so it is not simply
+a matter of putting it there. Worth deciding where the last word of a year
+belongs -- probably under the final week itself, which would make the banner
+"the week just gone" for every week except the last, where it is this one.
