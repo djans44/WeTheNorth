@@ -46,8 +46,37 @@
 
   {% else %}
   <section>
+    {# When it rises, given the band every other page on the site uses to say
+       where a thing stands. It was a clause in the middle of the note below
+       -- "until the assembly rises on Sep 25" -- which is the one fact on
+       this page a manager has to act on, said to the day when the deadline
+       is 11:59 at night. The modifiers mean what they mean everywhere: the
+       plain rule before anything has happened, oxblood while it can be acted
+       on, gold once it is settled. #}
+    <div class="pickhead">
+      {% if open %}
+        <p class="draftstate live">
+          <span>Sitting</span>
+          <span class="sub">Rises {{ poll.closes_at|league_hour }}.
+            {{ voters }} of {{ seats }} have spoken.</span>
+        </p>
+      {% elif state == "scheduled" %}
+        <p class="draftstate none">
+          <span>Called</span>
+          <span class="sub">Sits {{ poll.opens_at|league_hour }}, rises
+            {{ poll.closes_at|league_hour }}.</span>
+        </p>
+      {% else %}
+        <p class="draftstate set">
+          <span>Risen</span>
+          <span class="sub">Closed {{ poll.closes_at|league_hour }}.
+            {{ voters }} of {{ seats }} spoke.</span>
+        </p>
+      {% endif %}
+    </div>
+
     {% if open %}
-      {# Whether you are one of the voters counted below. Four assemblies
+      {# Whether you are one of the voters counted above. Four assemblies
          sit at once and they look alike, so "have I done this one" is the
          first thing a manager arriving here wants answered. #}
       {% if mine %}
@@ -55,18 +84,15 @@
           {{ mine|length }} of {{ crests|length }} answered.</p>
       {% endif %}
       <p class="note">Four questions, one answer each. Change any of them as
-        often as you like until the assembly rises on
-        {{ poll.closes_at|league_day }}.
-        {{ voters }} of {{ seats }} have spoken. Nobody sees a count, yours
-        included, until it closes.</p>
+        often as you like until it rises. Nobody sees a count, yours
+        included, until then.</p>
     {% elif state == "scheduled" %}
       {# Called but not yet sitting. Saying so beats saying nothing: a manager
          who hears the vote is coming and finds an empty page assumes it is
          broken. #}
-      <p class="note">The assembly is called and sits on
-        {{ poll.opens_at|league_day }}. Nothing can be said before then.</p>
+      <p class="note">Nothing can be said before it sits.</p>
     {% else %}
-      <p class="note">This assembly has risen. What it decided is in the
+      <p class="note">What it decided is in the
         <a href="/assembly/proclamations?season={{ poll.season_year }}">proclamations</a>.</p>
     {% endif %}
   </section>

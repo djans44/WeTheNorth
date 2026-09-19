@@ -180,7 +180,26 @@ def league_day(ts):
     return "%s %d" % (d.strftime("%b"), d.day)
 
 
+def league_hour(ts):
+    """A timestamp as the league reads it: its own date and hour, its zone.
+
+    league_day for a deadline people act on to the minute rather than to the
+    day. The assembly rises at 11:59pm and "Sep 25" left a manager to guess
+    whether that meant the start of the day or the end of it.
+
+    %a and %b rather than %-d and %-I: the latter are glibc only and this
+    runs on Windows in development, which has bitten twice.
+    """
+    if not ts:
+        return ""
+    d = ts.astimezone(LEAGUE_TZ)
+    return "%s %s %d, %d:%02d%s" % (
+        d.strftime("%a"), d.strftime("%b"), d.day,
+        d.hour % 12 or 12, d.minute, "am" if d.hour < 12 else "pm")
+
+
 templates.env.filters["league_day"] = league_day
+templates.env.filters["league_hour"] = league_hour
 def crest_when(row):
     """When a crest was won, and what earned it, on one line.
 
