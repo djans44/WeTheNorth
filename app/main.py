@@ -3309,13 +3309,21 @@ def assembly_page(request: Request, season: int = 0, msg: str = "", error: str =
     """
     me = request.session.get("owner_id")
     with get_db() as conn:
+        # Only the seasons that have an assembly. More than one can sit at
+        # once -- the league opened four the week the page went live -- and
+        # without this list the page showed whichever poll_for picked and
+        # the other three were reachable only by typing ?season= by hand.
+        years = query(conn, """
+            select season_year from crest_polls order by season_year desc
+        """)
         poll = poll_for(conn, season or None)
         if not poll:
             return templates.TemplateResponse(
                 request=request, name="assembly.html",
                 context={"poll": None, "open": False, "ballots": {},
                          "crests": [], "mine": {}, "result": {},
-                         "turnout": 0, "voters": 0})
+                         "turnout": 0, "voters": 0,
+                         "years": years, "season": season})
 
         rows, ballots = ballot_state(conn, poll, me)
         mine = {r["crest_id"]: r["chosen"] for r in rows if r["chosen"]}
@@ -3334,6 +3342,7 @@ def assembly_page(request: Request, season: int = 0, msg: str = "", error: str =
         context={"poll": poll, "open": live, "state": poll_state(poll),
                  "ballots": ballots, "crests": rows, "mine": mine,
                  "voters": voters, "seats": seats,
+                 "years": years, "season": poll["season_year"],
                  "msg": msg, "error": error})
 
 

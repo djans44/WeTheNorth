@@ -4,8 +4,29 @@
 
 {% block content %}
 <div class="page">
+  {# The year is the control that changes the year, as on every other page
+     with more than one of them. More than one assembly can sit at once and
+     four did the week this went live, and until this was here the page
+     showed one of them and the rest were reachable only by hand. Only the
+     seasons that have an assembly are offered. #}
   <header class="page-head tight stuck">
-    <h1>{{ leaf(20) }}Open deliberations{% if poll %} {{ poll.season_year }}{% endif %}</h1>
+    {% if years %}
+      <details class="headpick">
+        <summary>
+          <h1>{{ leaf(20) }}Open deliberations{% if poll %} {{ poll.season_year }}{% endif %}</h1>
+        </summary>
+        <ul>
+          {% for y in years %}
+            <li>
+              <a href="/assembly?season={{ y.season_year }}"
+                 {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% else %}
+      <h1>{{ leaf(20) }}Open deliberations</h1>
+    {% endif %}
     <a class="to-top" href="#top">Top</a>
   </header>
 
