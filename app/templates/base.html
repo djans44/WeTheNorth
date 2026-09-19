@@ -50,13 +50,18 @@
           {% endfor %}
         </ul>
       </li>
+      {# The league's own record, as against a season's or a manager's:
+         what has happened across all of them. Rosters belongs in here with
+         transactions -- both are the record of a season after the fact --
+         rather than alongside the four headings that are places to go. #}
       <li class="has-menu">
         <a href="/history"
-           {% if path in ('/history', '/crests', '/transactions') %}class="on"{% endif %}>History</a>
+           {% if path in ('/history', '/crests', '/transactions', '/rosters') %}class="on"{% endif %}>League</a>
         <ul class="submenu">
-          <li><a href="/history">League history</a></li>
+          <li><a href="/history">History</a></li>
           <li><a href="/crests">Crests of honour</a></li>
           <li><a href="/transactions">Transactions</a></li>
+          <li><a href="/rosters">Rosters</a></li>
         </ul>
       </li>
       <li class="has-menu">
@@ -72,8 +77,6 @@
           {% endfor %}
         </ul>
       </li>
-      <li><a href="/rosters"
-             {% if path == '/rosters' %}class="on"{% endif %}>Rosters</a></li>
       {# The badge counts assemblies sitting that this manager has not spoken
          at. A vote you can miss by not thinking to look is a vote that gets
          eight replies, so the nav says so. #}
