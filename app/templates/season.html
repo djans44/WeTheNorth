@@ -370,7 +370,11 @@
      playoff weeks, where the table has stopped deciding anything. #}
   {% if state != "playoffs" %}
   <section id="standings">
-    <h2>Standings after week {{ shown }}</h2>
+    {# Named for the last week with results in it, not the week on screen:
+       the page opens on the week being played and that week has none, so
+       "after week 2" would sit over the week one table. #}
+    <h2>{% if counted %}Standings after week {{ counted }}
+      {%- else %}Standings{% endif %}</h2>
     {{ standingstable(standings, seeds, seed_key) }}
   </section>
   {% endif %}

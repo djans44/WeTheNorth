@@ -1517,11 +1517,18 @@ def season(request: Request, year: int, week: str | None = None):
         weeks = []
         for g in games:
             if not weeks or weeks[-1]["week"] != g["week"]:
-                weeks.append({"week": g["week"], "games": [], "played": False})
+                weeks.append({"week": g["week"], "games": [],
+                              "played": False, "done": True})
             g["rival"] = (g["owner_a"], g["owner_b"]) in rival_pairs
             weeks[-1]["games"].append(g)
+            # Two different facts. `played` is whether the week has any
+            # result at all, `done` whether every game in it does. A week
+            # with one score in has been started and not finished, and which
+            # week the page opens on turns on the difference.
             if g["points_a"] is not None:
                 weeks[-1]["played"] = True
+            else:
+                weeks[-1]["done"] = False
 
         # Rivalry week is the week where every game is a rival meeting, which
         # is read off the fixtures rather than pinned to a number. The
@@ -1553,8 +1560,20 @@ def season(request: Request, year: int, week: str | None = None):
             # the week just gone, and the year is the more interesting read.
             shown = None
         else:
-            # Mid-season, open on what just happened rather than on week 1.
-            shown = played[-1] if played else numbers[0]
+            # Mid-season, open on the week being played. Week one's scores go
+            # in and the year has moved on to week two -- its fixtures, and
+            # the table the first week left behind -- which is what somebody
+            # opening the season page in October wants to see. It used to
+            # open on the week just finished, which on a season one week old
+            # meant week one, and week one is the slot that keeps the season
+            # preview pinned above it: entering the first scores of the year
+            # appeared to change nothing at all.
+            #
+            # Every game scored, not any: a week with one result in is still
+            # the week being played, and stepping past it would land on
+            # fixtures nobody has reached.
+            ahead = [w["week"] for w in weeks if not w["done"]]
+            shown = ahead[0] if ahead else (played[-1] if played else numbers[0])
 
         if shown is None:
             state = "season"
@@ -1572,8 +1591,16 @@ def season(request: Request, year: int, week: str | None = None):
         # final order underneath week three. Seed marks go with it -- they
         # describe a race that is still being run, and are computed from the
         # season-wide table, so they belong only to the year as a whole.
+        #
+        # `counted` is the week the table is as of, which is not the week on
+        # screen: the page opens on the week being played and that week has
+        # no results in it, so naming it would put a "Standings after week 2"
+        # heading over the week one table. The last week with anything in it
+        # is the answer, and before the first ball is kicked there is none.
+        counted = None
         if state in ("preview", "regular"):
             standings = standings_after(conn, year, shown)
+            counted = max((w for w in played if w <= shown), default=None)
             seeds = {}
         else:
             seeds = playoff_labels(standings, remaining)
@@ -1728,7 +1755,8 @@ def season(request: Request, year: int, week: str | None = None):
         return templates.TemplateResponse(
             request=request, name="season.html",
             context={"s": head[0], "standings": standings, "weeks": weeks,
-                     "state": state, "shown": shown, "this_week": this_week,
+                     "state": state, "shown": shown, "counted": counted,
+                     "this_week": this_week,
                      "banner": banner, "records": records,
                      "seeds": seeds, "seed_key": seed_key(seeds, standings),
                      "brackets": brackets, "titles": titles,
