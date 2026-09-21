@@ -7386,6 +7386,12 @@ def admin_rivals(request: Request, season: int = 0, preview: int = 0):
         request=request, name="admin_rivals.html",
         context={"years": years, "season": season, "current": current,
                  "proposed": proposed, "total": total,
+                 "preview": preview,
+                 # Generating throws away a hand-made pairing without saying
+                 # so. Counted here so the page can warn before it happens
+                 # rather than after.
+                 "handmade": sum(1 for c in current
+                                 if c["source"] == "manual") // 2,
                  "owners": [{"owner_id": i, "username": names[i]} for i in ids],
                  "grid": grid, "headers": [names[i] for i in ids]})
 
@@ -7448,9 +7454,12 @@ async def admin_rivals_set(request: Request):
         for a, b in picks.items():
             if a == b:
                 problems.append(f"{names.get(a, a)} cannot rival themselves.")
+            elif b not in names:
+                problems.append(f"{names.get(a, a)} picks somebody who is "
+                                f"not in the {season} league.")
             elif picks.get(b) != a:
                 problems.append(
-                    f"{names.get(a, a)} picks {names.get(b, b)}, "
+                    f"{names[a]} picks {names[b]}, "
                     f"but not the other way round.")
 
         if problems:

@@ -1344,10 +1344,19 @@ tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
    under the text. The colour and size are what those columns want; only the
    display was ever the problem. */
 .keepers td.tm { display: table-cell; }
-/* The windows table is phases, fields and states -- no numbers in it, so the
-   sheet's right-aligned default put "Opens" and "Closes" at the far end of a
-   column that is almost entirely input, labelling nothing. */
-.windows th, .windows td { text-align: left; }
+/* Admin tables whose columns are controls rather than numbers. The sheet
+   right-aligns by default, which put the keeper windows' "Opens" and
+   "Closes" at the far end of a column that is almost entirely input, and
+   left the rivals override's twelve dropdowns some nine hundred pixels from
+   the managers they are set against. */
+.windows th, .windows td,
+.pairings th, .pairings td { text-align: left; }
+/* Two columns on a page that is deliberately wide for the score grid, so
+   without this the manager and the dropdown they are paired in sit seven
+   hundred pixels apart with nothing between them. Sized by its content and
+   nothing else: a min-width here beats the max-width beside it -- that is
+   the rule, not a quirk -- and 26rem of it put a 360px phone at 444. */
+.pairings { width: auto; }
 /* The void chooser. Its options are a manager, a player, a round and a
    penalty round on one line, which is 26rem before it starts truncating --
    but a fixed min-width is what pushed a 420px phone into scrolling

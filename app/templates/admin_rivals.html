@@ -1,33 +1,82 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
-{% block title %}Rivals | We the North{% endblock %}
+{% from "macros.html" import avatar, leaf %}
+{% block title %}Rivals {{ season }} | We the North{% endblock %}
 
 {% block content %}
 <div class="page wide">
-  <header class="page-head">
-    <h1>Rivals</h1>
-    <p class="lede">Every manager gets exactly one rival, and nobody is two
-      managers' rival. Scores weight playoff meetings, close games and past rivalries.</p>
+  {# The year is the control that changes the year, as on every other admin
+     page. This was the last one still choosing its season from a dropdown
+     and a Load button. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Rivals {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/rivals?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section>
-    <form method="get" action="/admin/rivals" class="picker">
-      <label for="season">Season</label>
-      <select id="season" name="season">
-        {% for y in years %}
-          <option value="{{ y.season_year }}" {% if y.season_year == season %}selected{% endif %}>{{ y.season_year }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit">Load</button>
-      <a href="/admin/rivals?season={{ season }}&preview=1" class="tm">Preview generated pairings</a>
+    <h2>{{ season }} rivalries</h2>
+    <p class="note">Every manager gets exactly one rival, and nobody is two
+      managers&rsquo; rival. Scores weight playoff meetings, close games and
+      past rivalries.</p>
+    {% if current %}
+      <ul class="records">
+      {% for c in current %}
+        {% if c.owner_id < c.rival_owner_id %}
+          <li class="pairing">
+            <span class="avatar-line">{{ avatar(c.owner_id, 30) }}<b>{{ c.username }}</b></span>
+            <span class="tm">vs</span>
+            <span class="avatar-line">{{ avatar(c.rival_owner_id, 30) }}<b>{{ c.rival }}</b></span>
+            <span class="tm">score {{ c.score }} &middot; {{ c.source }}</span></li>
+        {% endif %}
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="note">None set for {{ season }}. Look at what the weighting
+        proposes below, or pair them by hand.</p>
+    {% endif %}
+  </section>
+
+  {# Seeing the proposal is the step before replacing everything with it, so
+     it gets a button rather than the .tm-styled link it used to have tucked
+     inside the season picker. #}
+  <section>
+    <h2>Generated pairings</h2>
+    <p class="note">The best of every possible pairing, by total score.
+      Nothing is written until you say so.</p>
+    {# A get with a button rather than a styled link: button.seal is
+       element-qualified, and this is an action that happens to navigate. #}
+    <form method="get" action="/admin/rivals">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="preview" value="1">
+      <div class="actionrow">
+        <button type="submit" class="seal quiet">
+          {% if preview %}Work them out again{% else %}Propose pairings{% endif %}</button>
+      </div>
     </form>
   </section>
 
   {% if proposed %}
-  <section>
+  <section id="proposed">
     <h2>Proposed</h2>
-    <p class="note">Best of every possible pairing, total score {{ "%.1f"|format(total) }}.
-      Nothing saved yet.</p>
+    <p class="note">Total score {{ "%.1f"|format(total) }}. Nothing saved yet.</p>
+    {% if handmade %}
+      {# The override below exists to let a commissioner decide something the
+         weighting cannot. Generating used to discard that without a word. #}
+      <p class="note why">{{ handmade }} of {{ season }}&rsquo;s pairings
+        {{ "was" if handmade == 1 else "were" }} set by hand. Saving these
+        replaces {{ "it" if handmade == 1 else "them" }}.</p>
+    {% endif %}
     <table class="keepers">
       <thead><tr><th>Pair</th><th>Score</th><th>Meetings</th><th>Playoff</th><th>Close</th><th>Past rival</th></tr></thead>
       <tbody>
@@ -46,38 +95,22 @@
     </table>
     <form method="post" action="/admin/rivals/generate">
       <input type="hidden" name="season" value="{{ season }}">
-      <button type="submit">Generate and save</button>
+      <div class="actionrow">
+        <button type="submit" class="seal"
+                data-confirm="Replace every {{ season }} rivalry with these six pairings?{% if handmade %} {{ handmade }} of them {{ 'was' if handmade == 1 else 'were' }} set by hand and will be lost.{% endif %}">
+          Generate and save</button>
+      </div>
     </form>
-    <p class="note">Replaces any existing rivalries for {{ season }}.</p>
   </section>
   {% endif %}
 
   <section>
-    <h2>{{ season }} rivalries</h2>
-    {% if current %}
-      <ul class="records">
-      {% for c in current %}
-        {% if c.owner_id < c.rival_owner_id %}
-          <li class="pairing">
-            <span class="avatar-line">{{ avatar(c.owner_id, 30) }}<b>{{ c.username }}</b></span>
-            <span class="tm">vs</span>
-            <span class="avatar-line">{{ avatar(c.rival_owner_id, 30) }}<b>{{ c.rival }}</b></span>
-            <span class="tm">score {{ c.score }} &middot; {{ c.source }}</span></li>
-        {% endif %}
-      {% endfor %}
-      </ul>
-    {% else %}
-      <p class="note">None set for {{ season }}.</p>
-    {% endif %}
-  </section>
-
-  <section>
     <h2>Override</h2>
-    <p class="note">Both sides must agree. Saving is rejected unless every manager
-      is paired and each pairing is mutual.</p>
+    <p class="note">Both sides must agree. Saving is rejected unless every
+      manager is paired and each pairing is mutual.</p>
     <form method="post" action="/admin/rivals/set">
       <input type="hidden" name="season" value="{{ season }}">
-      <table class="keepers">
+      <table class="keepers pairings">
         <thead><tr><th>Manager</th><th>Rival</th></tr></thead>
         <tbody>
         {% for o in owners %}
@@ -101,7 +134,11 @@
         {% endfor %}
         </tbody>
       </table>
-      <button type="submit">Save pairings</button>
+      <div class="actionrow">
+        <button type="submit" class="seal"
+                data-confirm="Save these pairings for {{ season }}? Every rivalry the season has is replaced by what is on this form.">
+          Save pairings</button>
+      </div>
     </form>
   </section>
 
@@ -128,4 +165,3 @@
   </section>
 </div>
 {% endblock %}
-
