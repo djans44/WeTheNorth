@@ -77,7 +77,9 @@
         {% endfor %}
         </tbody>
       </table>
-      <button type="submit">Save windows</button>
+      <div class="actionrow">
+        <button type="submit" class="seal">Save windows</button>
+      </div>
     </form>
   </section>
 
@@ -104,7 +106,9 @@
     <form method="post" action="/admin/keepers/resolve">
       <input type="hidden" name="season" value="{{ season }}">
       <input type="hidden" name="phase" value="{{ preview }}">
-      <button type="submit">Resolve Keeper {{ preview }}</button>
+      <div class="actionrow">
+        <button type="submit" class="seal">Resolve Keeper {{ preview }}</button>
+      </div>
     </form>
     <p class="note">This cannot be undone from the site.</p>
     {% endif %}
@@ -138,15 +142,18 @@
         {% endfor %}
         </tbody>
       </table>
-      <button type="submit" name="action" value="approve">Approve selected</button>
+      <p class="note">Every row is ticked to start with, because approving is
+        the usual act. Rejecting deletes the submission; their plan stays, so
+        they can resubmit.</p>
       {# The confirm is on the button, not the form: approve is in the same
          form and must not ask. #}
-      <button type="submit" name="action" value="reject" class="ghost"
-              data-confirm="Reject the ticked submissions? They are deleted, not labelled. Each manager's plan stays, so they can submit again while the round is open.">
-        Reject and reopen</button>
-      <span class="tm">Every row is ticked to start with, because approving is
-        the usual act. Rejecting deletes the submission; their plan stays, so
-        they can resubmit.</span>
+      <div class="actionrow">
+        <button type="submit" name="action" value="reject" class="seal quiet"
+                data-confirm="Reject the ticked submissions? They are deleted, not labelled. Each manager's plan stays, so they can submit again while the round is open.">
+          Reject and reopen</button>
+        <button type="submit" name="action" value="approve" class="seal">
+          Approve selected</button>
+      </div>
     </form>
     {% else %}
       <p class="note">Nothing waiting.</p>
@@ -207,7 +214,7 @@
           </option>
         {% endfor %}
       </select>
-      <button type="submit" name="action" value="add" class="ghost">Void it</button>
+      <button type="submit" name="action" value="add" class="seal quiet">Void it</button>
     </form>
     {% endif %}
   </section>
@@ -254,15 +261,17 @@
       {# Disabled rather than merely empty, and the button with it: an empty
          select posts no owner_id, which is how "Reset this manager" used to
          reach the whole season. The route refuses it too. #}
-      <button type="submit" name="scope" value="owner" class="ghost"
-              {% if not all_owners %}disabled{% endif %}>Reset this manager</button>
-      <button type="submit" name="scope" value="season" class="ghost"
-              data-confirm="Reset all of {{ season }}? Every submission, plan and void the season has is deleted and all three keeper rounds reopen. There is no way back.">
-        Reset all of {{ season }}</button>
       {% if not all_owners %}
         <p class="note">{{ season }} has no keeper eligibility of its own, so
           there is no manager to reset one at a time.</p>
       {% endif %}
+      <div class="actionrow">
+        <button type="submit" name="scope" value="owner" class="seal quiet"
+                {% if not all_owners %}disabled{% endif %}>Reset this manager</button>
+        <button type="submit" name="scope" value="season" class="seal quiet"
+                data-confirm="Reset all of {{ season }}? Every submission, plan and void the season has is deleted and all three keeper rounds reopen. There is no way back.">
+          Reset all of {{ season }}</button>
+      </div>
     </form>
   </section>
 </div>
