@@ -61,7 +61,8 @@
         <b>Not {{ season }}&rsquo;s teams.</b>
         <ul>{% for t in unknown_teams %}<li>{{ t }}</li>{% endfor %}</ul>
         <p>A manager renaming a team is the usual cause. Rename it on the
-          <a href="/admin/owners">owners</a> page to match, then read again.</p>
+          <a href="/admin/owners?season={{ season }}">owners</a> page to match,
+          then read again.</p>
       </div>
     {% endif %}
 
