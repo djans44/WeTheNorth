@@ -137,14 +137,20 @@ than fail on a foreign key.
 
 **Items 5 to 12 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
 page, say what is wrong with it, agree the changes, build them. **Each is its
-own item** — one audit, one conversation. One left of the twelve: **10
-`/admin/rivals`**, plus the fresh-eyes pass on 12.
+own item** — one audit, one conversation. **All twelve are done.** What is
+left of this block is the fresh-eyes pass on 12, which item 14 rebuilt to a
+brief rather than audited.
+
+One thing they all taught, worth carrying into anything new: **measure at
+more than one width.** `/admin/keepers/edit` was 412px wide at 390, 375 and
+360 and exactly 420 at 420, which is the width these were habitually probed
+at, so a single measurement had cleared it.
 
 A design and usability audit rather than form validation. `/rules` was on
 the list and has no inputs at all, which settled which is meant.
 
-Every one looked at this way has been worth a handful of real changes, and
-several have been worth a data-losing bug. Expect the same of the last one.
+Every one looked at this way was worth a handful of real changes, and
+several were worth a data-losing bug.
 
 ## 5. Audit `/admin/scores`
 
@@ -234,10 +240,23 @@ The rest was shape: the season round-trips from the list and back, the save
 says what it changed, the way back sits above the title, and the initials box
 shows what it would derive.
 
-## 10. Audit `/admin/rivals`
+## 10. ~~Audit `/admin/rivals`~~ **Done**
 
-Generated pairings with a preview, and a manual override validated for mutual
-pairings.
+Six findings. Generate and save deletes every rivalry the season has and
+writes six new ones -- and the Override below it exists so a commissioner can
+decide something the weighting cannot, which generating threw away without a
+word. Both acts ask first now, and a hand-made pairing is counted and named
+in the question.
+
+Worth recording, because it was asserted before it was checked: this does
+*not* rewrite which games the history pages call rivalry meetings. Scores
+read `season_year <= season`, so a finished year's own games count toward its
+own scoring -- but generating today reproduces the stored pairings exactly
+for all five seasons. The manual override was the thing at risk.
+
+This was the last page choosing its season from a dropdown and a Load button.
+The override's twelve dropdowns also sat some nine hundred pixels from the
+managers they pair, on the sheet's right-aligned default.
 
 ## 11. Audit `/admin/schedule`
 
