@@ -288,3 +288,81 @@ The season view has its own season summary in that slot, so it is not simply
 a matter of putting it there. Worth deciding where the last word of a year
 belongs -- probably under the final week itself, which would make the banner
 "the week just gone" for every week except the last, where it is this one.
+
+## 16. Injuries and trades in the weekly account
+
+**Parked, deliberately.** Too much of it rides on one person typing the right
+thing on a Tuesday, and the half worth having is the half that is not built
+yet: a tie-in to weekly lineups, so most of it plumbs itself.
+
+The idea: a week's account should be able to call out injuries that bear on
+what comes next, and name any trade that went down. Neither is in the facts
+the generator gets today -- `week_facts` has results, superlatives, the
+table, movement, runs, crests, titles and next week's fixtures, and nothing
+about a player beyond a name.
+
+### What was worked out before it was parked
+
+**The player to manager lookup needs no new data.** Given a player name, who
+holds him comes straight off the draft plus every move since -- the same
+derivation `/rosters` uses. Checked against three 2026 players; all three
+resolved to the right manager with the right arrival.
+
+**Trades are blocked on something else entirely.** `matchups` has no date,
+`seasons` has no start date, and `transactions.occurred_on` is a bare date,
+so **nothing in the schema can say which week a trade fell in**. 61 trades
+across 2022-25, clustered late September to mid-November. The smallest fix is
+one date per season -- `week_one_starts` -- and arithmetic, NFL weeks being
+exactly seven days apart. That is really the first brick of item 3, and it
+pays for itself elsewhere: the transactions page could group by week, and the
+import could say which weeks a paste covers.
+
+**Storing injuries, if it is ever done by hand:** one row per player per week,
+with the holding `team_id` snapshotted at entry. Not a span with an end week
+-- an unclosed span says a player is hurt forever and nobody notices until
+December. Snapshotting the holder also sidesteps the date-to-week wall: asking
+in week 10 who held him in week 5 would otherwise mean replaying moves against
+a date.
+
+**Three things that will bite whoever builds it.**
+
+- *When* in the week matters and changes the meaning completely. Hurt in
+  Sunday's game and the score already reflects it; hurt on Monday night and
+  the score is clean and the injury belongs wholly to the week ahead. Same
+  row, opposite readings.
+- The model invents causation. Handed "Chris lost" and "Chris's quarterback
+  got hurt" it will write that the first was because of the second, which may
+  be flatly false -- and **we cannot know whether an injured player was even
+  started**, because there are no weekly lineups. See
+  `docs/features/player-scoring.md`. The prompt has to say so or the accounts
+  fill up with plausible fiction.
+- Duration is unknown on the Tuesday the account is written, and that is
+  fine: a weekly account is a contemporaneous document and should read as
+  written when it was. Where the duration is not known, the instruction that
+  works is to write it as a question the week leaves open rather than as a
+  fact about the future. Regenerating a published week later, once more is
+  known, was considered and rejected -- it makes the archive dishonest.
+
+### The prompt block, drafted and not used
+
+Anything not drawn from the record needs introducing as such, ahead of the
+facts rather than as a postscript, and the last sentence is the one that
+does the work:
+
+> The commissioner's note on this week. This is the one part of what follows
+> that is not drawn from the league's record -- it is what somebody who
+> watched the week thinks matters and the tables cannot show. Weigh it as you
+> would any other material: use what earns a place in the account and leave
+> what does not. Do not quote it, do not work through it, and do not invent
+> detail around it. If it says a player is hurt, you know that he is hurt and
+> you know nothing else -- not how long for, not what it means for a season,
+> unless the note says so itself.
+
+### What unblocks the version worth building
+
+Per-player scoring and weekly lineups, which is
+`docs/features/player-scoring.md` -- not built, and that note says what it
+would take. With lineups, an injury stops being something typed in and
+becomes something the record shows: who was started, what they scored, and
+what a manager lost. That is the version where this earns its place.
+
