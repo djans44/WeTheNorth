@@ -1532,6 +1532,13 @@ label.second { margin-top: var(--s4); }
 
 .owners-grid th, .owners-grid td { text-align: left; vertical-align: middle; }
 .owners-grid a { white-space: nowrap; }
+/* Long enough for the names the league actually picks. They run to 28
+   characters -- "Tua Salad with Bijan Mustard" -- and the default input cut
+   them off on the one page whose job is editing them. */
+.owners-grid input[name^="team_"] { width: 100%; min-width: 17rem; }
+/* Two characters, centred, with the derived value showing through when it is
+   left empty. */
+.sigil-initials { width: 3.2rem; text-align: center; }
 
 /* Keeper results: one column per round of choosing. Left-aligned because the
    cells are names, not numbers, and the round marker leads each one.

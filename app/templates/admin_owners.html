@@ -1,20 +1,39 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, leaf %}
 {% block title %}Owners | We the North{% endblock %}
 
 {% block content %}
 <div class="page wide">
-  <header class="page-head">
-    <h1>Owners</h1>
-    <p class="lede">Team name, colour and initials for everyone in one pass.
-      Open an owner to change their name, email or admin rights.</p>
+  {# The year is the control that changes the year, as on every other admin
+     page. Team names belong to a season and both importers send an admin
+     here to fix one, so being able to rename only the newest year made that
+     instruction a dead end for every other. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Owners {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/owners?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section>
-    <p class="note">Colours are not reserved. Where two owners share one, both
-      names show in the swatch tooltip.</p>
+    <p class="note">The team name is {{ season }}&rsquo;s; the colour and the
+      initials are the manager&rsquo;s and belong to no season, so changing
+      one here changes it everywhere. Colours are not reserved &mdash; where
+      two managers share one, both names show in the swatch tooltip. Open a
+      manager to change their name, email or admin rights.</p>
 
     <form method="post" action="/admin/owners">
+      <input type="hidden" name="season" value="{{ season }}">
       <table class="keepers owners-grid">
         <thead>
           <tr><th>Owner</th><th>{{ season }} team</th><th>Initials</th>
@@ -44,7 +63,12 @@
                 <span class="tm">no {{ season }} team</span>
               {% endif %}
             </td>
-            <td><input name="initials_{{ o.owner_id }}" value="{{ o.avatar_initials or '' }}"
+            {# Empty means "work it out from the name", which is what eleven
+               of thirteen do. The placeholder shows what that would be, so a
+               blank box reads as a default rather than as missing data. #}
+            <td><input name="initials_{{ o.owner_id }}" class="sigil-initials"
+                       value="{{ o.avatar_initials or '' }}"
+                       placeholder="{{ o.derived }}"
                        maxlength="2" size="2"></td>
             <td>
               <div class="avatar-picker compact">
@@ -64,7 +88,9 @@
         {% endfor %}
         </tbody>
       </table>
-      <button type="submit">Save owners</button>
+      <div class="actionrow">
+        <button type="submit" class="seal">Save owners</button>
+      </div>
     </form>
   </section>
 
@@ -78,8 +104,9 @@
     {% else %}
     <p class="note">{{ active }} of {{ size }} places taken. This creates the
       person, not a team &mdash; rivalries and the schedule take their entrants
-      from the {{ season }} team list, so putting someone into a season stays a
-      separate job.</p>
+      from the {{ now }} team list, so putting someone into a season stays a
+      separate job. It is about the league as it stands, whatever year is
+      shown above.</p>
 
     <form method="post" action="/admin/owners/new">
       <p class="field">

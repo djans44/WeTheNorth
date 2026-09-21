@@ -2046,12 +2046,25 @@ async def profile_email(request: Request):
 # ---- admin: everyone at a glance, then one at a time ----
 
 @app.get("/admin/owners", response_class=HTMLResponse)
-def admin_owners(request: Request):
+def admin_owners(request: Request, season: int = 0):
+    """Team name, colour and initials for everyone at once.
+
+    Any season, not only the newest. Team names are a season's, and both
+    importers send an admin here when a pasted name does not match one --
+    the roster loader reconciles any year, so being able to rename only the
+    current one made that instruction a dead end for every year but this.
+
+    The colour and the initials are the person's and belong to no season;
+    only the team column follows the picker, and the page says so.
+    """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
 
     with get_db() as conn:
-        season = _current_season(conn)
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        now = _current_season(conn)
+        if season not in [y["season_year"] for y in years]:
+            season = now
         owners = query(conn, """
             select o.owner_id, o.username, o.last_name, o.email,
                    o.is_admin, o.is_retired, o.avatar_bg, o.avatar_initials,
@@ -2061,7 +2074,13 @@ def admin_owners(request: Request):
               on t.owner_id = o.owner_id and t.season_year = %s
             order by o.is_retired, o.username
         """, (season,))
-        active, size = _active_count(conn), _league_size(conn, season)
+        # The add form is about the league as it stands, not the season
+        # being looked at: a new owner joins now, whatever year is on screen.
+        active, size = _active_count(conn), _league_size(conn, now)
+    # What the initials would be with the box left empty, so the box can show
+    # it rather than sitting blank as though the data were missing.
+    for o in owners:
+        o["derived"] = initials_for(o["username"], o["last_name"])
     holders = _colour_holders(owners)
     # Preselect a colour nobody holds, so a new owner is distinct by default.
     free = next((h for _, h in AVATAR_PALETTE if h not in holders),
@@ -2069,7 +2088,8 @@ def admin_owners(request: Request):
     return templates.TemplateResponse(
         request=request, name="admin_owners.html",
         context={"owners": owners, "palette": AVATAR_PALETTE,
-                 "season": season, "holders": holders, "free_bg": free,
+                 "season": season, "years": years, "now": now,
+                 "holders": holders, "free_bg": free,
                  "active": active, "size": size, "can_add": active < size})
 
 
@@ -2081,18 +2101,36 @@ async def admin_owners_save(request: Request):
     from urllib.parse import quote
     form = await request.form()
 
+    asked = form.get("season") or ""
+
     def bad(msg):
-        return RedirectResponse(
-            url="/admin/owners?error=" + quote(msg), status_code=303)
+        back = "?season=%s&error=" % asked if asked.isdigit() else "?error="
+        return RedirectResponse(url="/admin/owners" + back + quote(msg),
+                                status_code=303)
 
     with get_db() as conn:
-        season = _current_season(conn)
+        # The season the form was drawn for, not whatever is newest: the page
+        # can be opened on any year and the save has to land on the one the
+        # admin was looking at.
+        seasons = [r["season_year"] for r in
+                   query(conn, "select season_year from seasons")]
+        season = int(form.get("season") or 0)
+        if season not in seasons:
+            return bad("That is not a season the league has.")
         # Only owners with a row for this season have a name to rename, and
         # team_name is not null, so a blank is refused rather than skipped.
         named = {r["owner_id"]: r["username"] for r in query(conn, """
             select t.owner_id, o.username
             from teams t join owners o on o.owner_id = t.owner_id
             where t.season_year = %s
+        """, (season,))}
+
+        # What is there now, so the page can say what it actually did rather
+        # than "Owners saved" over a form where nothing was touched.
+        was = {r["owner_id"]: r for r in query(conn, """
+            select o.owner_id, o.avatar_bg, o.avatar_initials, t.team_name
+            from owners o
+            left join teams t on t.owner_id = o.owner_id and t.season_year = %s
         """, (season,))}
 
         updates = []
@@ -2109,19 +2147,33 @@ async def admin_owners_save(request: Request):
             updates.append((oid, bg, _clean_initials(form.get(f"initials_{oid}")),
                             team if oid in named else None))
 
+        sigils, renames = 0, 0
         with conn.cursor() as cur:
             for oid, bg, initials, team in updates:
-                _save_sigil(cur, oid, bg, initials)
-                if team:
+                before = was.get(oid) or {}
+                if (bg != before.get("avatar_bg")
+                        or initials != (before.get("avatar_initials") or "")):
+                    _save_sigil(cur, oid, bg, initials)
+                    sigils += 1
+                if team and team != before.get("team_name"):
                     cur.execute("""
                         update teams set team_name = %s, updated_at = now()
                         where owner_id = %s and season_year = %s
                     """, (team, oid, season))
+                    renames += 1
         conn.commit()
     bust_owner_caches()
 
+    said = []
+    if renames:
+        said.append("%d %s team name%s" % (renames, season,
+                                           "" if renames == 1 else "s"))
+    if sigils:
+        said.append("%d sigil%s" % (sigils, "" if sigils == 1 else "s"))
+    told = (" and ".join(said) + " saved.") if said else "Nothing changed."
     return RedirectResponse(
-        url="/admin/owners?msg=" + quote("Owners saved"), status_code=303)
+        url="/admin/owners?season=%d&msg=%s" % (season, quote(told)),
+        status_code=303)
 
 
 @app.post("/admin/owners/new")
