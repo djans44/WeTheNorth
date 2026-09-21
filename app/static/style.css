@@ -1014,6 +1014,9 @@ form > button[type="submit"] { margin-top: var(--s5); }
 .field > .tm { flex: 1 1 12rem; }
 .field > .avatar-picker { flex: 1; }
 .field.short > input { flex: 0 0 4rem; text-align: center; }
+/* Four rems holds a round number, not a date. This one asks for an ISO date
+   in words and then cut it off after the year. */
+.field > input.datefield { flex: 0 0 9rem; text-align: center; }
 /* A field holding something long -- a player and their position and cost, or
    a line of explanation. min-width:0 is the part that matters: without it a
    select refuses to shrink below its widest option, which is how the keeper

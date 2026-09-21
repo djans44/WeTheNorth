@@ -18,6 +18,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 from starlette.middleware.sessions import SessionMiddleware
 
+from app import adp as adprules
 from app import crests as crestrules
 from app import honours
 from app import rosterpaste
@@ -4039,6 +4040,144 @@ def roster_context(conn, season, text="", previewed=False):
                 unknown_teams=sorted(set(unknown_teams)),
                 unknown_players=sorted(set(unknown_players)),
                 checks=checks, derived=derived is not None)
+
+
+def _is_a_date(value):
+    """A date the way an ISO date reads. fromisoformat rather than a pattern:
+    2026-13-45 matches the pattern and is not a date."""
+    try:
+        datetime.date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
+
+
+def adp_context(conn, season, text="", source="", captured="", previewed=False):
+    """The paste, and what it would do to the season's draft positions."""
+    years = query(conn, "select season_year from seasons order by season_year desc")
+    players, defences = {}, {}
+    for r in query(conn, "select player_id, full_name, position from players"):
+        key = adprules._norm(r["full_name"])
+        players.setdefault(key, r["player_id"])
+        if r["position"] == "DEF" and key:
+            defences.setdefault(key.split()[-1], r["player_id"])
+    stored = query(conn, """
+        select count(*) as n, max(source) as source, max(captured_on) as captured
+        from player_adp where season_year = %s
+    """, (season,))[0]
+    # What was used last, anywhere, so the two fields do not start empty
+    # every year. A list is only comparable with itself, and the source is
+    # the thing that says whether it is.
+    last = query(conn, """
+        select source, captured_on from player_adp
+        where source is not null order by captured_on desc nulls last limit 1
+    """)
+
+    ctx = {"years": years, "season": season, "text": text,
+           "previewed": previewed, "stored": stored["n"],
+           "stored_source": stored["source"], "stored_captured": stored["captured"],
+           "source": source or stored["source"] or (last[0]["source"] if last else ""),
+           "captured": captured or (stored["captured"].isoformat()
+                                    if stored["captured"] else
+                                    datetime.date.today().isoformat()),
+           "rows": [], "unmatched": [], "puzzles": [], "changes": [], "new": 0}
+    if not text.strip():
+        return ctx
+
+    parsed, puzzles = adprules.parse(text)
+    matched, unmatched = adprules.resolve(parsed, players, defences)
+
+    # What each row would do to what is stored, because a second list for a
+    # season is the normal case -- positions move all preseason -- and
+    # "212 rows" says nothing about whether any of them changed.
+    was = {r["player_id"]: float(r["adp"]) for r in query(conn, """
+        select player_id, adp from player_adp where season_year = %s
+    """, (season,))}
+    changes, fresh = [], 0
+    for m in matched:
+        before = was.get(m["player_id"])
+        if before is None:
+            fresh += 1
+        elif abs(before - m["adp"]) >= 0.05:
+            changes.append(dict(m, was=before, moved=m["adp"] - before))
+    changes.sort(key=lambda r: -abs(r["moved"]))
+
+    return dict(ctx, rows=matched, unmatched=unmatched, puzzles=puzzles,
+                changes=changes, new=fresh)
+
+
+@app.get("/admin/adp", response_class=HTMLResponse)
+def admin_adp(request: Request, season: int = 0):
+    """Average draft position for a season, pasted in.
+
+    It is a reference table rather than a record of the league, and it earns
+    its place for one reason: a three year contract prices years two and
+    three at least(original round, adp round + 2), with the position locked
+    at signing. A season with no list is a contract that cannot be priced.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    with get_db() as conn:
+        years = query(conn, "select season_year from seasons order by season_year desc")
+        if not season:
+            season = years[0]["season_year"] if years else 0
+        ctx = adp_context(conn, season)
+    return templates.TemplateResponse(request=request, name="admin_adp.html",
+                                      context=ctx)
+
+
+@app.post("/admin/adp")
+async def admin_adp_post(request: Request):
+    """Read it, then write it -- never one without the other."""
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    text = form.get("text") or ""
+    source = (form.get("source") or "").strip()
+    captured = (form.get("captured") or "").strip()
+    save_it = form.get("action") == "save"
+
+    with get_db() as conn:
+        ctx = adp_context(conn, season, text, source, captured, previewed=True)
+        if not save_it:
+            return templates.TemplateResponse(
+                request=request, name="admin_adp.html", context=ctx)
+
+        stop = ""
+        if not ctx["rows"]:
+            stop = "Nothing to store."
+        elif not source:
+            stop = ("Name the source. A draft position only means something "
+                    "beside the list it came from.")
+        elif captured and not _is_a_date(captured):
+            stop = "The date it was captured should read as 2026-09-03."
+        if stop:
+            return templates.TemplateResponse(
+                request=request, name="admin_adp.html",
+                context=dict(ctx, stop=stop), status_code=400)
+
+        with conn.cursor() as cur:
+            for r in ctx["rows"]:
+                cur.execute("""
+                    insert into player_adp
+                        (season_year, player_id, adp, source, captured_on)
+                    values (%s, %s, %s, %s, %s)
+                    on conflict (season_year, player_id) do update set
+                        adp = excluded.adp, source = excluded.source,
+                        captured_on = excluded.captured_on
+                """, (season, r["player_id"], r["adp"], source,
+                      captured or None))
+        conn.commit()
+
+    told = "%d draft position%s stored for %d" % (
+        len(ctx["rows"]), "" if len(ctx["rows"]) == 1 else "s", season)
+    if ctx["unmatched"]:
+        told += ", %d name%s the league does not have skipped" % (
+            len(ctx["unmatched"]), "" if len(ctx["unmatched"]) == 1 else "s")
+    return RedirectResponse(url="/admin/adp?season=%d&msg=%s"
+                                % (season, quote(told + ".")), status_code=303)
 
 
 @app.get("/admin/rosters", response_class=HTMLResponse)

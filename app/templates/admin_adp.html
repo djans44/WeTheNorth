@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Draft positions {{ season }} | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Draft positions {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/admin/adp?season={{ y.season_year }}"
+               {% if y.season_year == season %}aria-current="page"{% endif %}>{{ y.season_year }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  <section>
+    <p class="note">Average draft position, copied in from wherever the league
+      reads it. It is the one number here that comes from outside: a three
+      year contract prices its second and third years at the lower of the
+      original round and the draft round plus two, and that position is
+      locked when the contract is signed &mdash; so a season with no list is
+      a contract nobody can price.
+      {% if stored %}{{ season }} has {{ stored }} stored{% if stored_source %},
+        from {{ stored_source }}{% endif %}{% if stored_captured %}, taken
+        {{ stored_captured }}{% endif %}.
+      {% else %}Nothing is stored for {{ season }} yet.{% endif %}</p>
+
+    <form method="post" action="/admin/adp">
+      <input type="hidden" name="season" value="{{ season }}">
+      <label for="text">The list</label>
+      <textarea id="text" name="text" rows="{{ 8 if previewed else 16 }}"
+                placeholder="Paste the whole ranking page."
+                >{{ text }}</textarea>
+
+      {# The source is required and the date is not. A position means nothing
+         without knowing whose list it came from -- two providers disagree by
+         a round on the same player -- while when it was taken is worth
+         recording and not worth refusing a paste over. #}
+      <p class="field">
+        <label for="source">Source</label>
+        <input id="source" name="source" class="widepick" value="{{ source }}"
+               placeholder="FantasyPros 2QB half 12tm">
+      </p>
+      <p class="field">
+        <label for="captured">Taken on</label>
+        <input id="captured" name="captured" class="datefield"
+               value="{{ captured }}" placeholder="2026-09-03">
+      </p>
+
+      <div class="actionrow">
+        <button type="submit" name="action" value="preview" class="seal">
+          Read the list</button>
+      </div>
+    </form>
+  </section>
+
+  {% if previewed %}
+  <section>
+    <h2>What this would do</h2>
+    {% if stop %}<div class="errors"><b>Nothing written.</b> {{ stop }}</div>{% endif %}
+    <p class="note"><b>{{ rows|length }}</b> position{{ "s" if rows|length != 1 }}
+      the league can use{% if new %}, <b>{{ new }}</b> of them new{% endif %}{%
+      if changes %}, <b>{{ changes|length }}</b> moved{% endif %}{%
+      if unmatched %}, <b>{{ unmatched|length }}</b> skipped{% endif %}{%
+      if puzzles %}, <b>{{ puzzles|length }}</b> line{{ "s" if puzzles|length != 1 }}
+      not understood{% endif %}.</p>
+
+    {% if changes %}
+      {# The point of reading a second list is what moved in it. Biggest
+         movers first, because a page of small drift is not news. #}
+      <h3>What moved</h3>
+      <table class="keepers moves">
+        <thead><tr><th>Player</th><th class="how">Was</th>
+                   <th class="how">Now</th><th class="how">Move</th></tr></thead>
+        <tbody>
+        {% for c in changes[:25] %}
+          <tr>
+            <td class="name">{{ c.name }} <span class="tm">{{ c.rank }}</span></td>
+            <td class="how">{{ "%.1f"|format(c.was) }}</td>
+            <td class="how">{{ "%.1f"|format(c.adp) }}</td>
+            <td class="how {% if c.moved < 0 %}win{% else %}loss{% endif %}">
+              {{ "%+.1f"|format(c.moved) }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% if changes|length > 25 %}
+        <p class="note">and {{ changes|length - 25 }} more that moved less.</p>
+      {% endif %}
+    {% endif %}
+
+    {% if unmatched %}
+      {# Not an error. A ranking covers three hundred players and kickers,
+         and this league has neither all of them nor any of those. #}
+      <h3>Skipped</h3>
+      <p class="note">Names the league has never had. They are left out rather
+        than created: a ranking is not evidence that anybody rostered them.</p>
+      <p class="tm">{{ unmatched|map(attribute="name")|join(", ") }}</p>
+    {% endif %}
+
+    {% for p in puzzles %}
+      <p class="note why">{{ p.why }}</p>
+      <pre class="raw">{{ p.line }}</pre>
+    {% endfor %}
+  </section>
+
+  {% if rows and not stop %}
+  <section class="danger">
+    <h2>Store it</h2>
+    <p class="note">A position already stored for {{ season }} is overwritten;
+      one that is not in this paste is left alone. Storing does not reprice a
+      contract already signed &mdash; those keep the round they were signed
+      against.</p>
+    <form method="post" action="/admin/adp">
+      <input type="hidden" name="season" value="{{ season }}">
+      <input type="hidden" name="source" value="{{ source }}">
+      <input type="hidden" name="captured" value="{{ captured }}">
+      <textarea name="text" hidden>{{ text }}</textarea>
+      <div class="actionrow">
+        <button type="submit" name="action" value="save" class="seal">
+          Store {{ rows|length }} position{{ "s" if rows|length != 1 }}</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
