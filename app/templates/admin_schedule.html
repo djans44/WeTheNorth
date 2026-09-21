@@ -113,8 +113,12 @@
       <input type="hidden" name="season" value="{{ season }}">
       <input type="hidden" name="seed" value="{{ seed }}">
       <input type="hidden" name="pairs" value="{{ pairing_code }}">
-      <label class="confirm"><input type="checkbox" name="confirm" value="1"> I mean it</label>
-      <button type="submit" class="seal">Save schedule</button>
+      {# The tick belongs in the row with the button it gates -- .actionrow
+          zeroes a label's margin for exactly this. #}
+      <div class="actionrow">
+        <label class="confirm"><input type="checkbox" name="confirm" value="1"> I mean it</label>
+        <button type="submit" class="seal">Save schedule</button>
+      </div>
     </form>
   </section>
 

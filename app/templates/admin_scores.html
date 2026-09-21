@@ -250,9 +250,11 @@
         <input type="hidden" name="season" value="{{ season }}">
         <input type="hidden" name="week" value="{{ week }}">
         <input type="hidden" name="mode" value="{{ mode }}">
-        <button type="submit" class="seal">Write the week {{ week }} account</button>
-        <span class="tm">Nothing has been written about this week. It normally
-          happens on its own when the last score is saved.</span>
+        <p class="note">Nothing has been written about this week. It normally
+          happens on its own when the last score is saved.</p>
+        <div class="actionrow">
+          <button type="submit" class="seal">Write the week {{ week }} account</button>
+        </div>
       </form>
     {% endif %}
   </section>
