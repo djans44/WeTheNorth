@@ -29,8 +29,12 @@
     <p class="note">The team name is {{ season }}&rsquo;s; the colour and the
       initials are the manager&rsquo;s and belong to no season, so changing
       one here changes it everywhere. Colours are not reserved &mdash; where
-      two managers share one, both names show in the swatch tooltip. Open a
-      manager to change their name, email or admin rights.</p>
+      two managers share one, both names show in the swatch tooltip. A swatch
+      drawn as a ring is one nobody else holds.
+      {% if unheld %}Unheld right now:
+        <b>{{ unheld|join(", ") }}</b>.{% else %}Every colour is spoken
+        for.{% endif %}
+      Open a manager to change their name, email or admin rights.</p>
 
     <form method="post" action="/admin/owners">
       <input type="hidden" name="season" value="{{ season }}">
@@ -74,8 +78,13 @@
               <div class="avatar-picker compact">
                 {% for name, hex in palette %}
                   {% set taken = holders.get(hex, []) | reject('equalto', o.username) | list %}
-                  <label class="hue" style="--sw: {{ hex }};"
-                         title="{{ name }}{% if taken %} &mdash; also {{ taken|join(', ') }}{% endif %}">
+                  {# Drawn as a ring rather than a disc when nobody else has
+                     it. Thirteen managers across sixteen colours means twelve
+                     of these are somebody's, so the free ones are what is
+                     worth pointing at; marking the taken ones would mark
+                     almost the whole row. The title still names who. #}
+                  <label class="hue{% if not taken %} free{% endif %}" style="--sw: {{ hex }};"
+                         title="{{ name }}{% if taken %} &mdash; {{ taken|join(', ') }} {{ 'has' if taken|length == 1 else 'have' }} this{% else %} &mdash; nobody else has this{% endif %}">
                     <input type="radio" name="bg_{{ o.owner_id }}" value="{{ hex }}"
                            {% if hex == o.avatar_bg %}checked{% endif %}>
                     <span class="chip"></span>

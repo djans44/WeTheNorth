@@ -2085,11 +2085,15 @@ def admin_owners(request: Request, season: int = 0):
     # Preselect a colour nobody holds, so a new owner is distinct by default.
     free = next((h for _, h in AVATAR_PALETTE if h not in holders),
                 AVATAR_PALETTE[0][1])
+    # Named, because sixteen colours between thirteen managers leaves three,
+    # and finding those three by hovering two hundred swatches is not finding
+    # them. The row's own picker marks them; this says which they are.
+    unheld = [name for name, h in AVATAR_PALETTE if h not in holders]
     return templates.TemplateResponse(
         request=request, name="admin_owners.html",
         context={"owners": owners, "palette": AVATAR_PALETTE,
                  "season": season, "years": years, "now": now,
-                 "holders": holders, "free_bg": free,
+                 "holders": holders, "free_bg": free, "unheld": unheld,
                  "active": active, "size": size, "can_add": active < size})
 
 

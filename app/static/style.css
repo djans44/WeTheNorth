@@ -1714,6 +1714,7 @@ label.second { margin-top: var(--s4); }
 }
 
 .avatar-picker .chip {
+  position: relative;
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 50%;
@@ -1738,6 +1739,24 @@ label.second { margin-top: var(--s4); }
 .avatar-picker.compact { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0; }
 .avatar-picker.compact .hue { padding: 0.15rem; border: 0; background: none; }
 .avatar-picker.compact .chip { width: 1.15rem; height: 1.15rem; }
+/* A colour nobody else holds, drawn as a ring. Only in the compact picker:
+   the full one prints the holders' names under each swatch and has already
+   answered the question, while this one has thirteen rows of sixteen and a
+   tooltip you cannot hover on a phone. A hole rather than a tint, so the
+   colour itself is still judged at full strength, and a pseudo-element
+   rather than an inset shadow, which the checked ring already uses. */
+.avatar-picker.compact .hue.free .chip::after {
+  content: "";
+  position: absolute;
+  inset: 32%;
+  border-radius: 50%;
+  background: var(--panel);
+}
+/* Not on the one already chosen. A manager's own colour is unheld by
+   definition, so the ring and the hole were landing on the same swatch and
+   the selected state stopped reading as selected. Which colour is theirs is
+   not a question the mark exists to answer. */
+.avatar-picker.compact .hue.free input:checked + .chip::after { content: none; }
 
 
 /* ---- keeper selection ---- */
