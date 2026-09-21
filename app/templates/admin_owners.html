@@ -92,7 +92,8 @@
                 {% endfor %}
               </div>
             </td>
-            <td><a href="/admin/owners/{{ o.owner_id }}">Open</a></td>
+            {# Carries the year, so the owner page comes back to it. #}
+            <td><a href="/admin/owners/{{ o.owner_id }}?season={{ season }}">Open</a></td>
           </tr>
         {% endfor %}
         </tbody>

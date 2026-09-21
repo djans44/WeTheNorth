@@ -4,13 +4,18 @@
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
+  {# The way back goes above the title, not under it. `back` is the season
+     the admin was looking at on the list, carried through so returning --
+     by the link or by saving -- lands on that year rather than on this one. #}
+  <header class="page-head tight stuck">
+    <p class="crumbs"><a href="/admin/owners?season={{ back }}">&larr; All owners</a></p>
     <h1 class="titled">{{ avatar(me.owner_id, 96) }}{{ me.username }}</h1>
-    <p class="crumbs"><a href="/admin/owners">&larr; All owners</a></p>
+    <a class="to-top" href="#top">Top</a>
   </header>
 
   <section>
     <form method="post" action="/admin/owners/{{ me.owner_id }}">
+      <input type="hidden" name="back" value="{{ back }}">
 
       <h2>Name</h2>
       <p class="field">
@@ -33,7 +38,9 @@
           <label for="team_name">{{ season }} team</label>
           <input id="team_name" name="team_name" value="{{ team.team_name }}" required>
         </p>
-        <p class="note">Earlier seasons keep the names used at the time.</p>
+        <p class="note">Earlier seasons keep the names used at the time. To
+          change one of those, pick the year on the
+          <a href="/admin/owners?season={{ back }}">owners list</a>.</p>
       {% else %}
         <p class="note">No {{ season }} team. Nothing to rename.</p>
       {% endif %}
@@ -58,7 +65,11 @@
         <label for="is_admin">Admin</label>
       </p>
       <p class="note">
-        {% if me.is_admin and admin_count == 1 %}
+        {% if is_me %}
+          This is you. Taking your own rights away is refused &mdash; the
+          redirect would land on a page you could no longer reach, and only
+          another admin could put it back.
+        {% elif me.is_admin and admin_count == 1 %}
           The only admin. Promote someone else before removing this.
         {% else %}
           Full access to score entry, keeper resolution and this page.
@@ -70,7 +81,10 @@
                {% if me.is_retired %}checked{% endif %}>
         <label for="is_retired">Retired</label>
       </p>
-      <p class="note">Keeps their history and their place in the tables.</p>
+      <p class="note">Keeps their history and their place in the tables.
+        {% if is_me %}Refused on your own record, for the same reason.
+        {% elif team %}They hold a {{ season }} team, so retiring them frees a
+          place in the league while that team row stays where it is.{% endif %}</p>
 
       <h2>Sigil</h2>
       <div class="avatar-picker">
@@ -88,11 +102,16 @@
 
       <p class="field short">
         <label for="avatar_initials">Initials</label>
+        {# The placeholder shows what an empty box would derive, the same as
+           the list page. The sigil above is already drawing it. #}
         <input id="avatar_initials" name="avatar_initials" maxlength="2"
+               class="sigil-initials" placeholder="{{ derived }}"
                value="{{ me.avatar_initials or '' }}">
       </p>
 
-      <button type="submit">Save {{ me.username }}</button>
+      <div class="actionrow">
+        <button type="submit" class="seal">Save {{ me.username }}</button>
+      </div>
     </form>
   </section>
 </div>

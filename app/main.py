@@ -2269,7 +2269,13 @@ async def admin_owner_new(request: Request):
 
 
 @app.get("/admin/owners/{oid}", response_class=HTMLResponse)
-def admin_owner_edit(request: Request, oid: int):
+def admin_owner_edit(request: Request, oid: int, season: int = 0):
+    """One manager in detail.
+
+    `season` is only where the admin came from, carried so the way back and
+    the save land on the year they were looking at rather than on this one.
+    The team field is still this season's; the list edits any of them.
+    """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     with get_db() as conn:
@@ -2277,6 +2283,11 @@ def admin_owner_edit(request: Request, oid: int):
         ctx["admin_count"] = query(conn, """
             select count(*) as n from owners where is_admin
         """)[0]["n"]
+        years = [r["season_year"] for r in
+                 query(conn, "select season_year from seasons")]
+    ctx["back"] = season if season in years else ctx["season"]
+    ctx["is_me"] = oid == request.session.get("owner_id")
+    ctx["derived"] = initials_for(ctx["me"]["username"], ctx["me"]["last_name"])
     return templates.TemplateResponse(
         request=request, name="admin_owner_edit.html", context=ctx)
 
@@ -2295,9 +2306,13 @@ async def admin_owner_edit_save(request: Request, oid: int):
     is_admin = form.get("is_admin") is not None
     retired = form.get("is_retired") is not None
 
+    back = (form.get("back") or "").strip()
+
     def bad(msg):
+        keep = "season=%s&" % back if back.isdigit() else ""
         return RedirectResponse(
-            url=f"/admin/owners/{oid}?error=" + quote(msg), status_code=303)
+            url="/admin/owners/%d?%serror=%s" % (oid, keep, quote(msg)),
+            status_code=303)
 
     if not username:
         return bad("A display name is required.")
@@ -2330,7 +2345,9 @@ async def admin_owner_edit_save(request: Request, oid: int):
 
         # Bringing someone back is the other way to overfill the league.
         was = query(conn, """
-            select is_retired from owners where owner_id = %s
+            select username, last_name, email, is_admin, is_retired,
+                   avatar_bg, avatar_initials
+            from owners where owner_id = %s
         """, (oid,))
         if not was:
             raise HTTPException(status_code=404, detail="No such owner")
@@ -2350,6 +2367,25 @@ async def admin_owner_edit_save(request: Request, oid: int):
                 return bad("That is the last admin. Promote someone first.")
 
         season = _current_season(conn)
+        initials = _clean_initials(form.get("avatar_initials"))
+        before = was[0]
+        # What actually moved, so the toast can say it. Everything here is
+        # written every time regardless -- it is one row -- but reporting
+        # "saved" over a form nobody touched says nothing.
+        changed = []
+        if (username, last_name or None, email or None) != (
+                before["username"], before["last_name"], before["email"]):
+            changed.append("details")
+        if is_admin != before["is_admin"] or retired != before["is_retired"]:
+            changed.append("standing")
+        if bg != before["avatar_bg"] or initials != (before["avatar_initials"] or ""):
+            changed.append("sigil")
+        old_team = query(conn, """
+            select team_name from teams where owner_id = %s and season_year = %s
+        """, (oid, season))
+        if team_name and (not old_team or team_name != old_team[0]["team_name"]):
+            changed.append("%d team name" % season)
+
         with conn.cursor() as cur:
             cur.execute("""
                 update owners
@@ -2358,7 +2394,7 @@ async def admin_owner_edit_save(request: Request, oid: int):
                 where owner_id = %s
             """, (username, last_name or None, email or None,
                   is_admin, retired, oid))
-            _save_sigil(cur, oid, bg, _clean_initials(form.get("avatar_initials")))
+            _save_sigil(cur, oid, bg, initials)
             if team_name:
                 cur.execute("""
                     update teams set team_name = %s, updated_at = now()
@@ -2373,8 +2409,10 @@ async def admin_owner_edit_save(request: Request, oid: int):
         request.session["username"] = username
     bust_owner_caches()
 
-    return RedirectResponse(
-        url="/admin/owners?msg=" + quote(f"{username} saved"), status_code=303)
+    told = ("%s: %s saved." % (username, ", ".join(changed))
+            if changed else "Nothing changed.")
+    where = "/admin/owners?season=%s&" % back if back.isdigit() else "/admin/owners?"
+    return RedirectResponse(url=where + "msg=" + quote(told), status_code=303)
 
 
 def keeper_context(conn, season, owner_id):
