@@ -137,15 +137,14 @@ than fail on a foreign key.
 
 **Items 5 to 12 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
 page, say what is wrong with it, agree the changes, build them. **Each is its
-own item** — one audit, one conversation. Two left of the twelve: **7
-`/admin/keepers/edit/{sid}`** and **10 `/admin/rivals`**, both offseason
-pages, plus the fresh-eyes pass on 12.
+own item** — one audit, one conversation. One left of the twelve: **10
+`/admin/rivals`**, plus the fresh-eyes pass on 12.
 
 A design and usability audit rather than form validation. `/rules` was on
 the list and has no inputs at all, which settled which is meant.
 
 Every one looked at this way has been worth a handful of real changes, and
-several have been worth a data-losing bug. Expect the same of the last two.
+several have been worth a data-losing bug. Expect the same of the last one.
 
 ## 5. Audit `/admin/scores`
 
@@ -172,12 +171,27 @@ The Phase-versus-keeper-round naming the `/rules` audit left for this page is
 settled: Round in every column header, Cost for the column that was a second
 Round.
 
-## 7. Audit `/admin/keepers/edit/{sid}`
+## 7. ~~Audit `/admin/keepers/edit/{sid}`~~ **Done**
 
-Overriding one submission. Notably, an admin override deliberately does not
-validate a round against the manager's other phases, so a duplicate round can
-be created — visible in the Settled table, blocked by nothing. PROJECT.md §9
-records this; the audit should decide whether the page says so.
+Eight findings, one commit. Every value went to the database unchecked, so a
+contract of seven years, a round of 99 and a player id that does not exist
+each came back as an unhandled 500 -- the constraints held, the admin just
+had no idea what had happened.
+
+Worse: the player id was taken on trust, so another manager's keeper saved
+happily onto a submission. An override kept calling itself the manager's
+plan, so Settled credited them with a pick they never made. And the season
+came from a hidden field, so a mismatched one updated nothing and still
+reported success.
+
+The duplicate-round question this item asked is settled: it is still allowed,
+which is the point of an override, but the page names the clash -- "R1 is
+already Keeper Round 2" -- rather than carrying a standing caveat that it is
+not checked.
+
+**A note on measuring.** This page was 412px wide on a 390, 375 and 360px
+viewport and exactly 420 on a 420 one, which is the width these audits are
+habitually probed at. One measurement said it was fine. Check more than one.
 
 ## 8. ~~Audit `/admin/owners`~~ **Done**
 
