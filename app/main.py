@@ -1571,6 +1571,12 @@ def season(request: Request, year: int, week: str | None = None):
         # What the selector is pointing at. `week=season` is the year as a
         # whole; anything unrecognised falls back to the default rather than
         # answering 404, because a stale link should still land somewhere.
+        # The week the season is up to: the first with a game still to play.
+        # Worked out before the branch because two things want it -- which
+        # week to open on, and whether the week being looked at is the
+        # current one.
+        ahead = [w["week"] for w in weeks if not w["done"]]
+
         want = (week or "").strip().lower()
         if want.isdigit() and int(want) in numbers:
             shown = int(want)
@@ -1591,7 +1597,6 @@ def season(request: Request, year: int, week: str | None = None):
             # Every game scored, not any: a week with one result in is still
             # the week being played, and stepping past it would land on
             # fixtures nobody has reached.
-            ahead = [w["week"] for w in weeks if not w["done"]]
             shown = ahead[0] if ahead else (played[-1] if played else numbers[0])
 
         if shown is None:
@@ -1620,7 +1625,16 @@ def season(request: Request, year: int, week: str | None = None):
         if state in ("preview", "regular"):
             standings = standings_after(conn, year, shown)
             counted = max((w for w in played if w <= shown), default=None)
-            seeds = {}
+            # Seed marks belong to a race still being run, so they go on the
+            # table that is that race: a season still going, opened on the
+            # week it is up to. Under week three of a finished year they
+            # would describe the end of it, which is the reason they were
+            # kept off every week view -- but that also kept them off the
+            # one place the league actually looks, the current season's
+            # current week. `remaining` is season-wide and the table here is
+            # everything played so far, which is exactly what the test wants.
+            seeds = ({} if finished or shown != (ahead[0] if ahead else None)
+                     else playoff_labels(standings, remaining))
         else:
             seeds = playoff_labels(standings, remaining)
 
