@@ -43,8 +43,13 @@
         <label for="email">Email</label>
         <input id="email" name="email" type="email" value="{{ me.email or '' }}">
       </p>
-      <p class="note">Signing in is a straight email match. Leave it blank and
-        they cannot sign in at all &mdash; which is Tulio's situation today.</p>
+      {# Who cannot sign in is read off the roll rather than written here.
+         This named Tulio, whose address was filled in at some point, and the
+         sentence stayed wrong until somebody happened to read it. #}
+      <p class="note">Signing in is a straight email match &mdash; no password,
+        no reset. Leave it blank and they cannot sign in at all.
+        {% if no_email %}Nobody has one today except
+          <b>{{ no_email|join(", ") }}</b>.{% endif %}</p>
 
       <h2>Standing</h2>
       <p class="checkline">

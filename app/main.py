@@ -1894,6 +1894,12 @@ def _owner_form(conn, oid):
         "team": teams[0] if teams else None,
         "palette": AVATAR_PALETTE,
         "holders": _colour_holders(everyone, skip=oid),
+        # Worked out rather than written into the page. The note used to name
+        # Tulio as the manager who could not sign in; his address was filled
+        # in at some point and the sentence has been wrong ever since, which
+        # is what naming a person in explanatory copy buys you.
+        "no_email": [r["username"] for r in everyone
+                     if not r["email"] and not r["is_retired"]],
     }
 
 
@@ -1930,6 +1936,24 @@ def _save_sigil(cur, oid, bg, initials):
 
 def _clean_initials(raw):
     return (raw or "").strip().upper()[:2]
+
+
+def _looks_like_email(value):
+    """Loose enough to admit anything real, strict enough to catch a typo.
+
+    Not RFC 5322 -- that admits things no mail server would take and rejects
+    nothing anybody types by accident. This is the credential: sign-in is a
+    straight match against this column, so a value that can never arrive in
+    an inbox is a manager who cannot get in, with no password reset and no
+    error that explains why. The browser's type=email checks the same shape
+    and is not a check at all, being absent from any post that did not come
+    from a browser.
+    """
+    v = (value or "").strip()
+    if v.count("@") != 1 or any(c.isspace() for c in v):
+        return False
+    local, _, domain = v.partition("@")
+    return bool(local) and "." in domain and not domain.startswith(".")         and not domain.endswith(".") and len(domain) > 2
 
 
 # ---- profile ----
@@ -2206,6 +2230,9 @@ async def admin_owner_new(request: Request):
         return bad("A display name is required.")
     if bg not in AVATAR_HEXES:
         return bad("That is not one of the league colours.")
+    if email and not _looks_like_email(email):
+        return bad("That does not look like an email address, and it is the "
+                   "only way they sign in.")
 
     with get_db() as conn:
         # The league is a fixed size. Someone has to leave before someone
@@ -2276,6 +2303,21 @@ async def admin_owner_edit_save(request: Request, oid: int):
         return bad("A display name is required.")
     if bg not in AVATAR_HEXES:
         return bad("That is not one of the league colours.")
+    if email and not _looks_like_email(email):
+        return bad("That does not look like an email address, and it is the "
+                   "only way they sign in.")
+
+    # Taking your own admin rights away logs you out of admin on the redirect
+    # -- the session is updated below -- and only another admin can give them
+    # back. The last-admin guard further down does not catch it, because with
+    # two admins there is always another one. Refusing costs nothing: anybody
+    # who can do it to themselves has a colleague who can do it for them.
+    me_id = request.session.get("owner_id")
+    if oid == me_id and not is_admin:
+        return bad("That would take your own admin rights away. "
+                   "Another admin has to do it for you.")
+    if oid == me_id and retired:
+        return bad("You cannot retire yourself. Another admin has to do it.")
 
     with get_db() as conn:
         clash = _taken(conn, "username", username, oid)
@@ -2324,10 +2366,11 @@ async def admin_owner_edit_save(request: Request, oid: int):
                 """, (team_name, oid, season))
         conn.commit()
 
-    # An admin editing themselves needs the session to follow.
-    if oid == request.session.get("owner_id"):
+    # An admin editing themselves needs the session to follow. is_admin is
+    # not copied across: it cannot have changed, because taking your own
+    # rights away is refused above.
+    if oid == me_id:
         request.session["username"] = username
-        request.session["is_admin"] = is_admin
     bust_owner_caches()
 
     return RedirectResponse(
