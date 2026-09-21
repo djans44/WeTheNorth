@@ -96,17 +96,11 @@ that is the *doing*, this is the *seeing*. Worth settling which owns the
 dates before building either, because `keeper_windows` is the only table
 that holds any today.
 
-## 4. Admin imports from text files
+## 4. ~~Admin imports from text files~~ **Done, and the rest struck**
 
-One import per data element, so a season can be stood up or repaired without
-hand-written SQL. This is the answer to the rough edge in PROJECT.md §9:
-`seasons` and `teams` have no UI at all and have only ever been written by
-migrations.
-
-Paste or upload, preview what it will do, then apply. Never a silent write.
-
-Two are built and live, both on that pattern and both worth copying for the
-rest: `/admin/transactions` and `/admin/draft`. What they settled --
+Four are built, all on the same pattern and all worth copying from:
+`/admin/draft`, `/admin/transactions`, `/admin/rosters` and `/admin/adp`.
+What that pattern settled --
 
 - the parser is a module of its own, takes text, touches no database, and
   reports what it could not read rather than guessing;
@@ -116,24 +110,32 @@ rest: `/admin/transactions` and `/admin/draft`. What they settled --
 - Yahoo prints the same data more than one way, and a loader that knows only
   the shape it was written against will meet the other one.
 
-| Element | Table | Notes |
+**The other five are struck, not deferred.** The table was written when three
+loaders existed and the rest looked like a set. They are not: every one has a
+live writer in the app already, so a loader would be a second way to do
+something there is already a way to do.
+
+| Element | Table | What writes it now |
 |---|---|---|
-| Seasons | `seasons` | The row every other import needs first |
-| Teams | `teams` | One per owner per season; team names change yearly |
-| Owners | `owners` | Emails are the credential and are deliberately not in git |
-| Players | `players` | ~359 rows. **No Yahoo id** — `player_id` is a local identity column and every importer matches on `lower(full_name)`. See `docs/features/player-scoring.md` |
-| ~~Draft picks~~ | `draft_picks` | **Done** -- `/admin/draft`. Reads both board shapes; the keeper badge is a private-use glyph and has to be read before the icons are stripped |
-| ~~Rosters~~ | `rosters` | **Done** -- `/admin/rosters`. Paste all twelve; it reconciles them against the draft and every move since before it writes, which is step 3 of item 13 |
-| ~~Transactions~~ | `transactions` | **Done** -- `/admin/transactions`. A week at a time, idempotent on a natural key, and it says so when a paste may have a gap |
-| Matchups | `matchups` | Score entry already exists; a bulk import is for a season's history |
-| ADP | `player_adp` | Locked at signing for 3-year contract pricing |
-| Keeper selections | `keeper_selections` | ~104 rows |
+| Seasons | `seasons` | `/admin/season-setup`, step one |
+| Teams | `teams` | `/admin/season-setup`, step two |
+| Owners | `owners` | `/admin/owners`, Add an owner |
+| Players | `players` | **a side effect** of `/admin/transactions` and `/admin/draft` |
+| Matchups | `matchups` | `/admin/schedule` draws the fixtures, `/admin/scores` fills them |
 
-Order matters: seasons, then teams, then players, then everything keyed on
-them. An import that runs out of order should say what is missing rather
-than fail on a foreign key.
+Players is the whole argument in miniature: nobody has to load a player,
+because the two loaders that name a player's position create him on the way
+past. That is exactly why `/admin/rosters` says to load the transactions
+first -- a roster names no positions and so cannot.
 
----
+What is genuinely missing is a different shape, and only worth building if it
+is ever wanted: **there is no way to take in a whole season's results from
+outside.** The schedule page draws fixtures, it does not ingest somebody
+else's, and entering a year by hand is seventeen weeks of score entry. That
+matters only for a season before 2022 or from another league.
+
+`keeper_selections` was the sixth row of this table and has moved to item 17.
+It was never an import problem.
 
 **Items 5 to 12 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
 page, say what is wrong with it, agree the changes, build them. **Each is its
