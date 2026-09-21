@@ -6816,6 +6816,14 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
             where season_year = %s and team_a_points is not null
             order by week
         """, (season,))]
+        # Every week the season has, played or not. Which weeks can be
+        # written about and where a write ends up are different questions:
+        # an account appears on the following week's page, and that page
+        # exists as soon as the fixture does.
+        scheduled = [r["week"] for r in query(conn, """
+            select distinct week from matchups
+            where season_year = %s order by week
+        """, (season,))]
         # Draft and published are different answers to "is this week done
         # with", and one word for both made the picker useless for finding
         # the weeks that still want reading.
@@ -6902,12 +6910,16 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
     # page -- which leaves the last week of a season with nowhere to appear.
     # Said plainly rather than linked to a page that does not exist.
     shown_on = None
-    if kind == "preview" and weeks:
-        shown_on = "/season/%d?week=%d" % (season, weeks[0])
+    if kind == "preview" and scheduled:
+        shown_on = "/season/%d?week=%d" % (season, scheduled[0])
     elif kind == "season":
         shown_on = "/season/%d?week=season" % season
     elif kind == "week" and week:
-        nxt = next((w for w in weeks if w > week), None)
+        # The week after this one on the calendar, not the week after it with
+        # scores in. 2026 week one's account has been on the season page since
+        # it was written -- week two is where it reads -- and this said it was
+        # on no page, because nobody has played week two yet.
+        nxt = next((w for w in scheduled if w > week), None)
         shown_on = "/season/%d?week=%d" % (season, nxt) if nxt else None
 
     # A recap needs a champion and a week needs scores. Saying which is
