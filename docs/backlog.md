@@ -137,9 +137,7 @@ than fail on a foreign key.
 
 **Items 5 to 12 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
 page, say what is wrong with it, agree the changes, build them. **Each is its
-own item** — one audit, one conversation. **All twelve are done.** What is
-left of this block is the fresh-eyes pass on 12, which item 14 rebuilt to a
-brief rather than audited.
+own item** — one audit, one conversation. **All twelve are done.**
 
 One thing they all taught, worth carrying into anything new: **measure at
 more than one width.** `/admin/keepers/edit` was 412px wide at 390, 375 and
@@ -267,16 +265,22 @@ null scores so score entry pre-fills.
 Destructive on save and the results are hard to eyeball, which is the thing
 to look at.
 
-## 12. Audit `/admin/crests`
+## 12. ~~Audit `/admin/crests`~~ **Done**
 
-The grant flow, built last. Worth an audit precisely because it is new and
-was never looked at with fresh eyes.
+Item 14 had rebuilt this page as Assembly admin to a brief; the fresh-eyes
+pass found five things, one of them a flow that could not complete.
 
-**Mostly overtaken.** Item 14 rebuilt this page as Assembly admin: a year to
-pick, the five steps in the order they happen, results that stay hidden until
-the assembly rises, and manual granting narrowed to settling a tie. That was
-a rework to a brief rather than an audit, so what is left is the fresh-eyes
-pass over what it became -- smaller than the other four, and worth doing last.
+`poll_state` calls an assembly risen the moment its closing time passes.
+Proclaim asked `closed_at`, which only Rise it now sets, and that button is
+drawn only while a poll sits -- so an assembly left to run out showed its
+count, offered Proclaim and refused it, with nothing left on the page to
+unstick it. The proclamations page listed seasons on `closed_at` too, so the
+count it told the league to go and read was on no page. Both ask `poll_state`
+now, which is the thing its own docstring says it is for.
+
+Also: taking an honour back had no confirmation, which is the control that
+loses league history; it posted the page's season rather than the grant's;
+and `owners` was still being queried for a dropdown removed in item 14.
 
 ## 13. A roster tracked all year, not snapshotted at the end
 
