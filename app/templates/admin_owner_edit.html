@@ -7,9 +7,28 @@
   {# The way back goes above the title, not under it. `back` is the season
      the admin was looking at on the list, carried through so returning --
      by the link or by saving -- lands on that year rather than on this one. #}
+  {# The manager is the control that changes the manager, the way the year
+     is on every page with more than one of them and the way /team already
+     does it. Going back to the list to reach the next one is two moves for
+     a page that is usually worked through in a row. Everyone is offered,
+     retired included, because they are all editable here. #}
   <header class="page-head tight stuck">
     <p class="crumbs"><a href="/admin/owners?season={{ back }}">&larr; All owners</a></p>
-    <h1 class="titled">{{ avatar(me.owner_id, 96) }}{{ me.username }}</h1>
+    <details class="headpick">
+      <summary>
+        <h1 class="titled">{{ avatar(me.owner_id, 96) }}{{ me.username }}</h1>
+      </summary>
+      <ul>
+        {% for o in roll %}
+          <li>
+            <a href="/admin/owners/{{ o.owner_id }}?season={{ back }}"
+               {% if o.owner_id == me.owner_id %}aria-current="page"{% endif %}>
+              {{ o.username }}{% if o.is_retired %}
+                <span class="tm">retired</span>{% endif %}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
     <a class="to-top" href="#top">Top</a>
   </header>
 

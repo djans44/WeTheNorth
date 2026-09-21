@@ -1894,6 +1894,10 @@ def _owner_form(conn, oid):
         "team": teams[0] if teams else None,
         "palette": AVATAR_PALETTE,
         "holders": _colour_holders(everyone, skip=oid),
+        # Everyone, for the picker in the title: retired managers included,
+        # because they are editable here, and a manager with no season yet
+        # included too, which is why this is not nav_owners().
+        "roll": everyone,
         # Worked out rather than written into the page. The note used to name
         # Tulio as the manager who could not sign in; his address was filled
         # in at some point and the sentence has been wrong ever since, which
