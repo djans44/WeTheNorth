@@ -1014,6 +1014,11 @@ form > button[type="submit"] { margin-top: var(--s5); }
 .field > .tm { flex: 1 1 12rem; }
 .field > .avatar-picker { flex: 1; }
 .field.short > input { flex: 0 0 4rem; text-align: center; }
+/* A field holding something long -- a player and their position and cost, or
+   a line of explanation. min-width:0 is the part that matters: without it a
+   select refuses to shrink below its widest option, which is how the keeper
+   override page came to be 412px wide on every phone. */
+.widepick { flex: 1; min-width: 0; max-width: 28rem; }
 
 .checkline { display: flex; align-items: center; gap: var(--s3); margin: 1.4rem 0 0; }
 .checkline label { margin: 0; }

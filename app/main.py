@@ -4944,58 +4944,114 @@ async def admin_keeper_review(request: Request):
 
 @app.post("/admin/keepers/edit")
 async def admin_keeper_edit(request: Request):
+    """Override one submission, or take it away.
+
+    Everything here arrives from a form and every field of it is checked.
+    The database's own constraints were doing that job -- round 1 to 13,
+    a term of one year or three, a player that exists -- which meant an
+    ordinary typo came back as an unhandled 500 with no message and no way
+    out. They stay as the last line; these are the first.
+    """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
     from urllib.parse import quote
     me = request.session.get("owner_id")
     form = await request.form()
-    season = int(form["season"])
     sid = int(form["submission_id"])
     action = form.get("action")
 
     with get_db() as conn:
-        with conn.cursor() as cur:
-            if action == "delete":
+        # The season is the submission's own, not the hidden field's. Posting
+        # a season that did not match matched no rows and still reported
+        # "Submission updated", which is the worst of both.
+        rows = query(conn, """
+            select season_year, phase, owner_id, player_id, cost_round,
+                   term_years, origin
+            from keeper_submissions where submission_id = %s
+        """, (sid,))
+        if not rows:
+            raise HTTPException(status_code=404, detail="No such submission")
+        sub = rows[0]
+        season = sub["season_year"]
+
+        def bad(msg):
+            return RedirectResponse(
+                url="/admin/keepers/edit/%d?error=%s" % (sid, quote(msg)),
+                status_code=303)
+
+        if action == "delete":
+            with conn.cursor() as cur:
                 cur.execute("""
-                    delete from keeper_submissions
-                    where submission_id = %s and season_year = %s
-                """, (sid, season))
-                conn.commit()
-                return RedirectResponse(
-                    url=f"/admin/keepers?season={season}&msg=" +
-                        quote("Submission removed, that phase is open again"),
-                    status_code=303)
+                    delete from keeper_submissions where submission_id = %s
+                """, (sid,))
+            conn.commit()
+            return RedirectResponse(
+                url=f"/admin/keepers?season={season}&msg=" +
+                    quote("Submission removed, that keeper round is open again"),
+                status_code=303)
 
-            raw = (form.get("player_id") or "").strip()
-            rd = (form.get("cost_round") or "").strip()
-            term = (form.get("term_years") or "").strip()
-            status = form.get("status") or "approved"
-            note = (form.get("note") or "").strip() or "edited by admin"
+        raw = (form.get("player_id") or "").strip()
+        rd = (form.get("cost_round") or "").strip()
+        term = (form.get("term_years") or "").strip()
+        status = form.get("status") or "approved"
+        note = (form.get("note") or "").strip() or "edited by admin"
 
-            if not raw:
+        if status not in ("approved", "pending"):
+            return bad("That is not a status this page sets.")
+        if term and term not in ("1", "3"):
+            return bad("A contract is one year or three.")
+
+        if not raw:
+            with conn.cursor() as cur:
                 cur.execute("""
                     update keeper_submissions
                     set player_id = null, cost_round = null, term_years = null,
                         contract_id = null, origin = 'forfeit', status = 'approved',
                         note = %s, reviewed_by = %s, reviewed_at = now()
-                    where submission_id = %s and season_year = %s
-                """, (note, me, sid, season))
-            else:
-                if not rd:
-                    conn.rollback()
-                    return RedirectResponse(
-                        url=f"/admin/keepers?season={season}&error=" +
-                            quote("A round is required when a player is set"),
-                        status_code=303)
-                cur.execute("""
-                    update keeper_submissions
-                    set player_id = %s, cost_round = %s, term_years = %s,
-                        origin = case when origin = 'forfeit' then 'manual' else origin end,
-                        status = %s, note = %s,
-                        reviewed_by = %s, reviewed_at = now()
-                    where submission_id = %s and season_year = %s
-                """, (int(raw), int(rd), int(term) if term else None,
-                      status, note, me, sid, season))
+                    where submission_id = %s
+                """, (note, me, sid))
+            conn.commit()
+            return RedirectResponse(
+                url=f"/admin/keepers?season={season}&msg=" +
+                    quote("Submission updated"), status_code=303)
+
+        if not rd:
+            return bad("A round is required when a player is set.")
+        if not rd.isdigit() or not 1 <= int(rd) <= 13:
+            return bad("A round is a number from 1 to 13.")
+
+        # The player has to be one this page offered. The dropdown is built
+        # from that manager's eligibility, and without checking it the id was
+        # taken on trust: another manager's keeper saved happily, which is
+        # the same hole the assembly ballot closes by name.
+        allowed = {r["player_id"] for r in query(conn, """
+            select player_id from keeper_eligibility
+            where for_season = %s and owner_id = %s
+        """, (season, sub["owner_id"]))}
+        if sub["player_id"]:
+            allowed.add(sub["player_id"])   # whoever is on it already
+        if not raw.isdigit() or int(raw) not in allowed:
+            return bad("That player is not one of this manager's to keep.")
+
+        # An admin who actually changed the pick owns it. Leaving origin as
+        # 'plan' after one meant the Settled table credited a manager with a
+        # keeper they never chose. Approving one unaltered is not a change
+        # and keeps whatever it was.
+        picked = (int(raw), int(rd), int(term) if term else None)
+        origin = sub["origin"]
+        if picked != (sub["player_id"], sub["cost_round"], sub["term_years"]):
+            origin = "manual"
+        elif origin == "forfeit":
+            origin = "manual"
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                update keeper_submissions
+                set player_id = %s, cost_round = %s, term_years = %s,
+                    origin = %s, status = %s, note = %s,
+                    reviewed_by = %s, reviewed_at = now()
+                where submission_id = %s
+            """, picked + (origin, status, note, me, sid))
         conn.commit()
 
     return RedirectResponse(
@@ -5033,9 +5089,17 @@ def admin_keeper_edit_form(request: Request, sid: int):
             order by phase
         """, (sub["season_year"], sub["owner_id"], sid))
 
+    # The round this pick costs, against the rounds their other picks cost.
+    # A duplicate is allowed here on purpose -- an override is the one place
+    # the rule bends -- but the page used to carry a standing caveat saying
+    # it was not checked, which is not the same as telling anybody they have
+    # just done it. Named, it is worth reading.
+    clash = [u for u in used if u["cost_round"]
+             and u["cost_round"] == sub["cost_round"]]
     return templates.TemplateResponse(
         request=request, name="admin_keeper_edit.html",
-        context={"sub": sub, "options": options, "used": used})
+        context={"sub": sub, "options": options, "used": used,
+                 "clash": clash})
 
 
 def _save_plans(cur, season, target, me, form):

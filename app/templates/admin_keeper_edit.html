@@ -1,13 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Edit submission | We the North{% endblock %}
+{% from "macros.html" import avatar %}
+{% block title %}Override {{ sub.username }} | We the North{% endblock %}
 
 {% block content %}
 <div class="page">
-  <header class="page-head">
-    <h1>Override</h1>
-    <p class="lede">
-      {{ sub.username }} &middot; {{ sub.season_year }} Keeper {{ sub.phase }}
-    </p>
+  {# The way back above the title, and the manager named in it: this page is
+     reached from a row in a table and "Override" alone said nothing about
+     whose. #}
+  <header class="page-head tight stuck">
+    <p class="crumbs">
+      <a href="/admin/keepers?season={{ sub.season_year }}">&larr; Keeper admin</a></p>
+    <h1 class="titled">{{ avatar(sub.owner_id, 96) }}{{ sub.username }}</h1>
+    <p class="lede">{{ sub.season_year }} Keeper Round {{ sub.phase }}</p>
   </header>
 
   <section>
@@ -18,22 +22,32 @@
     </p>
 
     {% if used %}
-    <p class="note">Their other phases:
+    <p class="note">Their other keeper rounds:
       {% for u in used %}K{{ u.phase }}{% if u.cost_round %} at R{{ u.cost_round }}{% else %} forfeited{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
     </p>
+    {% endif %}
+
+    {# Named rather than warned about in general. A manager cannot keep two
+       players at the same cost, and an override is the one place nothing
+       stops you -- so the page says when it has happened rather than that it
+       might. #}
+    {% if clash %}
+      <p class="note why">R{{ sub.cost_round }} is already
+        {% for u in clash %}Keeper Round {{ u.phase }}{% if not loop.last %} and {% endif %}{% endfor %}.
+        Two picks at one cost is not a thing the league allows; nothing here
+        will stop you, and the settled table will show both.</p>
     {% endif %}
   </section>
 
   <section>
     <h2>Change</h2>
     <form method="post" action="/admin/keepers/edit">
-      <input type="hidden" name="season" value="{{ sub.season_year }}">
       <input type="hidden" name="submission_id" value="{{ sub.submission_id }}">
 
-      <p>
-        <label for="player_id">Player</label><br>
-        <select id="player_id" name="player_id" style="min-width:24rem">
-          <option value="">&mdash; forfeit this phase &mdash;</option>
+      <p class="field">
+        <label for="player_id">Player</label>
+        <select id="player_id" name="player_id" class="widepick">
+          <option value="">&mdash; forfeit this round &mdash;</option>
           {% for o in options %}
             <option value="{{ o.player_id }}"
                     {% if o.player_id == sub.player_id %}selected{% endif %}>
@@ -43,15 +57,15 @@
         </select>
       </p>
 
-      <p>
-        <label for="cost_round">Round</label><br>
+      <p class="field short">
+        <label for="cost_round">Round</label>
         <input type="number" id="cost_round" name="cost_round" min="1" max="13"
-               value="{{ sub.cost_round or '' }}" style="width:6rem">
-        <span class="tm">Required unless forfeiting. Not checked against other phases.</span>
+               value="{{ sub.cost_round or '' }}">
       </p>
+      <p class="note">Required unless forfeiting, and one to thirteen.</p>
 
-      <p>
-        <label for="term_years">Contract term</label><br>
+      <p class="field">
+        <label for="term_years">Contract term</label>
         <select id="term_years" name="term_years">
           <option value="" {% if not sub.term_years %}selected{% endif %}>none</option>
           <option value="1" {% if sub.term_years == 1 %}selected{% endif %}>1 year</option>
@@ -59,35 +73,43 @@
         </select>
       </p>
 
-      <p>
-        <label for="status">Status</label><br>
+      <p class="field">
+        <label for="status">Status</label>
         <select id="status" name="status">
           <option value="approved" {% if sub.status == "approved" %}selected{% endif %}>approved</option>
           <option value="pending" {% if sub.status == "pending" %}selected{% endif %}>pending</option>
         </select>
       </p>
 
-      <p>
-        <label for="note">Note</label><br>
-        <input type="text" id="note" name="note" style="min-width:24rem"
+      <p class="field">
+        <label for="note">Note</label>
+        <input type="text" id="note" name="note" class="widepick"
                value="{{ sub.note or '' }}" placeholder="why this was changed">
       </p>
+      <p class="note">Changing the pick marks it as the commissioner's rather
+        than the manager's. Approving it unaltered leaves it theirs.</p>
 
-      <button type="submit" name="action" value="save">Save override</button>
-      <a href="/admin/keepers?season={{ sub.season_year }}" class="tm" style="margin-left:1rem">Cancel</a>
+      {# No Cancel beside it: the crumb above the title is the way out, and
+         the one this page had was a .tm-styled link under the button, which
+         read as a footnote rather than as an exit. #}
+      <div class="actionrow">
+        <button type="submit" name="action" value="save" class="seal">Save override</button>
+      </div>
     </form>
   </section>
 
-  <section>
+  <section class="danger">
     <h2>Remove</h2>
-    <p class="note">Deleting reopens the phase for this manager. Their plan, if any,
-      stays intact and will submit again at resolution.</p>
+    <p class="note">Deleting reopens the keeper round for this manager. Their
+      plan, if any, stays intact and will submit again at resolution.</p>
     <form method="post" action="/admin/keepers/edit">
-      <input type="hidden" name="season" value="{{ sub.season_year }}">
       <input type="hidden" name="submission_id" value="{{ sub.submission_id }}">
-      <button type="submit" name="action" value="delete" class="ghost">Delete submission</button>
+      <div class="actionrow">
+        <button type="submit" name="action" value="delete" class="seal quiet"
+                data-confirm="Delete {{ sub.username }}'s Keeper Round {{ sub.phase }} submission? It is removed, not labelled, and the round opens again for them.">
+          Delete submission</button>
+      </div>
     </form>
   </section>
 </div>
 {% endblock %}
-
