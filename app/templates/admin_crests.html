@@ -214,11 +214,18 @@
                 </span>
               </p>
               {% if g.detail %}<p class="what">{{ g.detail }}</p>{% endif %}
-              <form method="post" action="/admin/crests/revoke" class="checkline">
+              {% if g.by_whom %}<p class="tm">Given by {{ g.by_whom }}</p>{% endif %}
+              {# The grant's own year, not the year on screen: this list is
+                 every season, so taking back a 2024 honour while looking at
+                 2026 was reporting against the wrong one. #}
+              <form method="post" action="/admin/crests/revoke">
                 <input type="hidden" name="owner_crest_id" value="{{ g.owner_crest_id }}">
-                <input type="hidden" name="season" value="{{ season }}">
-                <button type="submit">Take it back</button>
-                {% if g.by_whom %}<span class="tm">Given by {{ g.by_whom }}</span>{% endif %}
+                <input type="hidden" name="season" value="{{ g.season_year }}">
+                <div class="actionrow">
+                  <button type="submit" class="seal quiet"
+                          data-confirm="Take {{ g.crest }} back from {{ g.username }} for {{ g.season_year }}? The honour is removed, and if the assembly that decided it has risen you cannot proclaim it again without settling it by hand.">
+                    Take it back</button>
+                </div>
               </form>
             </div>
           </div>

@@ -3705,7 +3705,8 @@ def proclamations_page(request: Request, season: int = 0):
     with get_db() as conn:
         years = [r["season_year"] for r in query(conn, """
             select season_year from crest_polls
-            where closed_at is not null order by season_year desc
+            where closed_at is not null or closes_at <= now()
+            order by season_year desc
         """)]
         if not years:
             return templates.TemplateResponse(
@@ -4258,10 +4259,6 @@ def admin_crests(request: Request, season: int = 0):
             from crests where active and award_mode = 'manual'
             order by sort_order
         """)
-        owners = query(conn, """
-            select owner_id, username from owners
-            where not is_retired order by username
-        """)
         # Every grant ever made, not just this season's: four a year is a
         # short enough list to show whole, and seeing last year's is how you
         # remember what you called it.
@@ -4318,8 +4315,8 @@ def admin_crests(request: Request, season: int = 0):
                 vote["result"] = poll_result(conn, poll)
     return templates.TemplateResponse(
         request=request, name="admin_crests.html",
-        context={"vote": vote,"years": years, "season": season, "manual": manual,
-                 "owners": owners, "given": given})
+        context={"vote": vote, "years": years, "season": season,
+                 "manual": manual, "given": given})
 
 
 @app.post("/admin/crests")
@@ -4437,7 +4434,13 @@ async def admin_crests_proclaim(request: Request):
 
     with get_db() as conn:
         poll = poll_for(conn, season)
-        if not poll or not poll["closed_at"]:
+        # poll_state, not closed_at. An assembly rises when its closing time
+        # passes whether or not anybody pressed the button, and Rise it now
+        # is only drawn while one is sitting -- so a poll left to run out
+        # showed its count, offered Proclaim, and refused it, with no way
+        # left to set closed_at. The state is asked in one place for exactly
+        # this reason; this was the caller that went around it.
+        if poll_state(poll) != "risen":
             return RedirectResponse(
                 url="/admin/crests?season=%d&error=%s"
                     % (season, quote("That assembly has not risen yet.")),
