@@ -1679,6 +1679,13 @@ label.second { margin-top: var(--s4); }
 /* Named .hue, not .swatch -- .swatch is the draft-prep legend square and
    its fixed width/height would win here. */
 .avatar-picker .hue {
+  /* Positioned so the hidden radio inside it has a containing block. Without
+     this, position:absolute on the input resolves against the initial
+     containing block and the radios leave whatever the picker is inside: in
+     the owners table, thirteen rows of eighteen of them parked at x=559 and
+     scrolled a 420px page sideways to 560, past a table that was already
+     scrolling correctly inside itself. Flex does not create one. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.55rem;
