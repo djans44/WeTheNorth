@@ -137,14 +137,15 @@ than fail on a foreign key.
 
 **Items 5 to 12 are the UI audits.** The same treatment `/history`, `/season` and `/team` were given: read the
 page, say what is wrong with it, agree the changes, build them. **Each is its
-own item** — one audit, one conversation, one commit. Eight left of
-the twelve; `/draft-order`, `/draft-prep`, `/keepers` and `/rules` are done.
+own item** — one audit, one conversation. Two left of the twelve: **7
+`/admin/keepers/edit/{sid}`** and **10 `/admin/rivals`**, both offseason
+pages, plus the fresh-eyes pass on 12.
 
 A design and usability audit rather than form validation. `/rules` was on
 the list and has no inputs at all, which settled which is meant.
 
-None of the eight left has ever been looked at this way. The four that have
-were each worth a handful of real changes, so expect the same here.
+Every one looked at this way has been worth a handful of real changes, and
+several have been worth a data-losing bug. Expect the same of the last two.
 
 ## 5. Audit `/admin/scores`
 
@@ -178,17 +179,46 @@ validate a round against the manager's other phases, so a duplicate round can
 be created — visible in the Settled table, blocked by nothing. PROJECT.md §9
 records this; the audit should decide whether the page says so.
 
-## 8. Audit `/admin/owners`
+## 8. ~~Audit `/admin/owners`~~ **Done**
 
-Team name, colour and initials for everyone in one pass.
+Six findings, four commits. The one that mattered: both importers send an
+admin here to rename a team when a pasted name does not match, and the roster
+loader reconciles any year while this page could only rename the newest -- so
+the instruction was a dead end for every season but this one, and nothing
+else in the site renames a past season's team. The page takes a year now and
+the importers link to the one they are loading.
 
-## 9. Audit `/admin/owners/{oid}`
+Also: the colour picker's hidden radios are position:absolute inside a label
+that is only display:flex, so they resolved against the initial containing
+block and left the table, scrolling a 420px page out to 560. That rule is
+shared, so the fix is too. And a colour nobody else holds is drawn as a ring
+-- thirteen rows of sixteen swatches is not something anyone maps by eye, and
+the tooltip that used to be the only answer does not exist on a phone.
 
-One owner, in detail. The only page with **no lede and no h1** worth the
-name, which is where the audit starts.
+## 9. ~~Audit `/admin/owners/{oid}`~~ **Done**
 
-Emails are edited here and they are the sign-in credential, so whatever it
-does with them matters more than it looks.
+Seven findings, two commits. Three of them were ways to lock somebody out.
+
+Unticking Admin on your own record saved and updated the live session at
+once, so the redirect landed on a page you could no longer reach and only the
+other admin could undo it -- the last-admin guard never caught it, because
+with two admins there is always another one. Refused now, with retiring
+yourself.
+
+The email really is the credential: a straight match, no password, no reset.
+`type="email"` was the only check, which is none at all on a post that did
+not come from a browser, so a value that can never reach an inbox saved
+happily and the manager simply could not get in. Both this page and the add
+form check the shape now.
+
+And the note under it read "which is Tulio's situation today". His address
+was filled in at some point and the sentence had been wrong ever since --
+which is what naming a person in explanatory copy buys you. It reads the roll
+instead.
+
+The rest was shape: the season round-trips from the list and back, the save
+says what it changed, the way back sits above the title, and the initials box
+shows what it would derive.
 
 ## 10. Audit `/admin/rivals`
 
