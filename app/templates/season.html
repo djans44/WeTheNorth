@@ -9,9 +9,16 @@
                  "third_place": "Third place", "consolation": "Consolation"} %}
 
 {% block content %}
-{# The crests this week settled. Looked up once: the section and the rail
-   entry pointing at it must agree about whether there are any. #}
-{% set weekcrests = week_crests.get(shown) if shown else none %}
+{# The crests a week settled. Looked up once: the section and the rail entry
+   pointing at it must agree about whether there are any.
+
+   A week still to be played has none of its own, and that is the week the
+   page opens on. Its account is already the week just gone -- "Thus passed
+   week 2" above the week three fixtures -- so the crests that week settled
+   belong beside it rather than one page back, where nobody lands. #}
+{% set crestweek = shown if (this_week and this_week.played)
+                   else (shown - 1 if shown else none) %}
+{% set weekcrests = week_crests.get(crestweek) if crestweek else none %}
 
 {# One icon per section, widening on hover to show the label. Plain anchors --
    no JS, and it degrades to a list of jump links.
@@ -341,7 +348,7 @@
      yet has none, and the section is simply absent until they are. #}
   {% if weekcrests %}
   <section id="crests">
-    <h2>What week {{ shown }} settled</h2>
+    <h2>What week {{ crestweek }} settled</h2>
     <div class="crest-grid">
       {% for c in weekcrests %}
         <details class="crest blazoned">
