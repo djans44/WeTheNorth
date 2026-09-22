@@ -9,15 +9,47 @@
                  "third_place": "Third place", "consolation": "Consolation"} %}
 
 {% block content %}
-{# The crests a week settled. Looked up once: the section and the rail entry
-   pointing at it must agree about whether there are any.
+{# What a week settled, written once and placed twice.
 
-   A week still to be played has none of its own, and that is the week the
-   page opens on. Its account is already the week just gone -- "Thus passed
-   week 2" above the week three fixtures -- so the crests that week settled
-   belong beside it rather than one page back, where nobody lands. #}
-{% set crestweek = shown if (this_week and this_week.played)
-                   else (shown - 1 if shown else none) %}
+   A finished week shows its own crests, under the scores that won them. The
+   week being played has none of its own, so it shows the ones the week just
+   gone settled -- the same week the account above it is about -- and they go
+   before the fixtures, with that report, rather than under a list of games
+   nobody has played. A macro because two copies would be two things to keep
+   in step. #}
+{% macro weekcrestsection() %}
+  {% if weekcrests %}
+  <section id="crests">
+    <h2>What week {{ crestweek }} settled</h2>
+    <div class="crest-grid">
+      {% for c in weekcrests %}
+        <details class="crest blazoned">
+          <summary title="{{ c.description }}">
+            {{ crestshield(c.code, c.category) }}
+            <span class="lines">
+              <span class="crest-name">{{ c.name }}</span>
+              <span class="crest-more" aria-hidden="true"></span>
+              <span class="crest-what">{{ c.description }}</span>
+              <span class="crest-who avatar-line">
+                {{ avatar(c.owner_id, 30) }}
+                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
+              </span>
+              <span class="tm">{{ c.detail if c.detail }}</span>
+            </span>
+          </summary>
+        </details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+{% endmacro %}
+
+{# The week being played: scores started or not, it is not finished, so it
+   has settled nothing yet. Complete rather than merely begun, or the page
+   would swap to a half-counted week on the first score saved and drop the
+   finished week out of sight while the rest were still being entered. #}
+{% set current = this_week and not this_week.done %}
+{% set crestweek = (shown - 1 if shown else none) if current else shown %}
 {% set weekcrests = week_crests.get(crestweek) if crestweek else none %}
 
 {# One icon per section, widening on hover to show the label. Plain anchors --
@@ -51,6 +83,11 @@
                    "fixtures", this_week),
       ("crests",   "Crests",  "crests",  weekcrests),
       ("standings","Standings","standings", true)] %}
+  {% if current %}
+    {# The rail has to be in the page's order, and on the week being played
+       the crests come before the fixtures. #}
+    {% set rail = [rail[0], rail[2], rail[1], rail[3]] %}
+  {% endif %}
 {% endif %}
 <nav class="sectionnav" aria-label="Sections of this page">
   {% for anchor, label, icon, there in rail if there %}
@@ -297,6 +334,9 @@
   {% else %}
   {# ================= one week ================= #}
 
+  {# On the week being played the crests are last week's and come first. #}
+  {% if current %}{{ weekcrestsection() }}{% endif %}
+
   <section id="fixtures">
     {% if state == "playoffs" %}
       {# The bracket, not this week's rows on their own: a playoff week is
@@ -343,33 +383,8 @@
     {% endif %}
   </section>
 
-  {# What the week settled. Here rather than in the honour roll, because the
-     score that won one is directly above it. A week whose scores are not in
-     yet has none, and the section is simply absent until they are. #}
-  {% if weekcrests %}
-  <section id="crests">
-    <h2>What week {{ crestweek }} settled</h2>
-    <div class="crest-grid">
-      {% for c in weekcrests %}
-        <details class="crest blazoned">
-          <summary title="{{ c.description }}">
-            {{ crestshield(c.code, c.category) }}
-            <span class="lines">
-              <span class="crest-name">{{ c.name }}</span>
-              <span class="crest-more" aria-hidden="true"></span>
-              <span class="crest-what">{{ c.description }}</span>
-              <span class="crest-who avatar-line">
-                {{ avatar(c.owner_id, 30) }}
-                <a href="/team/{{ c.username|lower }}">{{ c.username }}</a>
-              </span>
-              <span class="tm">{{ c.detail if c.detail }}</span>
-            </span>
-          </summary>
-        </details>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
+  {# On a finished week the crests sit under the scores that won them. #}
+  {% if not current %}{{ weekcrestsection() }}{% endif %}
 
   {# The table as it stood at the end of this week, which on a finished
      season is not the table at the end of it. No positions: a place in a
