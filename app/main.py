@@ -4854,12 +4854,18 @@ def admin_keepers(request: Request, season: int = 0, preview: int = 0,
             where k.for_season = %s order by o.username
         """, (season,))
 
+        # The ADP round a signing would be priced against comes with the
+        # row, so the commissioner locks it at approval with the number in
+        # front of them rather than trusting whatever the list says later.
         pending = query(conn, """
             select s.submission_id, s.phase, s.cost_round, s.term_years,
-                   s.origin, s.note, s.submitted_at, o.username, p.full_name
+                   s.origin, s.note, s.submitted_at, o.username, p.full_name,
+                   a.adp_round, a.adp
             from keeper_submissions s
             join owners o on o.owner_id = s.owner_id
             left join players p on p.player_id = s.player_id
+            left join player_adp_rounds a
+                   on a.player_id = s.player_id and a.season_year = s.season_year
             where s.season_year = %s and s.status = 'pending'
             order by s.phase, o.username
         """, (season,))
@@ -5012,6 +5018,54 @@ async def admin_keeper_windows(request: Request):
         status_code=303)
 
 
+def adp_round_for(conn, season, player_id):
+    """The ADP round a contract signed this season would be priced against.
+
+    Thirteen where the season has no list or the player is not on it, which
+    is what player_adp_rounds says a missing row means: a capped cost, never
+    a cheaper one.
+    """
+    rows = query(conn, """
+        select adp_round from player_adp_rounds
+        where season_year = %s and player_id = %s
+    """, (season, player_id))
+    return rows[0]["adp_round"] if rows else None
+
+
+def sign_contract(cur, sub, adp_round):
+    """Turn an approved signing into the obligation it is, and return its id.
+
+    A contract is created when the commissioner approves the submission that
+    signs it -- not when the round resolves, because a plan becomes a pending
+    submission that can still be edited or rejected. Nothing in the app wrote
+    this table before: the 2026 selection produced six signings that existed
+    only as a term_years on a submission, so 2027 would have seen six free
+    choices where the league had three-year obligations.
+
+    original_round is what the player costs in the signing season, which is
+    the round on the submission after resolution has bumped it clear of the
+    manager's other picks. The rows the history import wrote agree: every one
+    of them has original_round equal to that season's selection cost.
+
+    contract_round is the price of years two and three, least(original, adp
+    round + 2) with the +2 capped at the thirteen rounds a draft has. A one
+    year deal has no later year, so it has no later price.
+    """
+    later = None
+    if sub["term_years"] == 3:
+        capped = min((adp_round or 13) + 2, 13)
+        later = min(sub["cost_round"], capped)
+    cur.execute("""
+        insert into keeper_contracts
+            (player_id, owner_id, original_round, signed_season,
+             contract_years, adp_round, contract_round, status)
+        values (%s, %s, %s, %s, %s, %s, %s, 'active')
+        returning contract_id
+    """, (sub["player_id"], sub["owner_id"], sub["cost_round"],
+          sub["season_year"], sub["term_years"], adp_round, later))
+    return cur.fetchone()["contract_id"]
+
+
 def refresh_keeper_crests(conn, season):
     """Two crests are made of keeper data: Oathbreaker counts voids and Three
     Oaths Sworn counts contracts held at once. Both were only ever recomputed
@@ -5079,6 +5133,32 @@ async def admin_keeper_review(request: Request):
         with conn.cursor() as cur:
             for sid in chosen:
                 if approve:
+                    # A signing becomes a contract here, at the moment
+                    # somebody approves it, with the ADP round that was on
+                    # screen when they did.
+                    rows = query(conn, """
+                        select submission_id, season_year, owner_id, player_id,
+                               cost_round, term_years, contract_id
+                        from keeper_submissions
+                        where submission_id = %s and season_year = %s
+                    """, (int(sid), season))
+                    sub = rows[0] if rows else None
+                    if (sub and sub["term_years"] and sub["player_id"]
+                            and not sub["contract_id"]):
+                        raw = (form.get("adp_%s" % sid) or "").strip()
+                        adp = int(raw) if raw.isdigit() else None
+                        if adp is not None and not 1 <= adp <= 20:
+                            adp = None
+                        # term_years and contract_id are exclusive by
+                        # constraint, and rightly: a term is a request to
+                        # sign and a contract id is the obligation that
+                        # request became. Signing turns the one into the
+                        # other, and the years live on the contract.
+                        cur.execute("""
+                            update keeper_submissions
+                            set contract_id = %s, term_years = null
+                            where submission_id = %s
+                        """, (sign_contract(cur, sub, adp), int(sid)))
                     cur.execute("""
                         update keeper_submissions
                         set status = 'approved', reviewed_by = %s, reviewed_at = now()

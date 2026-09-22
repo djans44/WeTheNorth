@@ -122,8 +122,8 @@
       <input type="hidden" name="season" value="{{ season }}">
       <table class="keepers">
         <thead>
-          <tr><th></th><th>Round</th><th>Manager</th><th>Player</th><th>Round</th>
-              <th>Term</th><th>Origin</th><th>Note</th><th></th></tr>
+          <tr><th></th><th>Round</th><th>Manager</th><th>Player</th><th>Cost</th>
+              <th>Term</th><th>ADP round</th><th>Origin</th><th>Note</th><th></th></tr>
         </thead>
         <tbody>
         {% for p in pending %}
@@ -135,6 +135,21 @@
             <td class="name">{{ p.full_name }}</td>
             <td class="rd">R{{ p.cost_round }}</td>
             <td>{% if p.term_years %}{{ p.term_years }} yr{% endif %}</td>
+            {# Only a signing has a later price to lock, and only a three
+               year deal has later years at all. The box is filled from the
+               season's list and is the value the contract keeps: approving
+               is the moment it stops being able to move. #}
+            <td>
+              {% if p.term_years == 3 %}
+                <input name="adp_{{ p.submission_id }}" class="sigil-initials"
+                       type="number" min="1" max="20"
+                       value="{{ p.adp_round or '' }}"
+                       placeholder="13">
+                {% if not p.adp_round %}<span class="tm">no list</span>{% endif %}
+              {% elif p.term_years %}
+                <span class="tm">not priced</span>
+              {% endif %}
+            </td>
             <td class="tm">{{ p.origin }}</td>
             <td class="tm">{{ p.note }}</td>
             <td><a href="/admin/keepers/edit/{{ p.submission_id }}">Edit</a></td>
@@ -144,7 +159,10 @@
       </table>
       <p class="note">Every row is ticked to start with, because approving is
         the usual act. Rejecting deletes the submission; their plan stays, so
-        they can resubmit.</p>
+        they can resubmit. Approving a three year deal signs the contract and
+        locks the ADP round beside it &mdash; years two and three cost the
+        lower of the round it was kept at and that round plus two, and after
+        this the number cannot move.</p>
       {# The confirm is on the button, not the form: approve is in the same
          form and must not ask. #}
       <div class="actionrow">
