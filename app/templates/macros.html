@@ -384,3 +384,22 @@
   {%- endif %}
   </svg>
 {%- endmacro %}
+
+
+{# What happened to a week's account, and what happens next.
+
+   Both the page the scores are entered on and the page the summaries are
+   managed from ask it, and two copies would be two things to keep in step.
+
+   The wording is load-bearing. The answer is nearly always "nothing you
+   need to do", and a bare error reads as the opposite -- it sends an admin
+   to the button for something the app has already scheduled. #}
+{% macro retryline(account) %}
+  {% if account and account.failed %}
+    <p class="note error">Attempt {{ account.attempts }} did not finish:
+      {{ account.failed }}
+      {%- if account.retry_at %} <b>Trying again at
+        {{ account.retry_at|league_clock }}.</b>
+      {%- else %} <b>Nothing more will be tried tonight.</b>{% endif %}</p>
+  {% endif %}
+{% endmacro %}

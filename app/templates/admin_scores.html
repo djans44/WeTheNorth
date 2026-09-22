@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import leaf %}
+{% from "macros.html" import leaf, retryline %}
 {% block title %}Enter scores | We the North{% endblock %}
 
 {% block content %}
@@ -178,17 +178,7 @@
        went back to offering the button as though nothing had been tried --
        and the only place the refusal surfaced was the summaries page, which
        asks Gemini on the request and can hand the error straight back. #}
-    {% if account.failed and not account.writing %}
-      {# What happens next, not merely that something went wrong. The answer
-         is usually "nothing you need to do", and a bare error reads as the
-         opposite -- it sends an admin to the button for something the app
-         has already scheduled. #}
-      <p class="note error">Attempt {{ account.attempts }} did not finish:
-        {{ account.failed }}
-        {%- if account.retry_at %} <b>Trying again at
-          {{ account.retry_at|league_clock }}.</b>
-        {%- else %} <b>Nothing more will be tried tonight.</b>{% endif %}</p>
-    {% endif %}
+    {% if not account.writing %}{{ retryline(account) }}{% endif %}
 
     {% if account.writing %}
       <p class="note waiting" data-recheck="6">{% if account.row %}A new one is

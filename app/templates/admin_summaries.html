@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import leaf %}
+{% from "macros.html" import leaf, retryline %}
 {% block title %}Summaries {{ season }} | We the north{% endblock %}
 
 {% block content %}
@@ -70,7 +70,21 @@
        says the same word. When something IS stopping it, that reason is the
        only note on the page -- telling somebody to generate one and then
        telling them they cannot is two messages arguing. #}
-    {% if not draft and not published and not blocked %}
+    {# The same account the scores page shows, because this is the page an
+       admin lands on after a failure and it used to be the one place the
+       retry was invisible. #}
+    {% if account and account.writing %}
+      <p class="note waiting">Week {{ week }} is being written right now.
+        It takes about half a minute.</p>
+    {% else %}
+      {{ retryline(account) }}
+    {% endif %}
+
+    {# "Nothing has been written" is true and unhelpful once something has
+       been tried and failed: the line above already says so, and says what
+       happens next. Two messages arguing, as with blocked. #}
+    {% if not draft and not published and not blocked
+          and not (account and account.failed) %}
       <p class="note">Nothing has been written. Generate one below.</p>
     {% endif %}
 

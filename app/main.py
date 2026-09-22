@@ -7142,18 +7142,69 @@ def week_summary_state(conn, season, week):
             "have_key": summaries.available()}
 
 
-def run_summary_job(season, week):
-    """Write one week's account on a thread, and record how it went.
+def start_writing(season, week):
+    """Mark a week as being written, unless it already is. True if taken.
 
-    Off the request thread wherever it is called from. The call takes the
-    best part of a minute; the admin who entered the scores would otherwise
-    sit through it, and Render would very likely time the request out first.
+    The mark is what stops the two writers colliding. write_summary clears
+    the old draft before inserting the new one, so two calls in flight at
+    once are not a crash but something worse to diagnose: two calls paid
+    for, and whichever finishes second silently deletes the other's work.
     """
     with _writing_lock:
         if (season, week) in _writing:
             return False
         _writing.add((season, week))
+        return True
 
+
+def stop_writing(season, week):
+    with _writing_lock:
+        _writing.discard((season, week))
+
+
+def note_failed_attempt(conn, season, week, err):
+    """Record a hand-written attempt that failed, as a scheduled one would be.
+
+    The summaries page calls Gemini on the request and hands the error
+    straight back, which is exactly why it is the page an admin notices a
+    failure on. Until now that was the whole of what it did: the same 503
+    that starts a retry ladder from the scores page died here without a
+    trace, and the only record of the attempt was a line in the log.
+
+    Open, claim, fail -- the three steps a scheduled attempt takes, so the
+    week ends up in the state it would have been in had the clock made the
+    call instead of a person.
+    """
+    if summary_exists(conn, season, week):
+        # Something wrote one while this call was busy failing. There is
+        # nothing left to retry and the error is no longer about anything.
+        return
+    open_summary_job(conn, season, week)
+    claim_summary_jobs(conn, season, week)
+    finish_summary_job(conn, season, week, error=str(err)[:300],
+                       again=getattr(err, "retryable", False))
+
+
+def run_summary_job(season, week):
+    """Take the week and write it. False if something else already holds it."""
+    if not start_writing(season, week):
+        return False
+    spawn_summary_write(season, week)
+    return True
+
+
+def spawn_summary_write(season, week):
+    """Write one week's account on a thread, and record how it went.
+
+    Off the request thread wherever it is called from. The call takes the
+    best part of a minute; the admin who entered the scores would otherwise
+    sit through it, and Render would very likely time the request out first.
+
+    The caller must already hold the mark. Taking it and writing are separate
+    steps because between them sits a database round trip that must not
+    happen for a write which cannot start -- see queue_week_summary. The
+    thread releases the mark on its way out.
+    """
     def run():
         try:
             with get_db() as conn:
@@ -7179,12 +7230,10 @@ def run_summary_job(season, week):
                 log.exception("could not record the failed week %s summary "
                               "for %s", week, season)
         finally:
-            with _writing_lock:
-                _writing.discard((season, week))
+            stop_writing(season, week)
 
     threading.Thread(target=run, name="summary-%s-w%s" % (season, week),
                      daemon=True).start()
-    return True
 
 
 def queue_week_summary(season, week, force=False):
@@ -7209,16 +7258,32 @@ def queue_week_summary(season, week, force=False):
     """
     if not summaries.available():
         return False
-    with get_db() as conn:
-        if not week_is_complete(conn, season, week):
-            return False
-        if not force and summary_exists(conn, season, week):
-            return False
-        open_summary_job(conn, season, week, reset=force)
-        claimed = claim_summary_jobs(conn, season, week)
-    if not claimed:
+    # The mark first, before anything is written down. Claiming is not a
+    # question but a change -- it counts an attempt and moves the schedule on
+    # -- and doing that for an attempt that then cannot be made leaves a
+    # phantom behind: a week that reads as tried and due again at twenty
+    # past, when nothing was ever called. Which is precisely what the admin
+    # button did while a write was already in flight.
+    if not start_writing(season, week):
         return False
-    return run_summary_job(season, week)
+    started = False
+    try:
+        with get_db() as conn:
+            if not week_is_complete(conn, season, week):
+                return False
+            if not force and summary_exists(conn, season, week):
+                return False
+            open_summary_job(conn, season, week, reset=force)
+            if not claim_summary_jobs(conn, season, week):
+                return False
+        spawn_summary_write(season, week)
+        started = True
+        return True
+    finally:
+        # Every path out of here that did not start a thread has to give the
+        # mark back, or the week reads as "being written" until a restart.
+        if not started:
+            stop_writing(season, week)
 
 
 def run_due_summaries():
@@ -7229,6 +7294,11 @@ def run_due_summaries():
     """
     if not summaries.available():
         return []
+    # This one claims before checking the mark, and that is all right: the
+    # mark is process-local, so a week that fails run_summary_job here is one
+    # this same process is writing at this moment, and that write will finish
+    # the job when it lands. The claim it walked past is corrected seconds
+    # later rather than left standing.
     with get_db() as conn:
         due = claim_summary_jobs(conn)
     return [{"season": j["season_year"], "week": j["week"],
@@ -7364,6 +7434,12 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
         draft = published = None
         if kind != "week" or week:
             draft, published = summary_target(conn, season, kind, week or None)
+        # A week is the only kind with a retry behind it, so it is the only
+        # kind that has anything to say between "that failed" and "it will
+        # go again by itself". The other two are written by somebody
+        # standing here waiting, and there is nobody to retry on behalf of.
+        account = (week_summary_state(conn, season, week)
+                   if kind == "week" and week else None)
 
     # What this target is called, said once so the heading, the buttons and
     # the toast cannot drift apart. The heading is capitalised here rather
@@ -7434,7 +7510,7 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
                  "heading": name[:1].upper() + name[1:],
                  "draft": draft, "published": published, "blocked": blocked,
                  "at_a_glance": at_a_glance, "shown_on": shown_on,
-                 "model": summaries.MODEL})
+                 "account": account, "model": summaries.MODEL})
 
 
 @app.post("/admin/summaries/generate")
@@ -7461,23 +7537,38 @@ async def admin_summary_generate(request: Request):
             url=summaries_url(season, kind, error="Choose a week to write about."),
             status_code=303)
 
-    with get_db() as conn:
-        try:
-            _, missed = write_one_summary(conn, season, kind, week)
-        except summaries.SummaryError as e:
-            # The toast says this once and then deletes itself from the URL,
-            # so without this line a failure leaves no trace at all -- the
-            # background writer logs its own and this path did not.
-            log.warning("could not write the %s summary for %s%s: %s",
-                        kind, season, " week %s" % week if week else "", e)
-            return RedirectResponse(
-                url=summaries_url(season, kind, week, error=str(e)),
-                status_code=303)
-        # Written by hand is still written: a week with an account has
-        # nothing left to retry, and a job still ticking would put a stale
-        # failure above it on the scores page.
+    # The same week can be on its way from the clock at this moment. Refused
+    # rather than run alongside: two calls would be paid for and the slower
+    # one's draft would delete the faster one's on the way in.
+    if kind == "week" and not start_writing(season, week):
+        return RedirectResponse(
+            url=summaries_url(season, kind, week,
+                              error="Week %d is being written right now. Give "
+                                    "it a moment and look again." % week),
+            status_code=303)
+    try:
+        with get_db() as conn:
+            try:
+                _, missed = write_one_summary(conn, season, kind, week)
+            except summaries.SummaryError as e:
+                # The toast says this once and then deletes itself from the
+                # URL, so without this line a failure leaves no trace at all
+                # -- the background writer logs its own and this path did not.
+                log.warning("could not write the %s summary for %s%s: %s",
+                            kind, season, " week %s" % week if week else "", e)
+                if kind == "week":
+                    note_failed_attempt(conn, season, week, e)
+                return RedirectResponse(
+                    url=summaries_url(season, kind, week, error=str(e)),
+                    status_code=303)
+            # Written by hand is still written: a week with an account has
+            # nothing left to retry, and a job still ticking would put a
+            # stale failure above it on the scores page.
+            if kind == "week":
+                finish_summary_job(conn, season, week)
+    finally:
         if kind == "week":
-            finish_summary_job(conn, season, week)
+            stop_writing(season, week)
 
     what = {"preview": "the %s preview" % season,
             "season": "the %s recap" % season}.get(kind, "the week %s recap" % week)
