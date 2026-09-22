@@ -1,6 +1,7 @@
 import contextvars
 import datetime
 import decimal
+import hmac
 import logging
 import os
 import pathlib
@@ -84,7 +85,13 @@ def league_field(ts):
 
 
 STATIC_DIR = pathlib.Path("app/static")
-PUBLIC_PATHS = {"/", "/login", "/logout", "/health", "/preview"}
+# Paths the session guard lets past. "/tasks/summaries" is not public in
+# any ordinary sense -- it is called by a clock outside the app, so there is
+# no session to have, and it checks a shared secret of its own instead. It is
+# listed here because the middleware below only knows about sessions, and
+# without it the pinger is redirected to the front door forever.
+PUBLIC_PATHS = {"/", "/login", "/logout", "/health", "/preview",
+                "/tasks/summaries"}
 
 # Sixteen swatches for thirteen owners. Every one is dark enough that
 # parchment text sits on it legibly, which is why nothing in this codebase
@@ -199,8 +206,22 @@ def league_hour(ts):
         d.hour % 12 or 12, d.minute, "am" if d.hour < 12 else "pm")
 
 
+def league_clock(ts):
+    """Just the time of day, the league's own. "11:40am".
+
+    league_hour for something happening within the hour: the date on "it
+    goes again at Mon Sep 22, 11:40am" is three words saying today.
+    """
+    if not ts:
+        return ""
+    d = ts.astimezone(LEAGUE_TZ)
+    return "%d:%02d%s" % (d.hour % 12 or 12, d.minute,
+                          "am" if d.hour < 12 else "pm")
+
+
 templates.env.filters["league_day"] = league_day
 templates.env.filters["league_hour"] = league_hour
+templates.env.filters["league_clock"] = league_clock
 def crest_when(row):
     """When a crest was won, and what earned it, on one line.
 
@@ -6950,15 +6971,132 @@ def week_is_complete(conn, season, week):
 # exists so the admin who just saved a week is told something is happening
 # rather than that nothing was written, and if the process is restarted
 # mid-sentence then nothing was written, which is what an empty set says.
+#
+# What *failed* used to be a dict beside this one, and a restart forgot that
+# too -- which was wrong in a way this is not. A write that is no longer
+# running is news that outlives the process, so it lives in summary_jobs now.
 _writing = set()
-# And which ones tried and failed. The write happens on a thread, so the
-# request that started it is long answered by the time Gemini refuses --
-# the failure used to go to the log and nowhere else, and the scores page
-# went back to offering the button as though nothing had been attempted.
-# Process-local for the same reason _writing is: a restart forgetting that
-# a write failed is a restart during which nothing was written.
-_write_failed = {}
 _writing_lock = threading.Lock()
+
+# Soon once, then twice an hour. A 503 is usually over in minutes, so the
+# first retry sits close behind the failure; after that there is nothing to
+# be gained by asking more often than every half hour.
+FIRST_RETRY = datetime.timedelta(minutes=10)
+THEN_RETRY = datetime.timedelta(minutes=30)
+
+
+def retry_at(attempts, now=None):
+    """When to try again after a failure, or None to stop for the night.
+
+    Nothing carries into tomorrow. A week's account is worth reading the
+    evening the week finished, and these retries exist to get it written
+    before anyone looks rather than to get it written eventually -- a job
+    still ticking on Tuesday about Sunday's games is noise.
+
+    It also disposes of the daily quota without a rule of its own: the free
+    tier resets at midnight Pacific, which is three in the morning here, so
+    there is no hour left in the league's day when a spent quota could come
+    back anyway.
+    """
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    nxt = now + (FIRST_RETRY if attempts <= 1 else THEN_RETRY)
+    # Midnight at the end of the league's own day, not the server's: the
+    # difference is five hours, and the wrong one of them stops the retries
+    # at seven in the evening.
+    midnight = (now.astimezone(LEAGUE_TZ) + datetime.timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0)
+    return nxt if nxt < midnight else None
+
+
+def summary_exists(conn, season, week):
+    return bool(query(conn, """
+        select 1 from summaries
+        where season_year = %s and kind = 'week' and week = %s limit 1
+    """, (season, week)))
+
+
+def open_summary_job(conn, season, week, reset=False):
+    """Record that this week's account is wanted, and due now.
+
+    `reset` is the admin pressing the button: it puts the job back to how it
+    looked the moment the scores were saved, so a week that gave up at eleven
+    last night gets the whole ladder again rather than one more go.
+    """
+    with conn.cursor() as cur:
+        cur.execute("""
+            insert into summary_jobs (season_year, kind, week, next_try_at)
+            values (%(season)s, 'week', %(week)s, now())
+            on conflict (season_year, kind, week) do update
+               set next_try_at = case when %(reset)s then now()
+                        else coalesce(summary_jobs.next_try_at, now()) end,
+                   attempts   = case when %(reset)s then 0
+                        else summary_jobs.attempts end,
+                   last_error = case when %(reset)s then null
+                        else summary_jobs.last_error end,
+                   done_at    = null
+        """, {"season": season, "week": week, "reset": reset})
+
+
+def claim_summary_jobs(conn, season=None, week=None):
+    """Take every job that is due, in one statement, and say what was taken.
+
+    The claim and the has-it-been-written check are deliberately the same
+    statement. Read, decide, then call leaves a gap that two processes can
+    both walk through -- the pinger and an admin pressing save in the same
+    second -- and each of them spends a call writing the same week.
+
+    Claiming advances the schedule rather than clearing it. A process that
+    dies mid-write -- which on this host means any quarter of an hour nobody
+    is looking -- then leaves the job due again at the next slot, instead of
+    stranded with nothing left to wake it.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+    where, args = "", {"soon": retry_at(1, now), "later": retry_at(2, now)}
+    if season is not None:
+        where = " and j.season_year = %(season)s and j.week = %(week)s"
+        args.update(season=season, week=week)
+    with conn.cursor() as cur:
+        cur.execute("""
+            update summary_jobs j
+               set attempts = j.attempts + 1,
+                   last_tried_at = now(),
+                   next_try_at = case when j.attempts = 0
+                                      then %(soon)s::timestamptz
+                                      else %(later)s::timestamptz end
+             where j.next_try_at is not null
+               and j.next_try_at <= now()
+               and not exists (select 1 from summaries s
+                                where s.season_year = j.season_year
+                                  and s.kind = j.kind and s.week = j.week)
+        """ + where + """
+            returning j.season_year, j.week, j.attempts
+        """, args)
+        return cur.fetchall()
+
+
+def finish_summary_job(conn, season, week, error=None, again=True):
+    """Record how an attempt went.
+
+    Success closes the job. A failure worth repeating keeps the schedule the
+    claim already advanced; one that is not -- a spent daily quota, a refused
+    prompt, a bug in the prompt builder -- stops there, because the next
+    twenty-five attempts would be the same refusal twenty-five times over and
+    the only thing they would fill is the log.
+    """
+    with conn.cursor() as cur:
+        if error is None:
+            cur.execute("""
+                update summary_jobs
+                   set next_try_at = null, last_error = null, done_at = now()
+                 where season_year = %s and kind = 'week' and week = %s
+            """, (season, week))
+        else:
+            cur.execute("""
+                update summary_jobs
+                   set last_error = %s""" +
+                ("" if again else ", next_try_at = null") + """
+                 where season_year = %s and kind = 'week' and week = %s
+            """, (error, season, week))
 
 
 def week_summary_state(conn, season, week):
@@ -6968,6 +7106,10 @@ def week_summary_state(conn, season, week):
     published, or there is nothing -- and in that last case whether the week
     is finished decides between "not yet" and "not going to happen on its
     own".
+
+    The job's side of it rides along, because "that failed" and "it goes
+    again at twenty past" are one sentence to read and were two things to
+    look up.
     """
     rows = query(conn, """
         select summary_id, body, model, generated_at, published_at
@@ -6976,17 +7118,73 @@ def week_summary_state(conn, season, week):
         order by (published_at is not null) desc, generated_at desc
         limit 1
     """, (season, week))
+    jobs = query(conn, """
+        select attempts, last_error, last_tried_at, next_try_at
+        from summary_jobs
+        where season_year = %s and kind = 'week' and week = %s
+    """, (season, week))
+    job = jobs[0] if jobs else None
     with _writing_lock:
         busy = (season, week) in _writing
-        failed = _write_failed.get((season, week))
     row = rows[0] if rows else None
     if row:
         state = "published" if row["published_at"] else "draft"
     else:
         state = "writing" if busy else "none"
-    return {"state": state, "row": row, "writing": busy, "failed": failed,
+    # The job is only worth reporting while there is nothing written. A week
+    # that has an account does not want a stale failure above it, whatever
+    # eventually wrote it.
+    return {"state": state, "row": row, "writing": busy,
+            "failed": job["last_error"] if job and not row else None,
+            "retry_at": job["next_try_at"] if job and not row else None,
+            "attempts": job["attempts"] if job else 0,
             "complete": week_is_complete(conn, season, week),
             "have_key": summaries.available()}
+
+
+def run_summary_job(season, week):
+    """Write one week's account on a thread, and record how it went.
+
+    Off the request thread wherever it is called from. The call takes the
+    best part of a minute; the admin who entered the scores would otherwise
+    sit through it, and Render would very likely time the request out first.
+    """
+    with _writing_lock:
+        if (season, week) in _writing:
+            return False
+        _writing.add((season, week))
+
+    def run():
+        try:
+            with get_db() as conn:
+                write_one_summary(conn, season, "week", week)
+            with get_db() as conn:
+                finish_summary_job(conn, season, week)
+            log.info("wrote the week %s summary for %s", week, season)
+        except Exception as e:
+            # summaries.ask() has already decided which failures are worth
+            # repeating and spent its own three goes on them. Anything else
+            # -- a 400, a blocked prompt, a bug in here -- fails the same way
+            # every time, so it is not asked again.
+            again = (isinstance(e, summaries.SummaryError)
+                     and getattr(e, "retryable", False))
+            log.exception("could not write the week %s summary for %s (%s)",
+                          week, season,
+                          "will try again" if again else "giving up")
+            try:
+                with get_db() as conn:
+                    finish_summary_job(conn, season, week,
+                                       error=str(e)[:300], again=again)
+            except Exception:
+                log.exception("could not record the failed week %s summary "
+                              "for %s", week, season)
+        finally:
+            with _writing_lock:
+                _writing.discard((season, week))
+
+    threading.Thread(target=run, name="summary-%s-w%s" % (season, week),
+                     daemon=True).start()
+    return True
 
 
 def queue_week_summary(season, week, force=False):
@@ -7003,54 +7201,39 @@ def queue_week_summary(season, week, force=False):
       - the week must be complete, so a half-entered week does not get an
         account of the three games that were in it;
       - and there must be no summary for that week already. Scores get
-        corrected, and the free tier allows twenty calls a day. Without this
-        an afternoon of fixing a typo would spend the week's quota on twelve
-        accounts of the same six games.
+        corrected, and without this an afternoon of fixing a typo would
+        write twelve accounts of the same six games.
 
-    Off the request thread. The call takes the best part of a minute and the
-    admin who entered the scores would otherwise sit through it, and Render
-    would very likely time the request out first. The cost is that a process
-    which spins down mid-write leaves nothing behind -- so the page says so,
-    and writing one by hand is a button.
+    `force` is the admin asking again: it skips the third guard and puts the
+    retry ladder back to the beginning.
     """
     if not summaries.available():
         return False
     with get_db() as conn:
         if not week_is_complete(conn, season, week):
             return False
-        if not force:
-            existing = query(conn, """
-                select 1 from summaries
-                where season_year = %s and kind = 'week' and week = %s limit 1
-            """, (season, week))
-            if existing:
-                return False
-
-    with _writing_lock:
-        if (season, week) in _writing:
+        if not force and summary_exists(conn, season, week):
             return False
-        _writing.add((season, week))
-        _write_failed.pop((season, week), None)
+        open_summary_job(conn, season, week, reset=force)
+        claimed = claim_summary_jobs(conn, season, week)
+    if not claimed:
+        return False
+    return run_summary_job(season, week)
 
-    def run():
-        try:
-            with get_db() as conn:
-                write_one_summary(conn, season, "week", week)
-            log.info("wrote the week %s summary for %s", week, season)
-            with _writing_lock:
-                _write_failed.pop((season, week), None)
-        except Exception as e:
-            log.exception("could not write the week %s summary for %s",
-                          week, season)
-            with _writing_lock:
-                _write_failed[(season, week)] = str(e)[:300]
-        finally:
-            with _writing_lock:
-                _writing.discard((season, week))
 
-    threading.Thread(target=run, name="summary-%s-w%s" % (season, week),
-                     daemon=True).start()
-    return True
+def run_due_summaries():
+    """Start every account that is due. What the pinger calls.
+
+    Returns what it started rather than a count, because the one thing worth
+    seeing in a task log is which week it was.
+    """
+    if not summaries.available():
+        return []
+    with get_db() as conn:
+        due = claim_summary_jobs(conn)
+    return [{"season": j["season_year"], "week": j["week"],
+             "attempt": j["attempts"]}
+            for j in due if run_summary_job(j["season_year"], j["week"])]
 
 
 # What can be written, in the order the page offers it. The label is what an
@@ -7290,6 +7473,11 @@ async def admin_summary_generate(request: Request):
             return RedirectResponse(
                 url=summaries_url(season, kind, week, error=str(e)),
                 status_code=303)
+        # Written by hand is still written: a week with an account has
+        # nothing left to retry, and a job still ticking would put a stale
+        # failure above it on the scores page.
+        if kind == "week":
+            finish_summary_job(conn, season, week)
 
     what = {"preview": "the %s preview" % season,
             "season": "the %s recap" % season}.get(kind, "the week %s recap" % week)
@@ -8143,6 +8331,42 @@ async def admin_schedule_save(request: Request):
     return RedirectResponse(
         url=f"/admin/schedule?season={season}&msg=" +
             quote(f"{len(rows)} matchups saved"), status_code=303)
+
+
+@app.post("/tasks/summaries")
+async def tasks_summaries(request: Request):
+    """Start whatever week's account is due. Called by a clock, not a person.
+
+    Render's free tier has no scheduler, so the clock is outside: a GitHub
+    Action posts here every five minutes. That it also wakes the app from its
+    spin-down is a second benefit rather than the point -- a cold start adds
+    half a minute to whichever ping lands first and nothing else changes.
+
+    Behind a shared secret rather than the admin session, because there is
+    nobody signed in. The secret is compared in constant time; it guards a
+    thing that spends money, and an endpoint that answers a wrong token
+    faster than a nearly-right one is an endpoint that will eventually tell
+    somebody the token.
+
+    Nothing here decides anything. Whether a week is due, and whether it has
+    already been written, are settled by the claim in claim_summary_jobs --
+    so a ping that arrives twice, or two that arrive at once, cost one call
+    between them.
+    """
+    token = os.environ.get("TASKS_TOKEN")
+    if not token:
+        # Not an error worth alarming about: it means this deployment has no
+        # clock wired up, which is the normal state of a laptop.
+        raise HTTPException(status_code=503,
+                            detail="No TASKS_TOKEN is set in this environment")
+    sent = request.headers.get("x-tasks-token") or ""
+    if not hmac.compare_digest(sent, token):
+        raise HTTPException(status_code=403, detail="Bad task token")
+    started = run_due_summaries()
+    if started:
+        log.info("task: started %d summar%s: %s", len(started),
+                 "y" if len(started) == 1 else "ies", started)
+    return {"started": started}
 
 
 @app.get("/health-check-tail")

@@ -1,0 +1,41 @@
+# The clock for the week's account.
+#
+# Render's free tier has no scheduler, so this is it. It posts to
+# /tasks/summaries, which starts whatever week is due a retry and does
+# nothing at all the rest of the time -- which is almost always.
+#
+# Five minutes is GitHub's floor and the schedule is best-effort: a run can
+# land ten or fifteen minutes late when Actions is busy, and one can be
+# skipped outright. That is fine here. The retry ladder in app/main.py is
+# "no earlier than", not "at", and a late ping only means a late attempt.
+name: Week summaries
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  # So it can be prodded by hand without waiting for the next slot.
+  workflow_dispatch:
+
+# One at a time. Two overlapping runs would be harmless -- the claim in
+# claim_summary_jobs settles which of them gets the week -- but there is no
+# reason to pay for finding that out.
+concurrency:
+  group: week-summaries
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the app what is due
+        env:
+          TASKS_TOKEN: ${{ secrets.TASKS_TOKEN }}
+        run: |
+          # --max-time is generous because the first ping after a spin-down
+          # waits on a cold start. The endpoint itself answers immediately:
+          # it starts the write on a thread rather than doing it here.
+          curl --fail-with-body --silent --show-error \
+               --max-time 120 \
+               --request POST \
+               --header "x-tasks-token: $TASKS_TOKEN" \
+               "https://wethenorth.onrender.com/tasks/summaries"

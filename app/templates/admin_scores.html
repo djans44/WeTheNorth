@@ -179,7 +179,15 @@
        and the only place the refusal surfaced was the summaries page, which
        asks Gemini on the request and can hand the error straight back. #}
     {% if account.failed and not account.writing %}
-      <p class="note error">The last attempt did not finish: {{ account.failed }}</p>
+      {# What happens next, not merely that something went wrong. The answer
+         is usually "nothing you need to do", and a bare error reads as the
+         opposite -- it sends an admin to the button for something the app
+         has already scheduled. #}
+      <p class="note error">Attempt {{ account.attempts }} did not finish:
+        {{ account.failed }}
+        {%- if account.retry_at %} <b>Trying again at
+          {{ account.retry_at|league_clock }}.</b>
+        {%- else %} <b>Nothing more will be tried tonight.</b>{% endif %}</p>
     {% endif %}
 
     {% if account.writing %}
@@ -259,9 +267,10 @@
         <input type="hidden" name="week" value="{{ week }}">
         <input type="hidden" name="mode" value="{{ mode }}">
         <p class="note">{% if account.failed %}Saving the week set one going
-          and it did not finish, so there is nothing here yet.{% else %}Nothing
-          has been written about this week. It normally happens on its own
-          when the last score is saved.{% endif %}</p>
+          and it did not finish, so there is nothing here yet. This starts the
+          attempts over from the beginning.{% else %}Nothing has been written
+          about this week. It normally happens on its own when the last score
+          is saved.{% endif %}</p>
         <div class="actionrow">
           <button type="submit" class="seal">Write the week {{ week }} account</button>
         </div>
