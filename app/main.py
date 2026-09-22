@@ -5066,6 +5066,49 @@ def sign_contract(cur, sub, adp_round):
     return cur.fetchone()["contract_id"]
 
 
+def sync_keeper_selections(conn, season):
+    """Rebuild a season's keeper archive from its approved submissions.
+
+    keeper_selections is what the league kept, and eleven things read it:
+    eligibility, the four season maximum, the draft board, Three Oaths
+    Sworn. Nothing in the app had ever written it -- only two hand-run
+    import scripts -- so 2026 resolved three keeper rounds and left the
+    archive empty.
+
+    Derived rather than kept in step. A submission can be approved, edited,
+    rejected or deleted from four routes, and a parallel record would have to
+    be corrected in all four; miss one and the two drift, which is exactly
+    the kind of silence this table failed in. Rebuilding is idempotent, so
+    running it twice is running it once and running it after anything is
+    always right.
+
+    keeper_year counts seasons before this one, so a rebuild of an earlier
+    season does not read its own output.
+    """
+    rows = query(conn, """
+        select s.owner_id, s.player_id, s.cost_round, s.contract_id,
+               t.team_id,
+               coalesce((select max(ks.keeper_year) from keeper_selections ks
+                          where ks.player_id = s.player_id
+                            and ks.season_year < %(y)s), 0) + 1 as keeper_year
+        from keeper_submissions s
+        join teams t on t.owner_id = s.owner_id and t.season_year = s.season_year
+        where s.season_year = %(y)s and s.status = 'approved'
+          and s.player_id is not null
+    """, {"y": season})
+    with conn.cursor() as cur:
+        cur.execute("delete from keeper_selections where season_year = %s", (season,))
+        for r in rows:
+            cur.execute("""
+                insert into keeper_selections
+                    (season_year, team_id, player_id, cost_round,
+                     keeper_year, contract_id)
+                values (%s, %s, %s, %s, %s, %s)
+            """, (season, r["team_id"], r["player_id"], r["cost_round"],
+                  r["keeper_year"], r["contract_id"]))
+    return len(rows)
+
+
 def refresh_keeper_crests(conn, season):
     """Two crests are made of keeper data: Oathbreaker counts voids and Three
     Oaths Sworn counts contracts held at once. Both were only ever recomputed
@@ -5095,6 +5138,10 @@ async def admin_keeper_resolve(request: Request):
     with get_db() as conn:
         actions, err = resolve_keeper_phase(conn, season, phase, apply=True)
         if not err:
+            # Resolution approves the automatic rows outright -- a contract
+            # being kept, a forfeit -- so the archive moves with it.
+            sync_keeper_selections(conn, season)
+            conn.commit()
             # Selections have just become real, so Three Oaths Sworn may have
             # changed for whoever a contract landed on.
             refresh_keeper_crests(conn, season)
@@ -5170,6 +5217,10 @@ async def admin_keeper_review(request: Request):
                         where submission_id = %s and season_year = %s
                     """, (int(sid), season))
         conn.commit()
+        # The archive is derived from what is approved, so every route that
+        # changes that has to say so. This is one of four.
+        sync_keeper_selections(conn, season)
+        conn.commit()
 
     n = len(chosen)
     word = "approved" if approve else "rejected and reopened"
@@ -5221,6 +5272,8 @@ async def admin_keeper_edit(request: Request):
                     delete from keeper_submissions where submission_id = %s
                 """, (sid,))
             conn.commit()
+            sync_keeper_selections(conn, season)
+            conn.commit()
             return RedirectResponse(
                 url=f"/admin/keepers?season={season}&msg=" +
                     quote("Submission removed, that keeper round is open again"),
@@ -5246,6 +5299,8 @@ async def admin_keeper_edit(request: Request):
                         note = %s, reviewed_by = %s, reviewed_at = now()
                     where submission_id = %s
                 """, (note, me, sid))
+            conn.commit()
+            sync_keeper_selections(conn, season)
             conn.commit()
             return RedirectResponse(
                 url=f"/admin/keepers?season={season}&msg=" +
@@ -5288,6 +5343,8 @@ async def admin_keeper_edit(request: Request):
                     reviewed_by = %s, reviewed_at = now()
                 where submission_id = %s
             """, picked + (origin, status, note, me, sid))
+        conn.commit()
+        sync_keeper_selections(conn, season)
         conn.commit()
 
     return RedirectResponse(
