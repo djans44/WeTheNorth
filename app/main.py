@@ -7346,7 +7346,7 @@ def summaries_url(season, kind, week=None, msg="", error=""):
 
 
 @app.get("/admin/summaries", response_class=HTMLResponse)
-def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
+def admin_summaries(request: Request, season: int = 0, kind: str = "",
                     week: int = 0, msg: str = "", error: str = ""):
     """One thing written about at a time: what exists for it, and what can be
     done to it.
@@ -7358,7 +7358,10 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
     """
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admins only")
-    if kind not in dict(SUMMARY_KINDS):
+    # An empty kind is not a bad kind: it is the nav link, which does not
+    # say, and the season chooses below. Anything else unrecognised is a
+    # typo in a URL and lands on the preview as it always did.
+    if kind and kind not in dict(SUMMARY_KINDS):
         kind = "preview"
 
     with get_db() as conn:
@@ -7423,6 +7426,26 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "preview",
         """, (season,))
         final = final[0] if final else {"drawn": 0, "played": 0}
         finished = bool(final["played"])
+
+        # Which target to open on, when the link did not say. The page
+        # used to open on the preview every time, which is the right answer
+        # in August and the wrong one from September on: by then the preview
+        # has been published for a month and what actually wants doing is
+        # last week's account.
+        #
+        # The newest week not finished with -- nothing written about it, or
+        # a draft nobody has published yet -- because that is what somebody
+        # came here to deal with. Then the recap, once there is a finished
+        # year to recap. Then the preview, which is where a season with no
+        # scores starts anyway.
+        if not kind:
+            kind = "preview"
+            wants = [w for w in weeks
+                     if w not in week_state or "draft" in week_state[w]]
+            if wants:
+                kind, week = "week", wants[-1]
+            elif finished and tally["season"] != "published":
+                kind = "season"
 
         # A week has to be chosen before there is a target at all. Landing on
         # the newest week with scores beats landing on nothing.

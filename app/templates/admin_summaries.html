@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import leaf, retryline %}
+{% from "macros.html" import leaf, retryline, waitingnote %}
 {% block title %}Summaries {{ season }} | We the north{% endblock %}
 
 {% block content %}
@@ -74,8 +74,8 @@
        admin lands on after a failure and it used to be the one place the
        retry was invisible. #}
     {% if account and account.writing %}
-      <p class="note waiting">Week {{ week }} is being written right now.
-        It takes about half a minute.</p>
+      {% set here = "/admin/summaries?season=" ~ season ~ "&kind=week&week=" ~ week %}
+      {{ waitingnote(here, "Week " ~ week ~ " is being written") }}
     {% else %}
       {{ retryline(account) }}
     {% endif %}

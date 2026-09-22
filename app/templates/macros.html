@@ -403,3 +403,23 @@
       {%- else %} <b>Nothing more will be tried tonight.</b>{% endif %}</p>
   {% endif %}
 {% endmacro %}
+
+
+{# A write that is happening somewhere this page cannot hear.
+
+   The account is written on a background thread, so the page saying so has
+   no way to learn that it finished -- it used to ask the reader to click a
+   link and guess when. data-recheck makes it look again on its own, a
+   bounded number of times, and app.js explains why the bound matters: the
+   writing mark is process-local, so a process that restarts mid-sentence
+   forgets it was writing and an unbounded page would reload for ever.
+
+   The link is in the markup whatever happens, because it is what is left
+   after the looks run out. Shared so that the two pages which wait on the
+   same thread wait in the same way -- the summaries page had no recheck at
+   all and left the reader refreshing by hand. #}
+{% macro waitingnote(href, what) %}
+  <p class="note waiting" data-recheck="6">{{ what }}. It takes about half a
+    minute, and this page will look again on its own &mdash; or
+    <a href="{{ href }}">look now</a>.</p>
+{% endmacro %}

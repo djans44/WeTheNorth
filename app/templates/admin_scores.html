@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import leaf, retryline %}
+{% from "macros.html" import leaf, retryline, waitingnote %}
 {% block title %}Enter scores | We the North{% endblock %}
 
 {% block content %}
@@ -181,11 +181,10 @@
     {% if not account.writing %}{{ retryline(account) }}{% endif %}
 
     {% if account.writing %}
-      <p class="note waiting" data-recheck="6">{% if account.row %}A new one is
-        being written{% else %}Being written now{% endif %}. It takes about
-        half a minute, and this page will look again on its own &mdash; or
-        <a href="/admin/scores?season={{ season }}&week={{ week }}&mode={{ mode }}#account">look
-        now</a>.</p>
+      {% set here = "/admin/scores?season=" ~ season ~ "&week=" ~ week
+                    ~ "&mode=" ~ mode ~ "#account" %}
+      {{ waitingnote(here, "A new one is being written" if account.row
+                           else "Being written now") }}
     {% endif %}
 
     {% if account.row %}
