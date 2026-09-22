@@ -6951,6 +6951,13 @@ def week_is_complete(conn, season, week):
 # rather than that nothing was written, and if the process is restarted
 # mid-sentence then nothing was written, which is what an empty set says.
 _writing = set()
+# And which ones tried and failed. The write happens on a thread, so the
+# request that started it is long answered by the time Gemini refuses --
+# the failure used to go to the log and nowhere else, and the scores page
+# went back to offering the button as though nothing had been attempted.
+# Process-local for the same reason _writing is: a restart forgetting that
+# a write failed is a restart during which nothing was written.
+_write_failed = {}
 _writing_lock = threading.Lock()
 
 
@@ -6971,12 +6978,13 @@ def week_summary_state(conn, season, week):
     """, (season, week))
     with _writing_lock:
         busy = (season, week) in _writing
+        failed = _write_failed.get((season, week))
     row = rows[0] if rows else None
     if row:
         state = "published" if row["published_at"] else "draft"
     else:
         state = "writing" if busy else "none"
-    return {"state": state, "row": row, "writing": busy,
+    return {"state": state, "row": row, "writing": busy, "failed": failed,
             "complete": week_is_complete(conn, season, week),
             "have_key": summaries.available()}
 
@@ -7022,15 +7030,20 @@ def queue_week_summary(season, week, force=False):
         if (season, week) in _writing:
             return False
         _writing.add((season, week))
+        _write_failed.pop((season, week), None)
 
     def run():
         try:
             with get_db() as conn:
                 write_one_summary(conn, season, "week", week)
             log.info("wrote the week %s summary for %s", week, season)
-        except Exception:
+            with _writing_lock:
+                _write_failed.pop((season, week), None)
+        except Exception as e:
             log.exception("could not write the week %s summary for %s",
                           week, season)
+            with _writing_lock:
+                _write_failed[(season, week)] = str(e)[:300]
         finally:
             with _writing_lock:
                 _writing.discard((season, week))
