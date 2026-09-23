@@ -8,6 +8,7 @@ The request is one POST with a JSON body, the project carries twenty-odd
 dependencies and no HTTP client beyond urllib, and adding an SDK to Render for
 one endpoint would cost more than it saves.
 """
+import datetime
 import json
 import logging
 import os
@@ -208,7 +209,13 @@ class SummaryError(Exception):
 # watching it, so a couple of retries here is the difference between usually
 # working and usually not.
 RETRY_ON = (429, 500, 502, 503, 504)
-ATTEMPTS = 3
+
+# Two, not three. This was three while a refused call was believed to cost
+# nothing, and on 22 September that turned out to be wrong: the day's quota
+# went while every single call was failing, which cannot happen unless a
+# refusal is billed. Three tries per attempt against a ladder that runs all
+# evening is a multiplier nobody reading either piece would notice.
+ATTEMPTS = 2
 BACKOFF = 8
 
 
@@ -247,6 +254,13 @@ def ask(prompt, temperature=0.95):
     raise last
 
 
+def _next_utc_midnight(now=None):
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    return (now.astimezone(datetime.timezone.utc)
+            + datetime.timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0)
+
+
 def _ask_once(prompt, temperature):
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
@@ -279,13 +293,22 @@ def _ask_once(prompt, temperature):
                         daily = True
                         detail = ("The free tier allows %s requests a day for "
                                   "%s and today's are gone. It resets at "
-                                  "midnight Pacific."
+                                  "midnight UTC."
                                   % (v.get("quotaValue", "a limited number"),
                                      MODEL))
         except Exception:
             pass
         err = SummaryError("Gemini returned %s. %s" % (e.code, detail[:200]))
         err.retryable = e.code in RETRY_ON and not daily
+        # Not retryable now, but not hopeless either: a day's allowance comes
+        # back at a known moment, so say when instead of only saying no. The
+        # caller schedules to it -- see retry_at in main.
+        #
+        # Midnight UTC, which is eight in the evening in Toronto. It was
+        # written here as midnight Pacific and that was a guess: on 22
+        # September the quota went at 15:53 and a call at 23:34 worked, which
+        # rules out a reset at three the following morning and fits this one.
+        err.resets_at = _next_utc_midnight() if daily else None
         raise err
     except Exception as e:
         # A timeout or a dropped connection is worth one more go.

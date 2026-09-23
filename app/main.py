@@ -6978,11 +6978,17 @@ def week_is_complete(conn, season, week):
 _writing = set()
 _writing_lock = threading.Lock()
 
-# Soon once, then twice an hour. A 503 is usually over in minutes, so the
-# first retry sits close behind the failure; after that there is nothing to
-# be gained by asking more often than every half hour.
+# Soon once, then hourly. A 503 is usually over in minutes, so the first
+# retry sits close behind the failure; after that there is nothing to be
+# gained by asking often, and rather a lot to be lost -- every call is
+# billed against the day's allowance whether or not it returns anything,
+# which is the lesson of 22 September.
 FIRST_RETRY = datetime.timedelta(minutes=10)
-THEN_RETRY = datetime.timedelta(minutes=30)
+THEN_RETRY = datetime.timedelta(hours=1)
+
+# A reset is a boundary somebody else is crossing. Landing on it to the
+# second is asking to be refused one more time for the sake of three minutes.
+QUOTA_CUSHION = datetime.timedelta(minutes=3)
 
 
 def retry_at(attempts, now=None):
@@ -7000,12 +7006,37 @@ def retry_at(attempts, now=None):
     """
     now = now or datetime.datetime.now(datetime.timezone.utc)
     nxt = now + (FIRST_RETRY if attempts <= 1 else THEN_RETRY)
-    # Midnight at the end of the league's own day, not the server's: the
-    # difference is five hours, and the wrong one of them stops the retries
-    # at seven in the evening.
-    midnight = (now.astimezone(LEAGUE_TZ) + datetime.timedelta(days=1)).replace(
+    return nxt if nxt < league_midnight(now) else None
+
+
+def league_midnight(now=None):
+    """The end of the league's own day, as an instant.
+
+    The league's, not the server's: the difference is five hours and the
+    wrong one of them stops the retries at seven in the evening.
+    """
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    return (now.astimezone(LEAGUE_TZ) + datetime.timedelta(days=1)).replace(
         hour=0, minute=0, second=0, microsecond=0)
-    return nxt if nxt < midnight else None
+
+
+def resume_at(resets, now=None):
+    """When a spent day's allowance can be tried again, or None if not today.
+
+    A quota is not a failure to back away from but a wait for a known hour,
+    and the two want opposite handling. Backing off doubles towards a moment
+    it cannot see; this schedules straight to it.
+
+    It earns its place from 22 September, when the allowance went at 15:53
+    and came back at eight in the evening. The job stopped at the first
+    refusal and the four working hours after the reset went unused, so the
+    week's account was written by hand at half past eleven.
+    """
+    if not resets:
+        return None
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    when = max(resets, now) + QUOTA_CUSHION
+    return when if when < league_midnight(now) else None
 
 
 def summary_exists(conn, season, week):
@@ -7074,14 +7105,19 @@ def claim_summary_jobs(conn, season=None, week=None):
         return cur.fetchall()
 
 
-def finish_summary_job(conn, season, week, error=None, again=True):
+def finish_summary_job(conn, season, week, error=None, again=True, at=None):
     """Record how an attempt went.
 
-    Success closes the job. A failure worth repeating keeps the schedule the
-    claim already advanced; one that is not -- a spent daily quota, a refused
-    prompt, a bug in the prompt builder -- stops there, because the next
-    twenty-five attempts would be the same refusal twenty-five times over and
-    the only thing they would fill is the log.
+    Success closes the job. Three ways a failure can end:
+
+      - `at` names an hour to resume from, which is the spent daily quota
+        saying when it comes back. Straight to it, rather than laddering
+        towards a moment that is already known.
+      - a failure worth repeating keeps the schedule the claim advanced.
+      - one that is not -- a refused prompt, a bug in the prompt builder --
+        stops there, because the next twenty-five attempts would be the same
+        refusal twenty-five times over and the only thing they would fill is
+        the log.
     """
     with conn.cursor() as cur:
         if error is None:
@@ -7090,6 +7126,12 @@ def finish_summary_job(conn, season, week, error=None, again=True):
                    set next_try_at = null, last_error = null, done_at = now()
                  where season_year = %s and kind = 'week' and week = %s
             """, (season, week))
+        elif at is not None:
+            cur.execute("""
+                update summary_jobs
+                   set last_error = %s, next_try_at = %s
+                 where season_year = %s and kind = 'week' and week = %s
+            """, (error, at, season, week))
         else:
             cur.execute("""
                 update summary_jobs
@@ -7182,7 +7224,8 @@ def note_failed_attempt(conn, season, week, err):
     open_summary_job(conn, season, week)
     claim_summary_jobs(conn, season, week)
     finish_summary_job(conn, season, week, error=str(err)[:300],
-                       again=getattr(err, "retryable", False))
+                       again=getattr(err, "retryable", False),
+                       at=resume_at(getattr(err, "resets_at", None)))
 
 
 def run_summary_job(season, week):
@@ -7214,18 +7257,22 @@ def spawn_summary_write(season, week):
             log.info("wrote the week %s summary for %s", week, season)
         except Exception as e:
             # summaries.ask() has already decided which failures are worth
-            # repeating and spent its own three goes on them. Anything else
-            # -- a 400, a blocked prompt, a bug in here -- fails the same way
-            # every time, so it is not asked again.
+            # repeating and spent its own goes on them. Anything else -- a
+            # 400, a blocked prompt, a bug in here -- fails the same way every
+            # time, so it is not asked again. The exception is a spent day's
+            # allowance, which is not retryable now and perfectly retryable
+            # after eight, and says so by carrying the hour it comes back.
             again = (isinstance(e, summaries.SummaryError)
                      and getattr(e, "retryable", False))
+            at = resume_at(getattr(e, "resets_at", None))
             log.exception("could not write the week %s summary for %s (%s)",
                           week, season,
+                          "waiting for the quota" if at else
                           "will try again" if again else "giving up")
             try:
                 with get_db() as conn:
                     finish_summary_job(conn, season, week,
-                                       error=str(e)[:300], again=again)
+                                       error=str(e)[:300], again=again, at=at)
             except Exception:
                 log.exception("could not record the failed week %s summary "
                               "for %s", week, season)
