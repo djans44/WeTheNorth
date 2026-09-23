@@ -7039,6 +7039,47 @@ def resume_at(resets, now=None):
     return when if when < league_midnight(now) else None
 
 
+def begin_attempt(conn, season, week, source):
+    """Open the record of one call, and return its id.
+
+    Written and committed before the call rather than after it, so that a
+    process which goes away mid-sentence -- the ordinary end of a quiet
+    quarter of an hour here -- leaves a row with a start and no finish. That
+    is a fact worth having; the alternative is no row at all and a gap
+    nobody can tell from nothing having been tried.
+    """
+    with conn.cursor() as cur:
+        cur.execute("""
+            insert into summary_attempts (season_year, kind, week,
+                                          attempt_no, source)
+            values (%(season)s, 'week', %(week)s,
+                    (select attempts from summary_jobs
+                      where season_year = %(season)s and kind = 'week'
+                        and week = %(week)s),
+                    %(source)s)
+            returning attempt_id
+        """, {"season": season, "week": week, "source": source})
+        return cur.fetchone()["attempt_id"]
+
+
+def end_attempt(conn, attempt_id, err=None):
+    """Close the record of one call. `err` is the failure, or None if it wrote."""
+    if attempt_id is None:
+        return
+    with conn.cursor() as cur:
+        cur.execute("""
+            update summary_attempts
+               set finished_at = now(), outcome = %s, error = %s,
+                   retryable = %s, resets_at = %s, calls = %s
+             where attempt_id = %s
+        """, ("failed" if err is not None else "written",
+              str(err)[:300] if err is not None else None,
+              getattr(err, "retryable", None) if err is not None else None,
+              getattr(err, "resets_at", None) if err is not None else None,
+              getattr(err, "calls", None) if err is not None else None,
+              attempt_id))
+
+
 def summary_exists(conn, season, week):
     return bool(query(conn, """
         select 1 from summaries
@@ -7204,7 +7245,7 @@ def stop_writing(season, week):
         _writing.discard((season, week))
 
 
-def note_failed_attempt(conn, season, week, err):
+def note_failed_attempt(conn, season, week, err, attempt=None):
     """Record a hand-written attempt that failed, as a scheduled one would be.
 
     The summaries page calls Gemini on the request and hands the error
@@ -7219,24 +7260,27 @@ def note_failed_attempt(conn, season, week, err):
     """
     if summary_exists(conn, season, week):
         # Something wrote one while this call was busy failing. There is
-        # nothing left to retry and the error is no longer about anything.
+        # nothing left to retry and the error is no longer about anything --
+        # but the call was still made and still cost, so it is still recorded.
+        end_attempt(conn, attempt, err)
         return
     open_summary_job(conn, season, week)
     claim_summary_jobs(conn, season, week)
+    end_attempt(conn, attempt, err)
     finish_summary_job(conn, season, week, error=str(err)[:300],
                        again=getattr(err, "retryable", False),
                        at=resume_at(getattr(err, "resets_at", None)))
 
 
-def run_summary_job(season, week):
+def run_summary_job(season, week, source="schedule"):
     """Take the week and write it. False if something else already holds it."""
     if not start_writing(season, week):
         return False
-    spawn_summary_write(season, week)
+    spawn_summary_write(season, week, source)
     return True
 
 
-def spawn_summary_write(season, week):
+def spawn_summary_write(season, week, source="schedule"):
     """Write one week's account on a thread, and record how it went.
 
     Off the request thread wherever it is called from. The call takes the
@@ -7249,10 +7293,20 @@ def spawn_summary_write(season, week):
     thread releases the mark on its way out.
     """
     def run():
+        attempt = None
+        try:
+            with get_db() as conn:
+                attempt = begin_attempt(conn, season, week, source)
+        except Exception:
+            # A missing record is not a reason to skip the write it would
+            # have described.
+            log.exception("could not open the attempt record for %s week %s",
+                          season, week)
         try:
             with get_db() as conn:
                 write_one_summary(conn, season, "week", week)
             with get_db() as conn:
+                end_attempt(conn, attempt)
                 finish_summary_job(conn, season, week)
             log.info("wrote the week %s summary for %s", week, season)
         except Exception as e:
@@ -7271,6 +7325,7 @@ def spawn_summary_write(season, week):
                           "will try again" if again else "giving up")
             try:
                 with get_db() as conn:
+                    end_attempt(conn, attempt, e)
                     finish_summary_job(conn, season, week,
                                        error=str(e)[:300], again=again, at=at)
             except Exception:
@@ -7283,7 +7338,7 @@ def spawn_summary_write(season, week):
                      daemon=True).start()
 
 
-def queue_week_summary(season, week, force=False):
+def queue_week_summary(season, week, force=False, source="scores"):
     """Write a week's account off the back of the scores that finished it.
 
     Entering scores is the moment a week becomes something there is anything
@@ -7323,7 +7378,7 @@ def queue_week_summary(season, week, force=False):
             open_summary_job(conn, season, week, reset=force)
             if not claim_summary_jobs(conn, season, week):
                 return False
-        spawn_summary_write(season, week)
+        spawn_summary_write(season, week, source)
         started = True
         return True
     finally:
@@ -7610,12 +7665,20 @@ async def admin_summary_generate(request: Request):
     # The same week can be on its way from the clock at this moment. Refused
     # rather than run alongside: two calls would be paid for and the slower
     # one's draft would delete the faster one's on the way in.
+    attempt = None
     if kind == "week" and not start_writing(season, week):
         return RedirectResponse(
             url=summaries_url(season, kind, week,
                               error="Week %d is being written right now. Give "
                                     "it a moment and look again." % week),
             status_code=303)
+    if kind == "week":
+        try:
+            with get_db() as conn:
+                attempt = begin_attempt(conn, season, week, "summaries")
+        except Exception:
+            log.exception("could not open the attempt record for %s week %s",
+                          season, week)
     try:
         with get_db() as conn:
             try:
@@ -7627,7 +7690,7 @@ async def admin_summary_generate(request: Request):
                 log.warning("could not write the %s summary for %s%s: %s",
                             kind, season, " week %s" % week if week else "", e)
                 if kind == "week":
-                    note_failed_attempt(conn, season, week, e)
+                    note_failed_attempt(conn, season, week, e, attempt)
                 return RedirectResponse(
                     url=summaries_url(season, kind, week, error=str(e)),
                     status_code=303)
@@ -7635,6 +7698,7 @@ async def admin_summary_generate(request: Request):
             # nothing left to retry, and a job still ticking would put a
             # stale failure above it on the scores page.
             if kind == "week":
+                end_attempt(conn, attempt)
                 finish_summary_job(conn, season, week)
     finally:
         if kind == "week":

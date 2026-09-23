@@ -250,7 +250,14 @@ def ask(prompt, temperature=0.95):
             if again:
                 time.sleep(BACKOFF * (attempt + 1))
                 continue
+            # How many calls this cost. An attempt is not a call -- it is up
+            # to ATTEMPTS of them -- and that multiplier is what emptied the
+            # day's allowance faster than anyone reading either piece alone
+            # would have predicted. Carried on the error so the record of the
+            # attempt can say it.
+            e.calls = attempt + 1
             raise
+    last.calls = ATTEMPTS
     raise last
 
 
