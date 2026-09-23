@@ -681,9 +681,34 @@ def nav_unvoted(owner_id):
         return 0
 
 
+def nav_drafts():
+    """What the admin badge counts: summaries written and not yet published.
+
+    A draft is a thing in mid-decision -- somebody has to read it and either
+    put it in front of the league or throw it away -- and the only place that
+    showed was the summaries page, which you had to think to visit. A week's
+    account is written minutes after the scores go in and is worth reading
+    that evening; one sitting unread for a fortnight is what this is against.
+
+    Every season rather than the current one, because a draft left behind in
+    a year that has finished is exactly the kind nobody goes looking for.
+
+    Quiet about its own failures, like nav_unvoted: a count that cannot be
+    had is not a reason for the page around it to fall over.
+    """
+    try:
+        with get_db() as conn:
+            return query(conn, """
+                select count(*) as n from summaries where published_at is null
+            """)[0]["n"]
+    except Exception:
+        return 0
+
+
 templates.env.globals["nav_owners"] = nav_owners
 templates.env.globals["nav_seasons"] = nav_seasons
 templates.env.globals["nav_unvoted"] = nav_unvoted
+templates.env.globals["nav_drafts"] = nav_drafts
 
 
 def initials_for(username, last_name=None, override=None):

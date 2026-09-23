@@ -110,8 +110,16 @@
       </li>
       <li><a href="/rules" {% if path == '/rules' %}class="on"{% endif %}>Rules</a></li>
       {% if request.session.get("is_admin") %}
+      {# Drafts written and not yet published, the same count in both places:
+         on the parent, because twelve submenu items is too many to go
+         hunting through, and on the one item it is about, because a badge
+         that only says "something" makes you open the menu to find out
+         what. Gold like the assembly count and for the same reason --
+         nothing is wrong, there is something to decide. #}
+      {% set drafts = nav_drafts() %}
       <li class="has-menu">
-        <a href="/admin/scores" {% if path.startswith('/admin') %}class="on"{% endif %}>Admin</a>
+        <a href="/admin/scores" {% if path.startswith('/admin') %}class="on"{% endif %}>Admin{%
+           if drafts %}<span class="badge">{{ drafts }}</span>{% endif %}</a>
         {# Alphabetical by what the link says. The order used to be roughly
            how often each was reached for, which only works while one person
            remembers what that order was; eight items is past that. #}
@@ -126,7 +134,8 @@
           <li><a href="/admin/season-setup">New season</a></li>
           <li><a href="/admin/owners">Owners</a></li>
           <li><a href="/admin/rivals">Rivals</a></li>
-          <li><a href="/admin/summaries">Summaries</a></li>
+          <li><a href="/admin/summaries">Summaries{%
+            if drafts %}<span class="badge">{{ drafts }}</span>{% endif %}</a></li>
           <li><a href="/admin/transactions">Transactions</a></li>
         </ul>
       </li>
