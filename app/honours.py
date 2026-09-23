@@ -9,9 +9,10 @@ suffered it; a late pick belongs to whoever made it; a trade has two sides and
 each is its own candidate, so the vote decides who receives it rather than
 leaving that to be settled afterwards.
 
-Three of the four read a season that has been played. The fourth, the late
-pick, also needs the end-of-season roster, because the condition that makes it
-worth voting on is that the player was still there at the end.
+All four read a season as far as it has been played. The late pick used to
+need the end-of-season roster as well. It does not: a player nobody moved is
+still where the draft put him, and the assembly sits during the playoffs,
+weeks before those rosters are loaded.
 
 Nothing here writes. It reads a season and returns the four ballots.
 """
@@ -24,6 +25,14 @@ CLOSE = 10
 
 # Where the late rounds begin. Ten of thirteen, so the last four.
 LATE_FROM = 10
+
+# The last week of the regular season, and the week the late pick waits for.
+# Not because the answer changes much afterwards -- it barely does -- but
+# because before it the ballot is every late pick nobody has got round to
+# dropping yet, which in week two is thirty-six of them and in week fourteen
+# is the handful the crest is actually about. A ballot that wide is not a
+# shortlist, it is the draft board with the top nine rounds taken off.
+REGULAR_WEEKS = 14
 
 CODES = ("best_team_name", "draft_day", "trade_of_year", "worst_beat")
 
@@ -43,22 +52,56 @@ def team_names(q, season):
              "what": r["team_name"]} for r in rows]
 
 
+def regular_season_complete(q, season):
+    """Whether the regular season is complete: its last week scored.
+
+    The same shape as week_is_complete in main, deliberately rewritten here
+    rather than imported: main imports this module, so the arrow cannot go
+    back the other way, and a ballot rule belongs beside the ballot it
+    governs rather than in the caller that happens to draw it.
+    """
+    rows = q("""
+        select count(*) as games,
+               count(*) filter (where team_a_points is not null
+                                 and (team_b_id is null
+                                      or team_b_points is not null)) as scored
+        from matchups where season_year = %s and week = %s
+    """, (season, REGULAR_WEEKS))
+    return bool(rows and rows[0]["games"]
+                and rows[0]["games"] == rows[0]["scored"])
+
+
 def late_picks(q, season):
     """Legend of the Choosing. The best pick of the late rounds.
 
-    Four conditions, and each throws something out:
+    Three conditions, and each throws something out:
 
-      round ten or after   -- the early rounds are where the good players
-                              are, and taking one is not a discovery
-      not a keeper         -- a keeper is not a pick, it is a price paid,
-                              and it lands in whatever round it costs
-      on the roster at the -- the difference between finding a player and
-      end of the season       taking a flier on one
-      and never moved at   -- held the whole way, which is the claim being
-      any point in between    made
+      round ten or after  -- the early rounds are where the good players
+                             are, and taking one is not a discovery
+      not a keeper        -- a keeper is not a pick, it is a price paid,
+                             and it lands in whatever round it costs
+      never moved, at any -- held the whole way, which is the claim being
+      point in the season    made
 
-    That last one is not the same as the one before it, which is how this
-    was wrong first time round. Borys drafted Luther Burden III in round
+    There was a fourth, on the end-of-season roster, and it was both
+    redundant and costly. Redundant because a player nobody added, dropped
+    or traded is still where the draft put him -- there is no other way off
+    a roster. Costly because those rosters are loaded once the season is
+    over and the assembly sits during the playoffs, so the ballot was empty
+    exactly when the league was being asked to vote on it, and the admin
+    page explained the emptiness by naming a load nobody could have done.
+
+    Measured rather than argued before it came out: across 2022, 2023, 2024
+    and 2025 the join changes nothing -- the same 12, 7, 3 and 7 candidates
+    with it and without.
+
+    What replaced it is a wait rather than a join. Nothing until the regular
+    season is complete, which lands comfortably before the assembly sits. That keeps the honest half of the
+    old rule -- this is a question about a whole season -- without asking
+    for a file that does not exist yet.
+
+    Why the surviving condition is the strong one, and not the same as
+    "had him at the start and at the end". Borys drafted Luther Burden III in round
     thirteen, dropped him on the tenth of September, watched him pass through
     David, Curtis and David again, and picked him back up as a free agent on
     the twenty-seventh of December. Start and end both say Borys. Nothing in
@@ -68,6 +111,8 @@ def late_picks(q, season):
     somebody let him go or somebody else had him. Seven of 2025's nine
     survive it.
     """
+    if not regular_season_complete(q, season):
+        return []
     rows = q("""
         select o.owner_id, o.username, p.full_name, p.position,
                d.round, d.pick_in_round
@@ -75,9 +120,6 @@ def late_picks(q, season):
         join players p on p.player_id = d.player_id
         join teams t on t.team_id = d.team_id
         join owners o on o.owner_id = t.owner_id
-        join rosters r on r.season_year = d.season_year
-                      and r.team_id = d.team_id
-                      and r.player_id = d.player_id
         where d.season_year = %s and d.round >= %s and not d.is_keeper
           and not exists (
               select 1 from transactions x
