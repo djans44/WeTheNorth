@@ -33,7 +33,7 @@ of the one before it.
 | 3 | Import ADP for the season | `/admin/adp` — **needed before keeper rounds resolve, not just before the draft** |
 | 4 | Rivalries | `/admin/rivals` |
 | 5 | Schedule | `/admin/schedule` — needs teams **and** rivalries, since week 10 is rivalry week |
-| 6 | Draft order lottery, then slot selection | `/admin/draft-order`, `/draft-order` |
+| 6 | Draft order lottery, then slot selection | `/draft-order` — the lottery and the slot board are the same page; the admin posts are on it |
 | 7 | Keeper windows, then resolve each phase | `/admin/keepers` |
 | 8 | Import draft results once the draft happens | `/admin/draft` |
 

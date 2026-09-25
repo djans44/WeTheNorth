@@ -61,20 +61,31 @@ requirements.txt
 
 ### Scripts
 
-| Script | Purpose |
-|---|---|
-| `migrate.py` | Applies unapplied `sql/migrations/*.sql`, tracked in `schema_migrations` |
-| `q.py "<sql>"` | Ad-hoc query or write. **Commits.** Uses the direct connection. |
-| `import_matchups.py` | CSV → `matchups` (upsert, handles byes and projections) |
-| `import_draft.py` / `import_draft_text.py` | Draft results → `players` + `draft_picks` |
-| `import_rosters.py` | Yahoo roster dump → `rosters` |
-| `import_keepers.py` / `import_keepers_history.py` | Keeper selections and contracts |
-| `import_adp_text.py` | FantasyPros ADP → `player_adp` |
-| `import_transactions.py` | Waiver and trade files → `transactions`, then fills `rosters.acquired` |
-| `fetch_positions.py` | Pulls the free Sleeper player list, resolves positions, writes `data/positions.csv` |
-| `add_players_from_files.py` | Creates missing `players` rows from source text files |
-| `export_positions.py` | Dumps current `players` to `data/positions.csv` |
-| `resolve_phase.py` | CLI version of keeper phase resolution (dry run by default, `--apply` to write) |
+Five of these have since been replaced by pages, and the **Instead** column
+says which. They all still run and the older ones are still the only way to
+load a season the app never saw — but a script is no longer the answer to
+"how do I do this", and this table read as though it were.
+
+| Script | Purpose | Instead |
+|---|---|---|
+| `migrate.py` | Applies unapplied `sql/migrations/*.sql`, tracked in `schema_migrations` | |
+| `q.py "<sql>"` | Ad-hoc query or write. **Commits.** Uses the direct connection. | |
+| `check_db.py` | What is in the database, at a glance | |
+| `import_matchups.py` | CSV → `matchups` (upsert, handles byes and projections) | |
+| `import_draft.py` / `import_draft_text.py` | Draft results → `players` + `draft_picks` | `/admin/draft` |
+| `import_rosters.py` | Yahoo roster dump → `rosters` | `/admin/rosters` |
+| `import_keepers.py` / `import_keepers_history.py` | Keeper selections and contracts, for seasons before the app | |
+| `import_adp_text.py` | FantasyPros ADP → `player_adp` | `/admin/adp` |
+| `import_transactions.py` | Waiver and trade files → `transactions`, then fills `rosters.acquired` | `/admin/transactions` |
+| `fetch_positions.py` | Pulls the free Sleeper player list, resolves positions, writes `data/positions.csv` | |
+| `add_players_from_files.py` | Creates missing `players` rows from source text files | |
+| `export_positions.py` | Dumps current `players` to `data/positions.csv` | |
+| `make_portraits.py` | Sigil portraits — see `docs/features/avatars.md` | |
+| `resolve_phase.py` | Keeper round resolution, dry by default | `/admin/keepers` |
+| `award_crests.py` | Recompute auto crests, dry by default | runs on score entry |
+| `write_summary.py` | Generate one account | `/admin/summaries` |
+| `backfill_keeper_records.py` | One-off: contracts and the archive for a season that resolved before the routes wrote them | |
+| `reset_season.py` / `serve_rehearsal.py` | Rehearsal against a Neon branch — see `docs/features/season-setup.md` | |
 
 ---
 
@@ -123,7 +134,17 @@ New owners are created from `/admin/owners` and get **no `teams` row**, so they
 stay out of every season-derived page until someone puts them in a season.
 
 **`seasons`** — `season_year` **is** the primary key (smallint, natural key).
-`team_count`, `keeper_count`, `is_complete`, `yahoo_league_key`.
+`team_count`, `keeper_count`, `is_complete`, `yahoo_league_key`, and the three
+dates the year is measured from: `week_one_sunday`, `trade_deadline`,
+`draft_at`.
+
+`week_one_sunday` is the anchor everything else derives from — a week runs
+from the Tuesday before its Sunday to the Monday after, so `league_week(season,
+date)` can name the week any date fell in, which nothing could do before
+migration 057. A check constraint holds it to an actual Sunday: a Tuesday
+there moves every week of the season by five days with no error and nothing
+looking empty. `draft_at` is an instant rather than a date, because people
+turn up to a draft at an hour.
 
 **`teams`** — one row per owner per season. `team_id` (surrogate),
 `season_year`, `owner_id`, `team_name`.
@@ -211,6 +232,48 @@ Unique indexes on both `lottery_position` and `slot` per season.
 **`rivalries`** — `(season_year, owner_id)` → `rival_owner_id`.
 Written in **both directions**. A unique index on `rival_owner_id` stops anyone
 being two managers' rival.
+
+### Crests and the assembly
+
+**`crests`** — the catalogue, 39 rows. `code`, `name`, `description`,
+`category`, `scope`, `standing`, `award_mode`, `colour`, `sort_order`,
+`active`. `award_mode` is the one that matters: `auto` crests are derived and
+rebuilt, `manual` ones are granted and survive a rebuild.
+
+**`owner_crests`** — who holds what. `owner_id`, `crest_id`, `season_year`,
+`week`, `detail`, `awarded_at`, `awarded_by`. An auto crest is deleted and
+recomputed in scope; a manual one is not, which is why the two modes exist.
+
+**`crest_polls`** — one assembly per season. `opens_at`, `closes_at`,
+`opened_at`, `opened_by`, `closed_at`. Whether one is sitting is
+`poll_state()` and nothing else: it is time-based, so a poll left to run out
+is risen whether or not anyone pressed a button, and asking `closed_at`
+instead is how Proclaim once offered itself and then refused.
+
+**`crest_votes`** — `poll_id`, `crest_id`, `owner_id`, `choice_owner_id`,
+`candidate`, `detail`, `cast_at`, `ballot_seen`. `ballot_seen` is the count of
+candidates a vote was cast against: two of the four ballots grow while the
+assembly sits, so a manager is told when there is more to look at rather than
+being made to change their mind.
+
+### Summaries
+
+**`summaries`** — generated prose. `kind` is `preview`, `season`, `week`,
+`matchup` or `chat`; `week` and `matchup_id` are null for the kinds that do
+not have one. Two rows per thing at most, one draft and one published, held by
+the unique indexes in migration 045. `model` is recorded per row because the
+prose will not read the same after the model changes and the table will
+outlive several of them.
+
+**`summary_jobs`** — one row per week's account that is wanted. `attempts`,
+`last_error`, `next_try_at`, `done_at`. Retries live here rather than in
+memory because the free tier spins the app down, and a dict is forgotten on
+the first quiet quarter of an hour.
+
+**`summary_attempts`** — one row per call. `started_at` and `finished_at`
+separately, so a row with no finish says the process went away mid-call;
+`source` says which of the three doors it came through; `calls` says how many
+HTTP requests the attempt spent, an attempt being up to `ATTEMPTS` of them.
 
 ---
 
@@ -421,7 +484,12 @@ Everything else requires a session (middleware redirects to `/`).
 | `POST /keepers/plan` | Save plan (validates round conflicts, refuses to save a conflict) |
 | `POST /keepers/submit` | Submit one phase |
 | `POST /keepers/void-submit` | Submit voids (writes and confirms in one step) |
-| `GET/POST /profile` | Your own name, surname, team name, email and sigil |
+| `GET/POST /profile`, `POST /profile/details`, `POST /profile/email` | Your own name, surname, team name, email and sigil |
+| `POST /keepers/forfeit` | Give up a keeper round rather than submit one |
+| `GET /draft-results` | The board as it was drafted, any season |
+| `GET /assembly` | Open deliberations: the four honours, the ballot as it stands now, and when the assembly rises |
+| `GET /assembly/proclamations` | What past assemblies decided |
+| `GET /calendar` | The shape of a league year: the draft, week one, the keeper rounds, the deadline, the assembly, and every week with its dates. Reads the tables that enforce those dates rather than holding copies; the arithmetic is its own |
 
 ### Admin (gated on `is_admin`)
 | Route | Purpose |
@@ -437,7 +505,30 @@ Everything else requires a session (middleware redirects to `/`).
 | `GET /admin/rivals`, `POST /admin/rivals/generate`, `POST /admin/rivals/set` | Rivalries |
 | `GET /admin/schedule`, `POST /admin/schedule/save` | Schedule generation |
 | `GET/POST /admin/owners` | Owners: team name, colour and initials in one pass, plus add an owner |
+| `POST /admin/owners/new` | Add an owner. Deliberately does **not** write a `teams` row — that is step two of season setup, where the team-count invariant is visible |
+| `POST /admin/draft-order/set` | Override one slot |
 | `GET/POST /admin/owners/{id}` | One owner: name, team, email, admin, retired, sigil |
+| `GET /admin/season-setup` | The create-season checklist. Opens on the first season with something outstanding, and on next year when there is none |
+| `POST /admin/season-setup/season` | Step one: the `seasons` row, counts and the three dates |
+| `POST /admin/season-setup/dates` | The three dates of a season that exists. The only part of step one that stays editable |
+| `POST /admin/season-setup/teams` | Step two: `teams` rows for the year |
+| `GET/POST /admin/adp` | Paste a ranking → `player_adp`. Preview, then write |
+| `GET/POST /admin/draft` | Paste draft results → `players` + `draft_picks` |
+| `GET/POST /admin/rosters` | Paste end-of-season rosters. Reconciles against the transaction record **before** writing, per manager |
+| `GET/POST /admin/transactions` | Paste adds, drops and trades → `transactions` |
+| `GET /admin/summaries` | One account at a time: read it, publish it, discard it. Opens on what wants doing rather than always the preview |
+| `POST /admin/summaries/generate` | Write one now, on the request thread |
+| `POST /admin/summaries/publish`, `POST /admin/summaries/discard` | Put one in front of the league, or throw it away |
+| `POST /admin/scores/summary` | Write the week's account again, from the page the scores were entered on |
+| `GET /admin/crests` | Assembly admin: call one, watch the ballot, rise it, proclaim what it decided |
+| `POST /admin/crests/poll`, `POST /admin/crests/proclaim`, `POST /admin/crests/revoke` | Open or rise an assembly, write the winners as grants, take one back |
+
+### Not a person
+
+| Route | Purpose |
+|---|---|
+| `POST /tasks/summaries` | Starts whatever week's account is due a retry. Called by a GitHub Action every five minutes, guarded by `TASKS_TOKEN` rather than a session, because there is nobody signed in |
+| `GET /health-check-tail` | A marker at the bottom of `main.py`. If it answers, every route above it was registered — which is the cheapest way to catch a file that stopped short |
 
 ---
 
