@@ -3970,7 +3970,7 @@ def league_calendar(request: Request, season: int = 0):
                 "now": f["week"] == now_week,
             })
 
-        # The choosing, and the assembly. Read, never written here.
+        # The choosing and the assembly. Read, never written here.
         windows = query(conn, """
             select phase, opens_at, closes_at, resolved_at
             from keeper_windows where season_year = %s order by phase
@@ -3981,13 +3981,76 @@ def league_calendar(request: Request, season: int = 0):
         """, (season,))
         polls = [dict(p, state=poll_state(p)) for p in polls]
 
+    # Everything the year is made of, in the order it happens, as one table.
+    # A section each was a heading and three lines under it, three times over,
+    # for dates that all answer the same question -- when is it -- and the
+    # answer reads better in a column than in a paragraph.
+    shape = []
+
+    def at(when, what, said, state="", soft=False):
+        """One row, keyed by the day it falls on so the table can be sorted.
+
+        A keeper window is a timestamp and the rest are dates. Sorting wants
+        one kind, so the key is the league's own date either way: the day the
+        league would say it happened on, rather than the day GMT would.
+        """
+        day = (when.astimezone(LEAGUE_TZ).date()
+               if hasattr(when, "astimezone") else when)
+        # The year, when it is not the season's own. The assemblies for
+        # 2022-2025 are sitting now, in 2026, and "Fri Sep 18" under a 2025
+        # heading reads as September 2025 -- which is a year out and looks
+        # like a bug rather than the truth about when the league got round
+        # to voting.
+        shape.append({"day": day, "what": what, "when": said,
+                      "year": day.year if day.year != season else None,
+                      "state": state, "soft": soft})
+
+    def span(a, b):
+        """Two moments on one line, the date said once if they share it.
+
+        A keeper round is hours rather than days, so "Thu 17 Sep, 5:30am to
+        9:30am" beats naming Thursday twice.
+        """
+        if a.astimezone(LEAGUE_TZ).date() == b.astimezone(LEAGUE_TZ).date():
+            return "%s, %s \u2013 %s" % (day_month(a.astimezone(LEAGUE_TZ).date()),
+                                         league_clock(a), league_clock(b))
+        return "%s \u2013 %s" % (league_hour(a), league_hour(b))
+
+    if row["draft_on"]:
+        at(row["draft_on"], "Draft day", day_month(row["draft_on"]))
+    if anchor:
+        at(anchor, "Week one", day_month(anchor))
+    for w in windows:
+        at(w["opens_at"], "Keeper round %s" % w["phase"],
+           span(w["opens_at"], w["closes_at"]),
+           "resolved" if w["resolved_at"] else "")
+    if row["trade_deadline"]:
+        at(row["trade_deadline"], "Trading closes",
+           day_month(row["trade_deadline"])
+           + (", week %d" % deadline_week if deadline_week else ""))
+    for p in polls:
+        at(p["opens_at"], "The assembly",
+           span(p["opens_at"], p["closes_at"]), p["state"])
+
+    # What to expect, for a season that has not called one yet. The league
+    # opens the assembly in the playoffs and runs it a fortnight: the Tuesday
+    # week fifteen opens to the Tuesday week seventeen opens. Said as an
+    # expectation and marked as one, because a date nobody has set is not a
+    # date, and a calendar that cannot tell those apart is worse than one that
+    # leaves a gap.
+    if anchor and not polls:
+        opens = anchor + datetime.timedelta(days=7 * 14 - 5)
+        closes = anchor + datetime.timedelta(days=7 * 16 - 5)
+        at(opens, "The assembly",
+           "%s \u2013 %s" % (day_month(opens), day_month(closes)),
+           "expected", soft=True)
+
+    shape.sort(key=lambda r: r["day"])
+
     return templates.TemplateResponse(
         request=request, name="calendar.html",
         context={"years": years, "season": season, "anchor": anchor,
-                 "deadline": row["trade_deadline"],
-                 "draft_on": row["draft_on"],
-                 "deadline_week": deadline_week, "now_week": now_week,
-                 "weeks": weeks, "windows": windows, "polls": polls,
+                 "now_week": now_week, "weeks": weeks, "shape": shape,
                  "finished": row["is_complete"]})
 
 

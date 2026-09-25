@@ -1968,6 +1968,16 @@ label.second { margin-top: var(--s4); }
 /* The same idea on the calendar: of eighteen rows one is the week being
    played, and it is the only one anybody is looking for. Scoped to .weeks
    because "now" is a name a second page would take for something else. */
+/* A pill for something nobody has set yet -- the assembly window a season is
+   expected to sit in, worked out from week one rather than recorded. Hollow,
+   because every other pill on the site reports a fact and this one reports a
+   guess, and the two must not look alike. */
+.pill.soft {
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-weight: 500;
+}
 .weeks tr.now { background: var(--gold-ghost); }
 .weeks tr.now td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
 /* Scoped, because "now" on its own is the kind of name a second page would
@@ -2980,6 +2990,19 @@ button.seal.working::before {
 /* ---- narrow screens ---- */
 
 @media (max-width: 48rem) {
+  /* The shape table is label and value, and three columns of it do not fit a
+     phone -- "Thu 17 Sep, 9:45am - 10:00am" is most of a 390px line on its
+     own, and right-aligning it pushed the short answers off the edge
+     entirely. Stacked, each row is the label with its answer under it, which
+     is how anybody would read it aloud. The row keeps the rule that was on
+     the cell, or a stacked row draws one through its own middle. */
+  .shape thead { display: none; }
+  .shape tr { display: block; padding: 0.45rem 0; border-bottom: 1px solid var(--rule); }
+  .shape tr:last-child { border-bottom: 0; }
+  .shape td { display: block; padding: 0 var(--s2); text-align: left; border: 0; }
+  .shape td.what { font-weight: 600; }
+  .shape td:empty { display: none; }
+
   /* The calendar's week table has five columns and the fifth is the one worth
      reading -- rivalry week, the final, which week is being played now. On a
      phone it was the one pushed off the edge, which is the fault the keeper
