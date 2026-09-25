@@ -28,14 +28,14 @@ of the one before it.
 
 | # | Step | Today |
 |---|---|---|
-| 1 | `seasons` row: `season_year`, `team_count`, `keeper_count` | a form on `/admin/season-setup`, cloned from the previous year |
+| 1 | `seasons` row: year, team and keeper counts, **week one, the trade deadline, draft day** | a form on `/admin/season-setup`, counts cloned from last year and the dates this year’s |
 | 2 | `teams` rows, one per owner for the season | a form on `/admin/season-setup`, carried forward from last season |
-| 3 | Import ADP for the season | `scripts/import_adp_text.py` — **needed before keeper phases resolve, not just before the draft** |
+| 3 | Import ADP for the season | `/admin/adp` — **needed before keeper rounds resolve, not just before the draft** |
 | 4 | Rivalries | `/admin/rivals` |
 | 5 | Schedule | `/admin/schedule` — needs teams **and** rivalries, since week 10 is rivalry week |
 | 6 | Draft order lottery, then slot selection | `/admin/draft-order`, `/draft-order` |
 | 7 | Keeper windows, then resolve each phase | `/admin/keepers` |
-| 8 | Import draft results once the draft happens | `scripts/import_draft.py` |
+| 8 | Import draft results once the draft happens | `/admin/draft` |
 
 Steps 4, 5 and 6 all take their entrants from `teams` rows for that season, so
 step 2 is the keystone: nothing downstream can run without it.
@@ -43,11 +43,12 @@ step 2 is the keystone: nothing downstream can run without it.
 Step 6 comes before step 7 deliberately — slot choice happens before keeper
 selection, so an owner knows their pick position while deciding who to keep.
 
-**Step 3 can be silently partial, which is worse than missing.**
-`import_adp_text.py` matches on normalised name and skips anyone with no
-`players` row, reporting the skips and carrying on. So ADP imported before the
-players exist is not absent -- it is short, by however many the league had not
-seen yet.
+**Step 3 can be silently partial, which is worse than missing.** The parser
+matches on normalised name and skips anyone with no `players` row, reporting
+the skips and carrying on. So ADP imported before the players exist is not
+absent -- it is short, by however many the league had not seen yet. The page
+says how many it matched and names what it skipped, which is the half the
+script only wrote to the terminal.
 
 That is not hypothetical. 2026's ADP was imported with 197 of the file's
 players matched. Re-running the same file two weeks later matched 212: fifteen
@@ -57,7 +58,7 @@ production has since been topped up to 212. In a year where one of them *is*
 on the previous season's roster, the fallback below applies to a player nobody
 knew was missing.
 
-Re-running the import is safe and is the fix: it is an upsert on
+Re-running it is safe and is the fix: it is an upsert on
 `(season_year, player_id)` with no deletes, so it tops up what is short and
 rewrites the rest with the same values. It does not retro-price existing
 contracts either, because a signed contract stores its own `contract_round`.

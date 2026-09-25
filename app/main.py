@@ -7146,7 +7146,7 @@ def season_setup_steps(conn, year):
         no_season))
 
     steps.append(step(
-        3, "Import ADP", "scripts/import_adp_text.py", None,
+        3, "Import ADP", "/admin/adp", "/admin/adp",
         "blocked" if no_season else ("done" if n["adp"] else "ready"),
         ("%s players priced" % n["adp"] if n["adp"] else
          "Needed before keeper rounds resolve, not just before the draft."),
@@ -7207,7 +7207,7 @@ def season_setup_steps(conn, year):
     if not slots_done:
         eight_block.append("The board needs every slot chosen")
     steps.append(step(
-        8, "Import the draft", "scripts/import_draft.py", None,
+        8, "Import the draft", "/admin/draft", "/admin/draft",
         "blocked" if eight_block else ("done" if n["picks"] else "ready"),
         ("%s picks" % n["picks"] if n["picks"] else
          "After the draft happens, not during setup."),
