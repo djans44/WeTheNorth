@@ -14,11 +14,15 @@ audit, four; the `/rules` audit, seven. All four pages are finished.
 Also done since, and left numbered here so the audit list keeps its numbers:
 **1 weekly summaries** and **2 season summaries** are built, generated for
 2022-2025 and published, with an admin page at `/admin/summaries` and at most
-one draft and one published version of each (migration 045). **5
-`/admin/scores`**, **6 `/admin/keepers`** and **11 `/admin/schedule`** have
-had their audits -- ten findings, seven and six respectively, three of which
-were losing data. **13 the year-round roster** is complete to its last step,
-and **14 the assembly** is built and the league is voting in it.
+one draft and one published version of each (migration 045). **13 the
+year-round roster** is complete to its last step, and **14 the assembly** is
+built and the league is voting in it.
+
+Items 1, 2 and 13 are the three whose own sections still read as plans. What
+1 and 2 describe was largely built another way -- there is no
+`scripts/write_summaries.py`, because an admin page turned out to be the right
+shape -- so those sections are a record of what was intended rather than of
+what exists. Worth rewriting when somebody next has reason to read them.
 
 Two things came out of `/draft-prep` that belong to the whole site rather than
 to that page: the connection pool, written up in `PROJECT.md`, and per-season
@@ -152,13 +156,29 @@ the list and has no inputs at all, which settled which is meant.
 Every one looked at this way was worth a handful of real changes, and
 several were worth a data-losing bug.
 
-## 5. Audit `/admin/scores`
+## 5. ~~Audit `/admin/scores`~~ **Done**
 
-Entering a week. Saving replaces every matchup for that week, and it now
-recomputes the crests as well.
+Ten findings, the first two of which lost data. The page is the one admin
+page used every week of a season, and it earned the most polish because of
+it.
 
-The one admin page used every week during a season, so it earns the most
-polish.
+Picking the wrong Round deleted the week. A save clears the week and rewrites
+it, and Final and Semifinals skipped the every-team-entered check that
+Regular season got -- so their rows came back empty, the empty rows were
+skipped, and nothing was inserted after the delete had already run. Two
+clicks emptied a played week and the page said "Saved 0 matchups" in green.
+
+`WRITEABLE` and `SUMMARY_KINDS` were two lists of the same three things four
+hundred lines apart with nothing forcing them to agree. This project has been
+bitten by that shape before -- the round-collision rule in six copies -- so
+the check reads the one list that has to exist anyway.
+
+The rest was shape: the week loads when you pick it (`loadonpick`, the
+summaries picker's opt-in, with the Load button kept in the markup for a
+scriptless browser), the two dropdowns stopped sitting against the far left
+of a wide panel, a failed recap said so on the page rather than only in the
+log, and the write buttons moved into an action row with the note above it
+rather than a bare span trailing after.
 
 ## 6. ~~Audit `/admin/keepers`~~ **Done**
 
@@ -258,14 +278,30 @@ This was the last page choosing its season from a dropdown and a Load button.
 The override's twelve dropdowns also sat some nine hundred pixels from the
 managers they pair, on the sheet's right-aligned default.
 
-## 11. Audit `/admin/schedule`
+## 11. ~~Audit `/admin/schedule`~~ **Done**
 
-The generator: fourteen weeks, three opponents twice and the rest once,
-rivalry week pinned, no pair in consecutive weeks. Saves into `matchups` with
-null scores so score entry pre-fills.
+Six findings. Destructive on save and hard to eyeball was the right thing to
+have flagged: two of the six were the destruction.
 
-Destructive on save and the results are hard to eyeball, which is the thing
-to look at.
+Rolling a schedule onto a season with scores in it corrupted that season. The
+save deleted only the unscored matchups and inserted a fresh fourteen weeks
+with `on conflict do nothing` -- and a new pairing in a played week does not
+collide with the played one, so it landed beside it. Against 2025 that turns
+84 matchups into 159, nine to twelve games in every week, managers playing
+twice. A tickbox was the only thing in the way.
+
+The save did not save what was previewed. It regenerated instead, and the two
+reads disagreed: the page ordered owners by username and the save had no
+`order by` at all. `generate_schedule`'s output depends on that order, so the
+preview and the save agreed by luck. Sorting the ids inside the generator
+makes the seed the only input that matters -- eight shuffles now give one
+schedule.
+
+And the page could only ever draw a schedule it had just rolled, so once one
+was saved the only way to see it was to roll another and hope it matched. It
+reads the saved matchups now, and a rolled one is labelled "Rolled, not
+saved" with a link back to the saved one, so which of the two is on screen is
+never a guess.
 
 ## 12. ~~Audit `/admin/crests`~~ **Done**
 
@@ -462,3 +498,47 @@ would take. With lineups, an injury stops being something typed in and
 becomes something the record shows: who was started, what they scored, and
 what a manager lost. That is the version where this earns its place.
 
+
+## 17. ~~Nothing in the app wrote the keeper record~~ **Done**
+
+Moved here from item 4's table of loaders, where it was the sixth row and did
+not belong: it was never an import problem. Two tables, neither of which the
+app had ever written.
+
+`keeper_contracts` had only ever been filled by two hand-run import scripts,
+so the 2026 selection produced six signings existing only as a `term_years`
+on a submission. Three were three-year deals. Come 2027, eligibility reads
+contracts for `state='contract'`, finds none, and six obligations show up as
+free choices.
+
+A contract is created when the commissioner approves the submission that
+signs it -- the moment the terms stop being able to move. Not at resolution,
+because a plan becomes a pending submission that can still be edited or
+rejected. The ADP round is on the review row and what is on screen at
+approval is what the contract keeps, so a later list cannot reprice a deal
+already signed.
+
+`keeper_selections` is what the league kept, and eleven things read it:
+eligibility, the four-season maximum, the draft board, Three Oaths Sworn.
+2026 resolved three keeper rounds and left it empty. It is **derived** now
+rather than kept in step -- a submission can be approved, edited, rejected or
+deleted from four routes, and a parallel record would have to be corrected in
+all four. Miss one and the two drift, which is the silence this table already
+failed in. Rebuilding from the approved submissions is idempotent, so running
+it after anything is always right, and it is called from all five places that
+change one.
+
+2026 was backfilled through the same two functions the routes use, by a
+script dry until told otherwise: six contracts and thirty selections,
+matching what was agreed beforehand row for row. What it changes for 2027 --
+six obligations that would have read as free choices, three repriced by the
+rule (Drake Maye thirteenth round to third, Jaxon Smith-Njigba ninth to
+fourth, Brock Bowers thirteenth to sixth), and thirteen players kept four
+times who cannot be kept again.
+
+**A note for whoever adds the next thing that changes a submission.** There
+are five call sites for the rebuild and nothing forces a sixth to exist. If
+you add a route that approves, edits, rejects or deletes one, it has to call
+`sync_keeper_selections` -- the table is derived, not maintained, and a route
+that forgets leaves no error behind, only a wrong archive that reads as
+right.
