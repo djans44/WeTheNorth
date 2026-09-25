@@ -90,7 +90,7 @@ Carried over from the season-page plan; the only piece of it never built.
 Needs `GEMINI_API_KEY`. Nothing generates without it and nothing else on the
 site depends on it, so everything still renders while it is missing.
 
-## 3. Season calendar
+## 3. ~~Season calendar~~ **Done, bar one check**
 
 A page for the shape of a league year: when keeper windows open and close,
 the draft, week one, the trade deadline, the playoff weeks.
@@ -140,19 +140,34 @@ them -- and what it adds is the arithmetic. Rivalry week and the playoff
 rounds are read off the fixtures rather than assumed from the number, the same
 rule the season page uses.
 
-All three dates are built. The draft is `seasons.draft_on`, migration 059,
-and it is the one that may be left blank: a season row is made when the
-schedule is out and the league has settled its rules, while when everyone can
-get in a room is a diary problem that comes later. Not derived from week one
-either, though 2026's draft fell exactly on the Tuesday that opens it -- that
-is where this league happened to put it once, not a rule, and a derivation has
-no way to be corrected the year it is wrong.
+All three dates are built. The draft is `seasons.draft_at`, migration 060 --
+an instant rather than a date, because people turn up to a draft at an hour,
+entered in league time through the same pair the keeper windows use. It is
+also the one that may be left blank: a season row is made when the schedule is
+out and the league has settled its rules, while when everyone can get in a
+room is a diary problem that comes later. Not derived from week one either,
+though 2026's draft fell exactly on the Tuesday that opens it -- that is where
+this league happened to put it once, not a rule, and a derivation has no way
+to be corrected the year it is wrong.
 
 2026 is recorded in full: drafted Tue 8 Sep, week one Sun 13 Sep, trading
 closes Sat 28 Nov, which is week 12. 2022-25 have only their week ones; what
 those seasons ran under is not written down anywhere, and a date inferred from
 where the trades happen to stop would be a guess wearing the clothes of a
 record.
+
+Two things the page says that nobody recorded. The **playoff weeks** are shown
+for a season whose bracket is not drawn -- the generator lays out fourteen
+weeks and stops, so a calendar built from fixtures ended in mid-December --
+marked "not drawn yet", because certain is not the same as drawn. And the
+**assembly window** a season is expected to sit in, the Tuesday week fifteen
+opens to the Tuesday week seventeen opens, on a hollow pill where every other
+pill is filled: a date nobody has set is not a date. The two agree without
+being made to, which is a small check on both.
+
+The shape of a year is one table rather than a section each, and it stacks
+below 48rem -- three columns of label, value and pill do not fit a phone, and
+right-aligning them pushed the short answers off the edge entirely.
 
 ### Still to do
 
