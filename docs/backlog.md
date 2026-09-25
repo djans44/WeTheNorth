@@ -96,9 +96,44 @@ A page for the shape of a league year: when keeper windows open and close,
 the draft, week one, the trade deadline, the playoff weeks.
 
 Overlaps the create-season checklist in `docs/features/season-setup.md` —
-that is the *doing*, this is the *seeing*. Worth settling which owns the
-dates before building either, because `keeper_windows` is the only table
-that holds any today.
+that is the *doing*, this is the *seeing*.
+
+**The ownership question is settled, and it mostly dissolved.** Listing the
+dates put them in three groups rather than one:
+
+- **Windows that gate a form stay where they are.** `keeper_windows` and
+  `crest_polls` hold `opens_at`/`closes_at` and both are *enforcement* --
+  `poll_state()` is the single rule for assembly state, and keeper submission
+  is refused outside its window. Moving them into a calendar table means the
+  enforcement reads a different table: churn on the most intricate part of
+  the domain for nothing. The page reads them.
+- **Derivable dates are never stored.** The playoff weeks are 15, 16 and 17
+  every year, and given week one every week's dates are arithmetic. Storing
+  them is a second place to be wrong.
+- **Three dates were genuinely unowned:** week one, the draft, the trade
+  deadline.
+
+**Week one is built** -- `seasons.week_one_sunday`, migration 057, with a
+`league_week(season, date)` function. The Sunday rather than the Tuesday the
+fantasy week opens: checkable against any NFL schedule, and unambiguous where
+"the Tuesday" invites the wrong side of the weekend and shifts the year by
+five days. A week runs Tuesday-before to Monday-after.
+
+### Still to do
+
+- **Nothing sets it for a future season.** 2027 will be created by
+  `/admin/season-setup` with no anchor, and `league_week` answers null. A
+  field on step one closes it.
+- The draft date and the trade deadline. The deadline **is enforced**, and
+  while the app cannot prevent a trade -- they happen in Yahoo and arrive by
+  import -- it can catch one dated after the deadline, the same shape as the
+  roster reconciliation in item 13. Open question: is the deadline a *week* or
+  a *date*? A week derives its date from the anchor every year with nothing to
+  re-enter. The record suggests week 11: with 63 trade sides now attributed,
+  the last trade of each season falls in weeks 11, 11, 10 and 7.
+- The page itself, **public** -- it exists so nobody can say they did not know
+  when a keeper window opened. Nav placement undecided; it would be an eighth
+  top-level item.
 
 ## 4. ~~Admin imports from text files~~ **Done, and the rest struck**
 
