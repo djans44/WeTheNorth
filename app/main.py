@@ -7105,6 +7105,22 @@ def end_attempt(conn, attempt_id, err=None):
               attempt_id))
 
 
+def final_week(conn, season):
+    """The week a season ends in, or None if its bracket is not drawn.
+
+    Read off the championship game rather than by taking the highest week
+    with fixtures. Mid-season, before the bracket exists, the highest week
+    with fixtures is the fourteenth, and skipping that one would lose an
+    account somebody wants. The bracket is identical every year, so the
+    championship game is the marker that means what it says.
+    """
+    rows = query(conn, """
+        select min(week) as week from matchups
+        where season_year = %s and game_type = 'championship'
+    """, (season,))
+    return rows[0]["week"] if rows and rows[0]["week"] else None
+
+
 def summary_exists(conn, season, week):
     return bool(query(conn, """
         select 1 from summaries
@@ -7247,6 +7263,7 @@ def week_summary_state(conn, season, week):
             "retry_at": job["next_try_at"] if job and not row else None,
             "attempts": job["attempts"] if job else 0,
             "complete": week_is_complete(conn, season, week),
+            "final": week == final_week(conn, season),
             "have_key": summaries.available()}
 
 
@@ -7397,6 +7414,16 @@ def queue_week_summary(season, week, force=False, source="scores"):
     try:
         with get_db() as conn:
             if not week_is_complete(conn, season, week):
+                return False
+            # Not the week the season ends in. A week's account appears on
+            # the following week's page and the last week has no following
+            # week, so 2025's week seventeen was written, published, and read
+            # by nobody -- while the season recap covers the same afternoon
+            # at three times the length, the finals being the story of the
+            # year rather than merely of the week. Generating it anyway cost
+            # a call, a retry ladder when that call failed, and a draft in
+            # the nav clearable only by publishing something invisible.
+            if week == final_week(conn, season):
                 return False
             if not force and summary_exists(conn, season, week):
                 return False
@@ -7554,6 +7581,11 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "",
         final = final[0] if final else {"drawn": 0, "played": 0}
         finished = bool(final["played"])
 
+        # The week this season ends in, wanted twice below: the landing rule
+        # must not open on a week it would then refuse to write, and the
+        # blocked reason further down has to say why it refuses.
+        last = final_week(conn, season)
+
         # Which target to open on, when the link did not say. The page
         # used to open on the preview every time, which is the right answer
         # in August and the wrong one from September on: by then the preview
@@ -7568,7 +7600,8 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "",
         if not kind:
             kind = "preview"
             wants = [w for w in weeks
-                     if w not in week_state or "draft" in week_state[w]]
+                     if (w not in week_state or "draft" in week_state[w])
+                     and w != last]
             if wants:
                 kind, week = "week", wants[-1]
             elif finished and tally["season"] != "published":
@@ -7651,6 +7684,14 @@ def admin_summaries(request: Request, season: int = 0, kind: str = "",
                    "written from the final table and the bracket." % season)
     elif kind == "week" and not weeks:
         blocked = "No week of %s has scores yet." % season
+    elif kind == "week" and week and week == last:
+        # Blocked rather than removed from the picker. 2025's week seventeen
+        # account exists and is published, and a week taken off the list is a
+        # week nobody can reach to read or discard.
+        blocked = ("Week %d is the week %s ends in, and the season recap "
+                   "covers it. A week's account is read on the following "
+                   "week's page and this one has no following week, so "
+                   "nothing is written for it." % (week, season))
 
     return templates.TemplateResponse(
         request=request, name="admin_summaries.html",
@@ -7686,6 +7727,15 @@ async def admin_summary_generate(request: Request):
         return RedirectResponse(
             url=summaries_url(season, kind, error="Choose a week to write about."),
             status_code=303)
+    if kind == "week":
+        with get_db() as conn:
+            if week == final_week(conn, season):
+                return RedirectResponse(
+                    url=summaries_url(season, kind, week,
+                                      error="Week %d is the week %s ends in. "
+                                            "The season recap covers it."
+                                            % (week, season)),
+                    status_code=303)
 
     # The same week can be on its way from the clock at this moment. Refused
     # rather than run alongside: two calls would be paid for and the slower
@@ -7781,9 +7831,14 @@ async def admin_scores_summary(request: Request):
     if not started:
         with get_db() as conn:
             done = week_is_complete(conn, season, week)
+            last = week == final_week(conn, season)
         return RedirectResponse(
             url=_scores_url(season, week, mode,
-                            error="Already being written, give it a moment."
+                            error="Week %d is the week the season ends in. "
+                                  "The season recap covers it, and a week's "
+                                  "account has nowhere to appear after the "
+                                  "last week." % week if last else
+                            "Already being written, give it a moment."
                             if done else
                             "Week %d is not finished, so there is nothing to "
                             "write about yet." % week), status_code=303)

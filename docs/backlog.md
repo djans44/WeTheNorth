@@ -345,7 +345,34 @@ commissioner to settle rather than broken by the count.
 
 Four assemblies are sitting now, one per season 2022-2025.
 
-## 15. The last week's account is written and shown nowhere
+## 15. ~~The last week's account is written and shown nowhere~~ **Done**
+
+Settled the other way from how this item framed it. It read as a display
+problem -- find somewhere to put week seventeen -- and the answer is that
+there is nothing to put. The two 2025 texts were compared side by side: the
+season recap carries the final, the third-place game, seventh and ninth,
+near enough line for line, at 3060 characters against 885. What only the
+weekly one had was four week-scoped superlatives -- highest and lowest of
+the week, closest game, margin against the reckoning. The finals are the
+story of the year rather than of the week.
+
+So the last week of a season no longer gets an account at all, which is
+cheaper than displaying one: no call, no retry ladder when that call fails,
+and no draft sitting in the admin badge clearable only by publishing
+something invisible. The week is read off the championship game rather than
+by taking the highest week with fixtures -- mid-season, before the bracket is
+drawn, the highest week with fixtures is the fourteenth, and skipping that
+would lose an account somebody wants.
+
+2025's week seventeen is kept. It is published, it costs nothing where it
+sits, and the summaries page already said "Published, but on no page". Both
+pages refuse to write another and say why, and the summaries page blocks
+rather than dropping the week from its picker -- a week off the list is a
+week nobody can reach to read or discard.
+
+### What this item said before
+
+
 
 A week's account appears on the *following* week's panel -- the banner reads
 `week_summaries.get(shown - 1)` under "Thus passed week N". The last week of

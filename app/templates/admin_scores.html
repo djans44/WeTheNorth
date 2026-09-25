@@ -230,8 +230,13 @@
             <input type="hidden" name="season" value="{{ season }}">
             <input type="hidden" name="week" value="{{ week }}">
             <input type="hidden" name="mode" value="{{ mode }}">
+            {# account.final: 2025's week seventeen was written before the
+               last week stopped getting an account, and it is kept. Offering
+               to write it again would be offering to spend a call on a page
+               nobody reads. #}
             <button type="submit" class="seal quiet"
-                    {% if not account.have_key or account.writing %}disabled{% endif %}>
+                    {% if not account.have_key or account.writing
+                          or account.final %}disabled{% endif %}>
               Write it again</button>
           </form>
         </div>
@@ -244,6 +249,15 @@
     {% elif not account.complete %}
       <p class="note">Week {{ week }} is not finished. The account writes
         itself when the last score is in.</p>
+
+    {% elif account.final %}
+      {# The last week of a season has no following week to be read on, and
+         the season recap covers the same afternoon at three times the
+         length. An invitation to write one would be an invitation to spend
+         a call on something nobody can read. #}
+      <p class="note">Week {{ week }} is the week the season ends in. The
+        <a href="/admin/summaries?season={{ season }}&amp;kind=season">season
+        recap</a> covers it, so no weekly account is written for it.</p>
 
     {% elif not account.have_key %}
       <p class="note">No <b>GEMINI_API_KEY</b> is set in this environment, so
