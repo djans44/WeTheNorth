@@ -90,7 +90,7 @@ Carried over from the season-page plan; the only piece of it never built.
 Needs `GEMINI_API_KEY`. Nothing generates without it and nothing else on the
 site depends on it, so everything still renders while it is missing.
 
-## 3. ~~Season calendar~~ **Done, bar one check**
+## 3. ~~Season calendar~~ **Done**
 
 A page for the shape of a league year: when keeper windows open and close,
 the draft, week one, the trade deadline, the playoff weeks.
@@ -169,14 +169,15 @@ The shape of a year is one table rather than a section each, and it stacks
 below 48rem -- three columns of label, value and pill do not fit a phone, and
 right-aligning them pushed the short answers off the edge entirely.
 
-### Still to do
+### Considered and not wanted
 
-- **The trade-deadline check.** The date is stored and displayed; nothing yet
-  compares it against what the transaction import loads. A trade dated after
-  the deadline should be caught the way `/admin/rosters` catches a roster that
-  disagrees with the record. Week 12 for 2026 sits comfortably later than any
-  trade the league has made -- the latest of 63 sides falls in week 11 -- so
-  the check would be quiet today, which is the right time to build it.
+A **check on the trade deadline** at import, catching a trade dated after it
+the way `/admin/rosters` catches a roster that disagrees with the record. Not
+built, on the league’s say-so. The record is the argument against: of 63
+trade sides across four seasons the latest falls in week 11, and 2026’s
+deadline is week 12, so the check has never had anything to say. The deadline
+is enforced by the commissioner refusing a trade, which is upstream of
+anything the import could catch.
 
 ## 4. ~~Admin imports from text files~~ **Done, and the rest struck**
 
