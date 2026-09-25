@@ -7131,7 +7131,7 @@ def season_setup_steps(conn, year):
     steps = []
 
     steps.append(step(
-        1, "The season row", "Still hand-written SQL -- the form belongs here", None,
+        1, "The season row", "On this page", None,
         "done" if n["season_row"] else "ready",
         ("%s teams, %s keepers each" % (size, n["keeper_count"])
          if n["season_row"] else
@@ -7139,7 +7139,7 @@ def season_setup_steps(conn, year):
 
     no_season = ["The season row has to exist first"] if not n["season_row"] else []
     steps.append(step(
-        2, "Owners and teams", "Still hand-written SQL -- the form belongs here", None,
+        2, "Owners and teams", "On this page", None,
         "blocked" if no_season else ("done" if teams_done else "ready"),
         ("%s of %s teams" % (n["teams"], size) if n["teams"] else
          "No owner is assigned to %s yet." % year),
@@ -8269,10 +8269,28 @@ def admin_season_setup(request: Request, season: int = 0):
         # row of its own can still be chosen and stood up.
         nxt = (max(known) + 1) if known else 2022
         years = [nxt] + known
+
+        steps = counts = None
         if not season:
-            unfinished = [r["season_year"] for r in rows if not r["is_complete"]]
-            season = unfinished[-1] if unfinished else nxt
-        steps, counts = season_setup_steps(conn, season)
+            # Where the work is, rather than the oldest season still running.
+            # The old rule landed on a year whose eight steps were all long
+            # done -- in October that is the season being played, a page of
+            # ticks -- and left the year somebody actually came to start
+            # hidden in the picker behind it.
+            #
+            # The loop stops at the first season with something outstanding
+            # and keeps what it worked out, so the common case costs nothing:
+            # the page needs those steps anyway.
+            for y in sorted(r["season_year"] for r in rows
+                            if not r["is_complete"]):
+                st, ct = season_setup_steps(conn, y)
+                if any(x["state"] != "done" for x in st):
+                    season, steps, counts = y, st, ct
+                    break
+            else:
+                season = nxt
+        if steps is None:
+            steps, counts = season_setup_steps(conn, season)
 
         # Defaults for a season that does not exist yet, cloned from the most
         # recent one that does. team_count has been 12 and keeper_count 3
@@ -8326,7 +8344,7 @@ def admin_season_setup(request: Request, season: int = 0):
         context={"years": years, "season": season, "steps": steps,
                  "counts": counts, "done": done, "total": len(steps),
                  "prev": prev, "roster": roster, "dates": dates,
-                 "suggested": suggested})
+                 "suggested": suggested, "known": known})
 
 
 @app.post("/admin/season-setup/season")

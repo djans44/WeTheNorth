@@ -14,8 +14,15 @@
       <ul>
         {% for y in years %}
           <li>
+            {# The year at the top of this list is the only one on the site
+               that does not exist: it is offered so a season can be stood up
+               at all. Unmarked it looked like the five real ones, and the one
+               action this page is named for was hidden in what reads as
+               navigation. #}
             <a href="/admin/season-setup?season={{ y }}"
-               {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+               {% if y == season %}aria-current="page"{% endif %}>{{ y }}
+              {%- if y not in known %} <span class="tm">not created</span>
+              {%- endif %}</a>
           </li>
         {% endfor %}
       </ul>
@@ -23,6 +30,26 @@
     <a class="to-top" href="#top">Top</a>
   </header>
 
+  {# The page is called New season and had no obvious way to start one. A
+     year with no row of its own gets the invitation instead of the tally:
+     eight steps of which seven are waiting on the first is a true answer to
+     a question nobody asked. #}
+  {% if season not in known %}
+  <section>
+    <div class="pickhead">
+      <p class="draftstate none">
+        <span>{{ season }} does not exist yet</span>
+        <span class="sub">Nothing can be set up until the season row is
+          made.</span>
+      </p>
+    </div>
+    <p class="note">Making it is step one below, and everything else hangs off
+      it. Teams and keepers are carried from {{ prev.season_year }}; the dates
+      are this year&rsquo;s, and week one is filled in from where the NFL has
+      started every season so far &mdash; worth checking against the
+      schedule.</p>
+  </section>
+  {% else %}
   <section>
     <div class="pickhead">
       {# none / set / live are the modifiers this component has: nothing yet,
@@ -43,6 +70,7 @@
       so a step that is not ready says what is in its way rather than
       disappearing.</p>
   </section>
+  {% endif %}
 
   <section>
     <ol class="setup">
