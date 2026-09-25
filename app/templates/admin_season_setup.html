@@ -99,9 +99,8 @@
                  its own rules; when everyone can get in a room is a diary
                  problem that comes later. #}
               <span class="field">
-                <label for="draft_on">Draft day</label>
-                <input id="draft_on" name="draft_on" class="datefield"
-                       placeholder="optional">
+                <label for="draft_at">Draft day</label>
+                <input id="draft_at" name="draft_at" type="datetime-local">
               </span>
               <button type="submit" class="seal">Create {{ season }}</button>
               {% if prev.season_year %}
@@ -132,10 +131,13 @@
                        placeholder="{{ season }}-11-16">
               </span>
               <span class="field">
+                {# Eastern, like the keeper windows, and read back through
+                   league_field rather than strftime -- which shows the UTC
+                   hour and invites an admin to correct a time that was
+                   already right. #}
                 <label for="dr">Draft day</label>
-                <input id="dr" name="draft_on" class="datefield"
-                       value="{{ dates.draft_on or '' }}"
-                       placeholder="optional">
+                <input id="dr" name="draft_at" type="datetime-local"
+                       value="{{ dates.draft_at | league_field }}">
               </span>
               <button type="submit" class="seal quiet">Save the dates</button>
               {% if not dates.trade_deadline %}

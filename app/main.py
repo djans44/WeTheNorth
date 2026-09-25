@@ -3885,6 +3885,17 @@ ROUND_NAMES = [("championship", "The final"),
                ("semifinal", "Semifinals"),
                ("quarterfinal", "Quarterfinals")]
 
+# The same three, in the order they are played, for a season whose bracket
+# nobody has drawn yet. The schedule generator lays out fourteen weeks and
+# stops; the bracket is drawn afterwards, off the final table. So a season in
+# October has fixtures to week fourteen and nothing after it, and a calendar
+# built only from fixtures showed a year that ends before the playoffs.
+#
+# They are as certain as anything here -- the bracket is identical every year
+# -- but certain is not the same as drawn, so they are marked as expected the
+# way the assembly's window is.
+EXPECTED_ROUNDS = ["Quarterfinals", "Semifinals", "The final"]
+
 
 @app.get("/calendar", response_class=HTMLResponse)
 def league_calendar(request: Request, season: int = 0):
@@ -3909,11 +3920,11 @@ def league_calendar(request: Request, season: int = 0):
             season = years[0] if years else 0
 
         row = query(conn, """
-            select week_one_sunday, trade_deadline, draft_on, is_complete
+            select week_one_sunday, trade_deadline, draft_at, is_complete
             from seasons where season_year = %s
         """, (season,))
         row = row[0] if row else {"week_one_sunday": None,
-                                  "trade_deadline": None, "draft_on": None,
+                                  "trade_deadline": None, "draft_at": None,
                                   "is_complete": False}
         anchor = row["week_one_sunday"]
 
@@ -3968,7 +3979,29 @@ def league_calendar(request: Request, season: int = 0):
                 "played": f["scored"] and f["scored"] == f["games"],
                 "part": f["scored"] and f["scored"] < f["games"],
                 "now": f["week"] == now_week,
+                "expected": False,
             })
+
+        # The playoff weeks, when the season has a full regular season drawn
+        # and nothing after it. Not for a half-drawn schedule: three playoff
+        # weeks under a season that stops at week five would be describing a
+        # year nobody has planned.
+        have = {w["week"] for w in weeks}
+        if anchor and have and max(have) >= honours.REGULAR_WEEKS:
+            for i, name in enumerate(EXPECTED_ROUNDS):
+                n = honours.REGULAR_WEEKS + 1 + i
+                if n in have:
+                    continue
+                sunday = anchor + datetime.timedelta(days=7 * (n - 1))
+                weeks.append({
+                    "week": n, "sunday": sunday,
+                    "opens": sunday - datetime.timedelta(days=5),
+                    "closes": sunday + datetime.timedelta(days=1),
+                    "games": 0, "rivalry": False, "label": name,
+                    "played": False, "part": False,
+                    "now": n == now_week, "expected": True,
+                })
+            weeks.sort(key=lambda w: w["week"])
 
         # The choosing and the assembly. Read, never written here.
         windows = query(conn, """
@@ -4016,8 +4049,9 @@ def league_calendar(request: Request, season: int = 0):
                                          league_clock(a), league_clock(b))
         return "%s \u2013 %s" % (league_hour(a), league_hour(b))
 
-    if row["draft_on"]:
-        at(row["draft_on"], "Draft day", day_month(row["draft_on"]))
+    if row["draft_at"]:
+        # The hour said, because it is the one thing here people turn up to.
+        at(row["draft_at"], "Draft day", league_hour(row["draft_at"]))
     if anchor:
         at(anchor, "Week one", day_month(anchor))
     for w in windows:
@@ -4304,7 +4338,7 @@ def _read_season_dates(form, season):
     """
     sunday = (form.get("week_one_sunday") or "").strip()
     deadline = (form.get("trade_deadline") or "").strip()
-    draft = (form.get("draft_on") or "").strip()
+    draft = (form.get("draft_at") or "").strip()
 
     if not _is_a_date(sunday):
         return None, ("Week one needs a date, as 2027-09-12. "
@@ -4334,15 +4368,19 @@ def _read_season_dates(form, season):
     # refusing to create the season over it would be the page insisting on
     # something nobody has yet.
     if draft:
-        if not _is_a_date(draft):
-            return None, ("The draft needs a date, as 2027-09-07. "
-                          "Got %r." % draft)
-        draft = datetime.date.fromisoformat(draft)
-        if draft >= sunday:
+        # A datetime-local, read as league wall-clock the way a keeper window
+        # is: the browser sends no zone at all, and Postgres would cast it
+        # using the session's, which is GMT. An admin typing 7pm would have
+        # set the draft for 3pm and nothing would have said so.
+        try:
+            draft = league_moment(draft)
+        except ValueError:
+            return None, ("The draft needs a date and time. Got %r." % draft)
+        if draft.astimezone(LEAGUE_TZ).date() >= sunday:
             return None, ("The draft is %s, which is after the season starts."
-                          % draft)
+                          % league_hour(draft))
     return {"week_one_sunday": sunday, "trade_deadline": deadline,
-            "draft_on": draft or None}, ""
+            "draft_at": draft or None}, ""
 
 
 def _is_a_date(value):
@@ -8256,12 +8294,12 @@ def admin_season_setup(request: Request, season: int = 0):
         # and every season that existed before the column did needed its week
         # one filling in.
         dates = query(conn, """
-            select week_one_sunday, trade_deadline, draft_on from seasons
+            select week_one_sunday, trade_deadline, draft_at from seasons
             where season_year = %s
         """, (season,))
         dates = dates[0] if dates else {"week_one_sunday": None,
                                         "trade_deadline": None,
-                                        "draft_on": None}
+                                        "draft_at": None}
         suggested = nfl_first_sunday(season)
 
         # Every owner, with last season's team name carried forward. An owner
@@ -8325,10 +8363,10 @@ async def admin_create_season(request: Request):
                         insert into seasons (season_year, team_count,
                                              keeper_count, is_complete,
                                              week_one_sunday, trade_deadline,
-                                             draft_on)
+                                             draft_at)
                         values (%s, %s, %s, false, %s, %s, %s)
                     """, (season, teams, keepers, dates["week_one_sunday"],
-                          dates["trade_deadline"], dates["draft_on"]))
+                          dates["trade_deadline"], dates["draft_at"]))
             if not err:
                 conn.commit()
 
@@ -8368,10 +8406,10 @@ async def admin_season_dates(request: Request):
         with conn.cursor() as cur:
             cur.execute("""
                 update seasons set week_one_sunday = %s, trade_deadline = %s,
-                       draft_on = %s, updated_at = now()
+                       draft_at = %s, updated_at = now()
                  where season_year = %s
             """, (dates["week_one_sunday"], dates["trade_deadline"],
-                  dates["draft_on"], season))
+                  dates["draft_at"], season))
             changed = cur.rowcount
     if not changed:
         return RedirectResponse(
@@ -8381,7 +8419,8 @@ async def admin_season_dates(request: Request):
         url=back + "&msg=" + quote(
             "Week one is %s, trading closes %s%s"
             % (dates["week_one_sunday"], dates["trade_deadline"],
-               ", drafted %s" % dates["draft_on"] if dates["draft_on"] else "")),
+               ", drafting %s" % league_hour(dates["draft_at"])
+               if dates["draft_at"] else "")),
         status_code=303)
 
 

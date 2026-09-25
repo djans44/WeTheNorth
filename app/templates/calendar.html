@@ -96,7 +96,8 @@
               {%- elif w.rivalry %}<b>Rivalry week</b>
               {%- endif %}
               <span class="tm">
-                {%- if w.now %}being played now
+                {%- if w.expected %}not drawn yet
+                {%- elif w.now %}being played now
                 {%- elif w.played %}played
                 {%- elif w.part %}part scored
                 {%- endif %}</span>
