@@ -119,21 +119,38 @@ fantasy week opens: checkable against any NFL schedule, and unambiguous where
 "the Tuesday" invites the wrong side of the weekend and shifts the year by
 five days. A week runs Tuesday-before to Monday-after.
 
+**Both dates are set on `/admin/season-setup`**, step one, and stay editable
+after creation -- which nothing else in step one is, because a team count is
+structural while a deadline is a decision the league can revise. Week one is
+offered pre-filled from the Labor Day pattern, so it is a confirmation rather
+than a lookup, and four refusals guard it, of which the one that earns its
+keep is "that is a Tuesday": it passes every other kind of validation and then
+moves the whole year by five days.
+
+The deadline is a **date**, not a week. A week would derive itself from the
+anchor every year with nothing to re-enter, and the record even suggests which
+one -- of 63 trade sides the latest falls in week 11 -- but the league sets it
+by hand, and a stored week would be the app telling the league what its own
+rule is.
+
+**The page is built**: `/calendar`, under League. Public, because it exists so
+that nobody can say they did not know a keeper window had opened. It owns
+nothing -- the windows and the assembly are read from the tables that enforce
+them -- and what it adds is the arithmetic. Rivalry week and the playoff
+rounds are read off the fixtures rather than assumed from the number, the same
+rule the season page uses.
+
 ### Still to do
 
-- **Nothing sets it for a future season.** 2027 will be created by
-  `/admin/season-setup` with no anchor, and `league_week` answers null. A
-  field on step one closes it.
-- The draft date and the trade deadline. The deadline **is enforced**, and
-  while the app cannot prevent a trade -- they happen in Yahoo and arrive by
-  import -- it can catch one dated after the deadline, the same shape as the
-  roster reconciliation in item 13. Open question: is the deadline a *week* or
-  a *date*? A week derives its date from the anchor every year with nothing to
-  re-enter. The record suggests week 11: with 63 trade sides now attributed,
-  the last trade of each season falls in weeks 11, 11, 10 and 7.
-- The page itself, **public** -- it exists so nobody can say they did not know
-  when a keeper window opened. Nav placement undecided; it would be an eighth
-  top-level item.
+- **The draft date.** The third unowned date, and the only one not built: a
+  draft has a time and people turn up to it. Nothing holds one today.
+- **The trade-deadline check.** The date is stored and displayed; nothing yet
+  compares it against what the transaction import loads. A trade dated after
+  the deadline should be caught the way `/admin/rosters` catches a roster that
+  disagrees with the record.
+- **2026 has no deadline recorded.** Its week one is set; the deadline is a
+  number only the league knows, and inferring one from where trades happen to
+  stop would be storing a guess as a record.
 
 ## 4. ~~Admin imports from text files~~ **Done, and the rest struck**
 

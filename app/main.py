@@ -219,9 +219,25 @@ def league_clock(ts):
                           "am" if d.hour < 12 else "pm")
 
 
+def day_month(d):
+    """A plain date as the league reads it: "Sun 13 Sep".
+
+    league_day does this for a timestamptz and converts into the league's zone
+    on the way. These are dates and have no zone to convert -- a Sunday is the
+    same Sunday everywhere -- so they get their own filter rather than a cast
+    that would read like a timezone bug waiting to happen.
+
+    d.day rather than %-d, which is glibc only and has bitten twice.
+    """
+    if not d:
+        return ""
+    return "%s %d %s" % (d.strftime("%a"), d.day, d.strftime("%b"))
+
+
 templates.env.filters["league_day"] = league_day
 templates.env.filters["league_hour"] = league_hour
 templates.env.filters["league_clock"] = league_clock
+templates.env.filters["day_month"] = day_month
 def crest_when(row):
     """When a crest was won, and what earned it, on one line.
 
@@ -3860,6 +3876,117 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
         context={"years": years, "season": season, "source": source,
                  "sides": sides, "squads": squads, "who": who, "one": one,
                  "moves": len(moves), "picks": len(picks)})
+
+
+# The playoff rounds a week can hold, most significant first. A week's label
+# is the best game in it: week sixteen has two semifinals and a fifth-place
+# game, and it is the semifinals.
+ROUND_NAMES = [("championship", "The final"),
+               ("semifinal", "Semifinals"),
+               ("quarterfinal", "Quarterfinals")]
+
+
+@app.get("/calendar", response_class=HTMLResponse)
+def league_calendar(request: Request, season: int = 0):
+    """The shape of a league year: when everything is, in one place.
+
+    It exists so that nobody can say they did not know a keeper window had
+    opened. Every date on it is already in the database somewhere -- the
+    windows on /admin/keepers, the assembly on /admin/crests -- and every one
+    of those is an admin page most of the league never opens.
+
+    It owns nothing. The dates that gate a form stay in the tables that
+    enforce them, because poll_state is the single rule for whether an
+    assembly is sitting and keeper submission is refused against its own
+    window; a calendar that held copies would be a second answer to a
+    question that already has one. What it adds is arithmetic: given the
+    Sunday week one falls on, every week of the season follows, and so does
+    which week any date lands in.
+    """
+    with get_db() as conn:
+        years = [r["season_year"] for r in nav_seasons()]
+        if season not in years:
+            season = years[0] if years else 0
+
+        row = query(conn, """
+            select week_one_sunday, trade_deadline, is_complete
+            from seasons where season_year = %s
+        """, (season,))
+        row = row[0] if row else {"week_one_sunday": None,
+                                  "trade_deadline": None, "is_complete": False}
+        anchor = row["week_one_sunday"]
+
+        # Which week today is, asked of the one thing that knows. Not the same
+        # question the season page answers: that one opens on the week being
+        # played, which it reads off the scores, because a week with no result
+        # in it is still the week being played. This is a calendar and answers
+        # from the date.
+        now_week = query(conn, """
+            select league_week(%s, current_date) as w
+        """, (season,))[0]["w"]
+        deadline_week = query(conn, """
+            select league_week(%s, %s::date) as w
+        """, (season, row["trade_deadline"]))[0]["w"]
+
+        # Rivalry week is the week where every game is a rival meeting, read
+        # off the fixtures rather than pinned to week ten -- the schedule
+        # generator puts it there, but the pre-2026 schedules came from Yahoo
+        # and know nothing about rivalries. The same rule the season page uses.
+        fixtures = query(conn, """
+            select m.week, count(*) as games,
+                   count(*) filter (where rv.owner_id is not null) as rival_games,
+                   array_agg(distinct m.game_type) as kinds,
+                   count(*) filter (where m.team_a_points is not null) as scored
+              from matchups m
+              join teams ta on ta.team_id = m.team_a_id
+              left join teams tb on tb.team_id = m.team_b_id
+              left join rivalries rv on rv.season_year = m.season_year
+                                    and rv.owner_id = ta.owner_id
+                                    and rv.rival_owner_id = tb.owner_id
+             where m.season_year = %s
+             group by m.week order by m.week
+        """, (season,))
+
+        weeks = []
+        for f in fixtures:
+            kinds = set(f["kinds"] or [])
+            label = next((name for code, name in ROUND_NAMES if code in kinds), "")
+            sunday = (anchor + datetime.timedelta(days=7 * (f["week"] - 1))
+                      if anchor else None)
+            weeks.append({
+                "week": f["week"],
+                "sunday": sunday,
+                # A week runs from the Tuesday before its Sunday to the Monday
+                # after, which is where the waivers clear and where a fantasy
+                # week ends.
+                "opens": sunday - datetime.timedelta(days=5) if sunday else None,
+                "closes": sunday + datetime.timedelta(days=1) if sunday else None,
+                "games": f["games"],
+                "rivalry": f["games"] > 1 and f["rival_games"] == f["games"],
+                "label": label,
+                "played": f["scored"] and f["scored"] == f["games"],
+                "part": f["scored"] and f["scored"] < f["games"],
+                "now": f["week"] == now_week,
+            })
+
+        # The choosing, and the assembly. Read, never written here.
+        windows = query(conn, """
+            select phase, opens_at, closes_at, resolved_at
+            from keeper_windows where season_year = %s order by phase
+        """, (season,))
+        polls = query(conn, """
+            select poll_id, opens_at, closes_at, closed_at
+            from crest_polls where season_year = %s order by opens_at
+        """, (season,))
+        polls = [dict(p, state=poll_state(p)) for p in polls]
+
+    return templates.TemplateResponse(
+        request=request, name="calendar.html",
+        context={"years": years, "season": season, "anchor": anchor,
+                 "deadline": row["trade_deadline"],
+                 "deadline_week": deadline_week, "now_week": now_week,
+                 "weeks": weeks, "windows": windows, "polls": polls,
+                 "finished": row["is_complete"]})
 
 
 @app.get("/transactions", response_class=HTMLResponse)

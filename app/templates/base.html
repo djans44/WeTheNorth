@@ -56,9 +56,11 @@
          rather than alongside the four headings that are places to go. #}
       <li class="has-menu">
         <a href="/history"
-           {% if path in ('/history', '/crests', '/transactions', '/rosters') %}class="on"{% endif %}>League</a>
+           {% if path in ('/history', '/crests', '/transactions', '/rosters',
+                          '/calendar') %}class="on"{% endif %}>League</a>
         <ul class="submenu">
           <li><a href="/history">History</a></li>
+          <li><a href="/calendar">League calendar</a></li>
           <li><a href="/crests">Crests of honour</a></li>
           <li><a href="/transactions">Transactions</a></li>
           <li><a href="/rosters">Rosters</a></li>

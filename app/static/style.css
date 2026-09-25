@@ -1965,6 +1965,11 @@ label.second { margin-top: var(--s4); }
    heavier: .rd is already 700 and 600 is a step down from it. */
 .choosing tr.onclock td.name { font-weight: 600; }
 .choosing tr.onclock td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+/* The same idea on the calendar: of eighteen rows one is the week being
+   played, and it is the only one anybody is looking for. Scoped to .weeks
+   because "now" is a name a second page would take for something else. */
+.weeks tr.now { background: var(--gold-ghost); }
+.weeks tr.now td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
 /* Scoped, because "now" on its own is the kind of name a second page would
    take for something else. Gold and not muted: every other word in this
    column is a state you are stuck in, and this one is a state that is
@@ -2975,6 +2980,14 @@ button.seal.working::before {
 /* ---- narrow screens ---- */
 
 @media (max-width: 48rem) {
+  /* The calendar's week table has five columns and the fifth is the one worth
+     reading -- rivalry week, the final, which week is being played now. On a
+     phone it was the one pushed off the edge, which is the fault the keeper
+     audit recorded: a table that scrolls is fine until the cut column is the
+     point of the table. The Tuesday and the Monday go instead. They are the
+     boundary rather than the week's name, the paragraph above says what it
+     is, and the Sunday identifies the week on its own. */
+  .weeks .bound { display: none; }
   :root {
     --pad-body:    var(--s4) 0.6rem;
     --pad-section: 1.1rem;

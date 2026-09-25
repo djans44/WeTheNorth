@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% from "macros.html" import leaf %}
+{% block title %}Calendar {{ season }} | We the North{% endblock %}
+
+{% block content %}
+<div class="page">
+  {# The year is the control that changes the year, as everywhere else. #}
+  <header class="page-head tight stuck">
+    <details class="headpick">
+      <summary>
+        <h1>{{ leaf(20) }}Calendar {{ season }}</h1>
+      </summary>
+      <ul>
+        {% for y in years %}
+          <li>
+            <a href="/calendar?season={{ y }}"
+               {% if y == season %}aria-current="page"{% endif %}>{{ y }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="to-top" href="#top">Top</a>
+  </header>
+
+  {# Everything here is measured from one date, so if that date is missing the
+     page has nothing to say and says so rather than drawing an empty grid.
+     An invitation, not an apology: the thing that fixes it is named. #}
+  {% if not anchor %}
+    <section>
+      <p class="note">{{ season }} has no week one recorded, and every date on
+        this page is measured from it. An admin sets it on
+        <b>New season</b>, step one.</p>
+    </section>
+  {% else %}
+
+  <section>
+    <h2>The shape of {{ season }}</h2>
+    <p class="note">The year is measured from one date. Week one&rsquo;s games
+      are played on {{ anchor|day_month }}, and every week runs from the
+      Tuesday before its Sunday to the Monday after &mdash; where the waivers
+      clear, and where a fantasy week ends. That is what lets the week a trade
+      or a waiver claim fell in be named at all.</p>
+    <ul class="records">
+      <li class="pairing">
+        <span><b>Week one</b></span>
+        <span class="tm">{{ anchor|day_month }}</span></li>
+      <li class="pairing">
+        <span><b>Trading closes</b></span>
+        {% if deadline %}
+          <span class="tm">{{ deadline|day_month }}{% if deadline_week %},
+            in week {{ deadline_week }}{% endif %}</span>
+        {% else %}
+          <span class="tm">not recorded for {{ season }}</span>
+        {% endif %}</li>
+      {% if now_week and not finished %}
+        <li class="pairing">
+          <span><b>Today</b></span>
+          <span class="tm">{% if now_week < 1 %}before week one{% elif
+            now_week > weeks|length %}after the season{% else %}week
+            {{ now_week }}{% endif %}</span></li>
+      {% endif %}
+    </ul>
+  </section>
+
+  {# The weeks themselves. Rivalry week and the playoff rounds are read off
+     the fixtures rather than assumed from the number: the schedule generator
+     pins rivalry week to ten, but the pre-2026 schedules came from Yahoo and
+     know nothing about rivalries, and a season whose bracket is not drawn has
+     no playoff weeks at all. #}
+  <section>
+    <h2>The weeks</h2>
+    <div class="scroller">
+      <table class="keepers weeks">
+        <thead>
+          <tr><th>Week</th><th class="bound">Opens</th><th>Sunday</th><th class="bound">Closes</th>
+              <th>What it is</th></tr>
+        </thead>
+        <tbody>
+        {% for w in weeks %}
+          <tr class="{% if w.now %}now{% endif %}">
+            <td class="rd">{{ w.week }}</td>
+            <td class="bound">{{ w.opens|day_month }}</td>
+            <td>{{ w.sunday|day_month }}</td>
+            <td class="bound">{{ w.closes|day_month }}</td>
+            <td>
+              {%- if w.label %}<b>{{ w.label }}</b>
+              {%- elif w.rivalry %}<b>Rivalry week</b>
+              {%- endif %}
+              <span class="tm">
+                {%- if w.now %}being played now
+                {%- elif w.played %}played
+                {%- elif w.part %}part scored
+                {%- endif %}</span>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not weeks %}
+      <p class="note">{{ season }} has no fixtures yet. They are drawn on
+        <b>Create schedule</b>.</p>
+    {% endif %}
+  </section>
+
+  {# Both of these are read from the tables that enforce them. A keeper round
+     refuses a submission against its own window and poll_state is the single
+     rule for whether an assembly is sitting, so copies here would be a second
+     answer to a settled question. #}
+  <section>
+    <h2>The choosing</h2>
+    {% if windows %}
+      <p class="note">Three rounds, each with its own window. A round missed
+        with no contract to fill the slot forfeits that keeper.</p>
+      <ul class="records">
+        {% for w in windows %}
+          <li class="pairing">
+            <span><b>Keeper round {{ w.phase }}</b></span>
+            <span class="tm">{{ w.opens_at|league_hour }}
+              &ndash; {{ w.closes_at|league_hour }}</span>
+            <span class="tm">{% if w.resolved_at %}resolved
+              {{ w.resolved_at|league_day }}{% endif %}</span></li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="note">No keeper windows are set for {{ season }}.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>The assembly</h2>
+    {% if polls %}
+      <ul class="records">
+        {% for p in polls %}
+          <li class="pairing">
+            <span><b>{{ season }} honours</b></span>
+            <span class="tm">{{ p.opens_at|league_hour }}
+              &ndash; {{ p.closes_at|league_hour }}</span>
+            <span class="pill {% if p.state == 'sitting' %}live{% endif %}">
+              {{ p.state }}</span></li>
+        {% endfor %}
+      </ul>
+      <p class="note"><a href="/assembly">Open deliberations</a> is where the
+        voting happens.</p>
+    {% else %}
+      <p class="note">No assembly has been called for {{ season }}.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
