@@ -140,17 +140,28 @@ them -- and what it adds is the arithmetic. Rivalry week and the playoff
 rounds are read off the fixtures rather than assumed from the number, the same
 rule the season page uses.
 
+All three dates are built. The draft is `seasons.draft_on`, migration 059,
+and it is the one that may be left blank: a season row is made when the
+schedule is out and the league has settled its rules, while when everyone can
+get in a room is a diary problem that comes later. Not derived from week one
+either, though 2026's draft fell exactly on the Tuesday that opens it -- that
+is where this league happened to put it once, not a rule, and a derivation has
+no way to be corrected the year it is wrong.
+
+2026 is recorded in full: drafted Tue 8 Sep, week one Sun 13 Sep, trading
+closes Sat 28 Nov, which is week 12. 2022-25 have only their week ones; what
+those seasons ran under is not written down anywhere, and a date inferred from
+where the trades happen to stop would be a guess wearing the clothes of a
+record.
+
 ### Still to do
 
-- **The draft date.** The third unowned date, and the only one not built: a
-  draft has a time and people turn up to it. Nothing holds one today.
 - **The trade-deadline check.** The date is stored and displayed; nothing yet
   compares it against what the transaction import loads. A trade dated after
   the deadline should be caught the way `/admin/rosters` catches a roster that
-  disagrees with the record.
-- **2026 has no deadline recorded.** Its week one is set; the deadline is a
-  number only the league knows, and inferring one from where trades happen to
-  stop would be storing a guess as a record.
+  disagrees with the record. Week 12 for 2026 sits comfortably later than any
+  trade the league has made -- the latest of 63 sides falls in week 11 -- so
+  the check would be quiet today, which is the right time to build it.
 
 ## 4. ~~Admin imports from text files~~ **Done, and the rest struck**
 

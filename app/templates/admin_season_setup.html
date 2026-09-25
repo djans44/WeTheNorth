@@ -94,6 +94,15 @@
                 <input id="trade_deadline" name="trade_deadline" class="datefield"
                        placeholder="{{ season }}-11-16">
               </span>
+              {# The one of the three that may not be known yet. A season row
+                 is made when the schedule is out and the league has settled
+                 its own rules; when everyone can get in a room is a diary
+                 problem that comes later. #}
+              <span class="field">
+                <label for="draft_on">Draft day</label>
+                <input id="draft_on" name="draft_on" class="datefield"
+                       placeholder="optional">
+              </span>
               <button type="submit" class="seal">Create {{ season }}</button>
               {% if prev.season_year %}
                 <span class="tm">Teams and keepers carried from
@@ -121,6 +130,12 @@
                 <input id="dl" name="trade_deadline" class="datefield"
                        value="{{ dates.trade_deadline or '' }}"
                        placeholder="{{ season }}-11-16">
+              </span>
+              <span class="field">
+                <label for="dr">Draft day</label>
+                <input id="dr" name="draft_on" class="datefield"
+                       value="{{ dates.draft_on or '' }}"
+                       placeholder="optional">
               </span>
               <button type="submit" class="seal quiet">Save the dates</button>
               {% if not dates.trade_deadline %}

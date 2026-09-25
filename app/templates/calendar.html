@@ -41,6 +41,16 @@
       clear, and where a fantasy week ends. That is what lets the week a trade
       or a waiver claim fell in be named at all.</p>
     <ul class="records">
+      {# In the order they happen, which puts the draft first. It gates
+         nothing and is measured from nothing -- it is here because a year
+         later nobody remembers when it was. #}
+      <li class="pairing">
+        <span><b>Draft day</b></span>
+        {% if draft_on %}
+          <span class="tm">{{ draft_on|day_month }}</span>
+        {% else %}
+          <span class="tm">not recorded for {{ season }}</span>
+        {% endif %}</li>
       <li class="pairing">
         <span><b>Week one</b></span>
         <span class="tm">{{ anchor|day_month }}</span></li>

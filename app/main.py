@@ -3909,11 +3909,12 @@ def league_calendar(request: Request, season: int = 0):
             season = years[0] if years else 0
 
         row = query(conn, """
-            select week_one_sunday, trade_deadline, is_complete
+            select week_one_sunday, trade_deadline, draft_on, is_complete
             from seasons where season_year = %s
         """, (season,))
         row = row[0] if row else {"week_one_sunday": None,
-                                  "trade_deadline": None, "is_complete": False}
+                                  "trade_deadline": None, "draft_on": None,
+                                  "is_complete": False}
         anchor = row["week_one_sunday"]
 
         # Which week today is, asked of the one thing that knows. Not the same
@@ -3984,6 +3985,7 @@ def league_calendar(request: Request, season: int = 0):
         request=request, name="calendar.html",
         context={"years": years, "season": season, "anchor": anchor,
                  "deadline": row["trade_deadline"],
+                 "draft_on": row["draft_on"],
                  "deadline_week": deadline_week, "now_week": now_week,
                  "weeks": weeks, "windows": windows, "polls": polls,
                  "finished": row["is_complete"]})
@@ -4230,7 +4232,7 @@ def nfl_first_sunday(year):
 
 
 def _read_season_dates(form, season):
-    """The two dates off a season form, or the first thing wrong with them.
+    """The dates off a season form as {column: value}, or what is wrong.
 
     Checked here rather than left to the constraints, which answer a bad value
     with a 500 and tell the admin nothing. A Sunday that is not a Sunday is
@@ -4239,29 +4241,45 @@ def _read_season_dates(form, season):
     """
     sunday = (form.get("week_one_sunday") or "").strip()
     deadline = (form.get("trade_deadline") or "").strip()
+    draft = (form.get("draft_on") or "").strip()
 
     if not _is_a_date(sunday):
-        return None, None, ("Week one needs a date, as 2027-09-12. "
-                            "Got %r." % sunday if sunday else
-                            "Week one needs the date of its Sunday.")
+        return None, ("Week one needs a date, as 2027-09-12. "
+                      "Got %r." % sunday if sunday else
+                      "Week one needs the date of its Sunday.")
     sunday = datetime.date.fromisoformat(sunday)
     if sunday.weekday() != 6:
-        return None, None, ("%s is a %s. Week one is named by its Sunday, and "
-                            "a day either side of it shifts every week of the "
-                            "season." % (sunday, sunday.strftime("%A")))
+        return None, ("%s is a %s. Week one is named by its Sunday, and a day "
+                      "either side of it shifts every week of the season."
+                      % (sunday, sunday.strftime("%A")))
     if sunday.year != season:
         # A 2027 season starting in 2026 is a typo every time.
-        return None, None, ("%s is not in %s." % (sunday, season))
+        return None, ("%s is not in %s." % (sunday, season))
 
     if not _is_a_date(deadline):
-        return None, None, ("The trade deadline needs a date, as 2027-11-16. "
-                            "Got %r." % deadline if deadline else
-                            "The trade deadline needs a date.")
+        return None, ("The trade deadline needs a date, as 2027-11-16. "
+                      "Got %r." % deadline if deadline else
+                      "The trade deadline needs a date.")
     deadline = datetime.date.fromisoformat(deadline)
     if deadline <= sunday:
-        return None, None, ("The trade deadline is %s, which is before the "
-                            "season starts." % deadline)
-    return sunday, deadline, ""
+        return None, ("The trade deadline is %s, which is before the season "
+                      "starts." % deadline)
+
+    # The one that is allowed to be missing. A season row is made when the
+    # schedule is known and the league has decided its own rules; when the
+    # draft will be held is a diary problem that gets settled later, and
+    # refusing to create the season over it would be the page insisting on
+    # something nobody has yet.
+    if draft:
+        if not _is_a_date(draft):
+            return None, ("The draft needs a date, as 2027-09-07. "
+                          "Got %r." % draft)
+        draft = datetime.date.fromisoformat(draft)
+        if draft >= sunday:
+            return None, ("The draft is %s, which is after the season starts."
+                          % draft)
+    return {"week_one_sunday": sunday, "trade_deadline": deadline,
+            "draft_on": draft or None}, ""
 
 
 def _is_a_date(value):
@@ -8175,11 +8193,12 @@ def admin_season_setup(request: Request, season: int = 0):
         # and every season that existed before the column did needed its week
         # one filling in.
         dates = query(conn, """
-            select week_one_sunday, trade_deadline from seasons
+            select week_one_sunday, trade_deadline, draft_on from seasons
             where season_year = %s
         """, (season,))
         dates = dates[0] if dates else {"week_one_sunday": None,
-                                        "trade_deadline": None}
+                                        "trade_deadline": None,
+                                        "draft_on": None}
         suggested = nfl_first_sunday(season)
 
         # Every owner, with last season's team name carried forward. An owner
@@ -8221,7 +8240,7 @@ async def admin_create_season(request: Request):
     keepers = int(form.get("keeper_count") or 3)
     back = "/admin/season-setup?season=%d" % season
 
-    sunday, deadline, err = _read_season_dates(form, season)
+    dates, err = _read_season_dates(form, season)
     if err:
         return RedirectResponse(url=back + "&error=" + quote(err),
                                 status_code=303)
@@ -8242,9 +8261,11 @@ async def admin_create_season(request: Request):
                     cur.execute("""
                         insert into seasons (season_year, team_count,
                                              keeper_count, is_complete,
-                                             week_one_sunday, trade_deadline)
-                        values (%s, %s, %s, false, %s, %s)
-                    """, (season, teams, keepers, sunday, deadline))
+                                             week_one_sunday, trade_deadline,
+                                             draft_on)
+                        values (%s, %s, %s, false, %s, %s, %s)
+                    """, (season, teams, keepers, dates["week_one_sunday"],
+                          dates["trade_deadline"], dates["draft_on"]))
             if not err:
                 conn.commit()
 
@@ -8253,7 +8274,8 @@ async def admin_create_season(request: Request):
     return RedirectResponse(
         url=back + "&msg=" + quote("%s created, %d teams, %d keepers each, "
                                    "week one %s"
-                                   % (season, teams, keepers, sunday)),
+                                   % (season, teams, keepers,
+                                      dates["week_one_sunday"])),
         status_code=303)
 
 
@@ -8274,7 +8296,7 @@ async def admin_season_dates(request: Request):
     season = int(form["season"])
     back = "/admin/season-setup?season=%d" % season
 
-    sunday, deadline, err = _read_season_dates(form, season)
+    dates, err = _read_season_dates(form, season)
     if err:
         return RedirectResponse(url=back + "&error=" + quote(err),
                                 status_code=303)
@@ -8283,17 +8305,21 @@ async def admin_season_dates(request: Request):
         with conn.cursor() as cur:
             cur.execute("""
                 update seasons set week_one_sunday = %s, trade_deadline = %s,
-                       updated_at = now()
+                       draft_on = %s, updated_at = now()
                  where season_year = %s
-            """, (sunday, deadline, season))
+            """, (dates["week_one_sunday"], dates["trade_deadline"],
+                  dates["draft_on"], season))
             changed = cur.rowcount
     if not changed:
         return RedirectResponse(
             url=back + "&error=" + quote("%s does not exist yet." % season),
             status_code=303)
     return RedirectResponse(
-        url=back + "&msg=" + quote("Week one is %s, trading closes %s"
-                                   % (sunday, deadline)), status_code=303)
+        url=back + "&msg=" + quote(
+            "Week one is %s, trading closes %s%s"
+            % (dates["week_one_sunday"], dates["trade_deadline"],
+               ", drafted %s" % dates["draft_on"] if dates["draft_on"] else "")),
+        status_code=303)
 
 
 @app.post("/admin/season-setup/teams")
