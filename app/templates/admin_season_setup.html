@@ -77,9 +77,54 @@
                 <input id="keeper_count" name="keeper_count" type="number" min="0" max="10"
                        value="{{ prev.keeper_count }}">
               </span>
+              {# The two dates the year is measured from. Week one is named by
+                 its Sunday because that is the day the league is about and the
+                 one you can check against a schedule; everything else -- the
+                 week a trade fell in, which week is which -- is arithmetic
+                 from it. The value offered is the Sunday after the Thursday
+                 after Labor Day, where the NFL has started every season so
+                 far, so this is a confirmation rather than a lookup. #}
+              <span class="field">
+                <label for="week_one_sunday">Week one Sunday</label>
+                <input id="week_one_sunday" name="week_one_sunday" class="datefield"
+                       value="{{ suggested }}">
+              </span>
+              <span class="field">
+                <label for="trade_deadline">Trading closes</label>
+                <input id="trade_deadline" name="trade_deadline" class="datefield"
+                       placeholder="{{ season }}-11-16">
+              </span>
               <button type="submit" class="seal">Create {{ season }}</button>
               {% if prev.season_year %}
-                <span class="tm">Carried from {{ prev.season_year }}.</span>
+                <span class="tm">Teams and keepers carried from
+                  {{ prev.season_year }}; the dates are this year&rsquo;s.</span>
+              {% endif %}
+            </form>
+          {% endif %}
+
+          {# Once the row exists the dates are still editable, and they are the
+             only part of step one that is. A team count is structural -- the
+             rivalry and schedule generators are built on it -- while a
+             deadline is a decision the league can revise, and every season
+             that existed before these columns did has one to fill in. #}
+          {% if s.n == 1 and s.state == "done" %}
+            <form method="post" action="/admin/season-setup/dates"
+                  class="season-form">
+              <input type="hidden" name="season" value="{{ season }}">
+              <span class="field">
+                <label for="wk1">Week one Sunday</label>
+                <input id="wk1" name="week_one_sunday" class="datefield"
+                       value="{{ dates.week_one_sunday or suggested }}">
+              </span>
+              <span class="field">
+                <label for="dl">Trading closes</label>
+                <input id="dl" name="trade_deadline" class="datefield"
+                       value="{{ dates.trade_deadline or '' }}"
+                       placeholder="{{ season }}-11-16">
+              </span>
+              <button type="submit" class="seal quiet">Save the dates</button>
+              {% if not dates.trade_deadline %}
+                <span class="tm">No deadline recorded for {{ season }}.</span>
               {% endif %}
             </form>
           {% endif %}

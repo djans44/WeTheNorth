@@ -4088,6 +4088,55 @@ def roster_context(conn, season, text="", previewed=False):
                 checks=checks, derived=derived is not None)
 
 
+def nfl_first_sunday(year):
+    """Where the NFL has started every season the league has run: the Sunday
+    after the Thursday after Labor Day.
+
+    Offered as the value in the form rather than enforced, because it is a
+    pattern and not a law. The admin confirms it against the schedule; the
+    point is that nobody has to work out which Sunday it was from nothing.
+    """
+    labor = datetime.date(year, 9, 1)
+    while labor.weekday() != 0:
+        labor += datetime.timedelta(days=1)
+    return labor + datetime.timedelta(days=6)
+
+
+def _read_season_dates(form, season):
+    """The two dates off a season form, or the first thing wrong with them.
+
+    Checked here rather than left to the constraints, which answer a bad value
+    with a 500 and tell the admin nothing. A Sunday that is not a Sunday is
+    the one worth catching: it passes every other kind of validation and then
+    moves every week of the year by five days.
+    """
+    sunday = (form.get("week_one_sunday") or "").strip()
+    deadline = (form.get("trade_deadline") or "").strip()
+
+    if not _is_a_date(sunday):
+        return None, None, ("Week one needs a date, as 2027-09-12. "
+                            "Got %r." % sunday if sunday else
+                            "Week one needs the date of its Sunday.")
+    sunday = datetime.date.fromisoformat(sunday)
+    if sunday.weekday() != 6:
+        return None, None, ("%s is a %s. Week one is named by its Sunday, and "
+                            "a day either side of it shifts every week of the "
+                            "season." % (sunday, sunday.strftime("%A")))
+    if sunday.year != season:
+        # A 2027 season starting in 2026 is a typo every time.
+        return None, None, ("%s is not in %s." % (sunday, season))
+
+    if not _is_a_date(deadline):
+        return None, None, ("The trade deadline needs a date, as 2027-11-16. "
+                            "Got %r." % deadline if deadline else
+                            "The trade deadline needs a date.")
+    deadline = datetime.date.fromisoformat(deadline)
+    if deadline <= sunday:
+        return None, None, ("The trade deadline is %s, which is before the "
+                            "season starts." % deadline)
+    return sunday, deadline, ""
+
+
 def _is_a_date(value):
     """A date the way an ISO date reads. fromisoformat rather than a pattern:
     2026-13-45 matches the pattern and is not a date."""
@@ -7990,6 +8039,22 @@ def admin_season_setup(request: Request, season: int = 0):
         prev = prev[0] if prev else {"season_year": None, "team_count": 12,
                                      "keeper_count": 3}
 
+        # The dates this season holds, if it exists, and the Sunday the NFL
+        # pattern says week one falls on. The pattern is offered as the value
+        # rather than enforced: it has held for every season the league has
+        # run, and the admin confirming it beats the admin working out which
+        # Sunday it was from nothing. Unlike a team count these are editable
+        # after creation -- a deadline is a decision the league can revise,
+        # and every season that existed before the column did needed its week
+        # one filling in.
+        dates = query(conn, """
+            select week_one_sunday, trade_deadline from seasons
+            where season_year = %s
+        """, (season,))
+        dates = dates[0] if dates else {"week_one_sunday": None,
+                                        "trade_deadline": None}
+        suggested = nfl_first_sunday(season)
+
         # Every owner, with last season's team name carried forward. An owner
         # who held a team last year is ticked; a retired one never is. The
         # roster changes by a manager or two a year, so starting from last
@@ -8013,7 +8078,8 @@ def admin_season_setup(request: Request, season: int = 0):
         request=request, name="admin_season_setup.html",
         context={"years": years, "season": season, "steps": steps,
                  "counts": counts, "done": done, "total": len(steps),
-                 "prev": prev, "roster": roster})
+                 "prev": prev, "roster": roster, "dates": dates,
+                 "suggested": suggested})
 
 
 @app.post("/admin/season-setup/season")
@@ -8028,7 +8094,11 @@ async def admin_create_season(request: Request):
     keepers = int(form.get("keeper_count") or 3)
     back = "/admin/season-setup?season=%d" % season
 
-    err = ""
+    sunday, deadline, err = _read_season_dates(form, season)
+    if err:
+        return RedirectResponse(url=back + "&error=" + quote(err),
+                                status_code=303)
+
     if teams % 2:
         # The rivalry and schedule generators both pair the league up.
         err = "An odd team count cannot be paired for rivalries or a schedule."
@@ -8043,17 +8113,60 @@ async def admin_create_season(request: Request):
                     err = "%s already exists." % season
                 else:
                     cur.execute("""
-                        insert into seasons (season_year, team_count, keeper_count, is_complete)
-                        values (%s, %s, %s, false)
-                    """, (season, teams, keepers))
+                        insert into seasons (season_year, team_count,
+                                             keeper_count, is_complete,
+                                             week_one_sunday, trade_deadline)
+                        values (%s, %s, %s, false, %s, %s)
+                    """, (season, teams, keepers, sunday, deadline))
             if not err:
                 conn.commit()
 
     if err:
         return RedirectResponse(url=back + "&error=" + quote(err), status_code=303)
     return RedirectResponse(
-        url=back + "&msg=" + quote("%s created, %d teams, %d keepers each"
-                                   % (season, teams, keepers)), status_code=303)
+        url=back + "&msg=" + quote("%s created, %d teams, %d keepers each, "
+                                   "week one %s"
+                                   % (season, teams, keepers, sunday)),
+        status_code=303)
+
+
+@app.post("/admin/season-setup/dates")
+async def admin_season_dates(request: Request):
+    """The two dates of an existing season.
+
+    Separate from creation because these are the only part of step one that
+    moves. A team count is structural and changing it after the schedule is
+    drawn breaks things downstream; a deadline is a decision the league can
+    revise, and week one needed correcting for every season that existed
+    before the column did.
+    """
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    from urllib.parse import quote
+    form = await request.form()
+    season = int(form["season"])
+    back = "/admin/season-setup?season=%d" % season
+
+    sunday, deadline, err = _read_season_dates(form, season)
+    if err:
+        return RedirectResponse(url=back + "&error=" + quote(err),
+                                status_code=303)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                update seasons set week_one_sunday = %s, trade_deadline = %s,
+                       updated_at = now()
+                 where season_year = %s
+            """, (sunday, deadline, season))
+            changed = cur.rowcount
+    if not changed:
+        return RedirectResponse(
+            url=back + "&error=" + quote("%s does not exist yet." % season),
+            status_code=303)
+    return RedirectResponse(
+        url=back + "&msg=" + quote("Week one is %s, trading closes %s"
+                                   % (sunday, deadline)), status_code=303)
 
 
 @app.post("/admin/season-setup/teams")
