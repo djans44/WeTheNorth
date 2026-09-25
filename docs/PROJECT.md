@@ -71,6 +71,7 @@ load a season the app never saw — but a script is no longer the answer to
 | `migrate.py` | Applies unapplied `sql/migrations/*.sql`, tracked in `schema_migrations` | |
 | `q.py "<sql>"` | Ad-hoc query or write. **Commits.** Uses the direct connection. | |
 | `check_db.py` | What is in the database, at a glance | |
+| `check_docs.py` | Every file, route and table the docs name against what is actually here. Exits non-zero, so it can be a gate | |
 | `import_matchups.py` | CSV → `matchups` (upsert, handles byes and projections) | |
 | `import_draft.py` / `import_draft_text.py` | Draft results → `players` + `draft_picks` | `/admin/draft` |
 | `import_rosters.py` | Yahoo roster dump → `rosters` | `/admin/rosters` |
