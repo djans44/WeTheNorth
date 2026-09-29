@@ -970,40 +970,51 @@ def week_facts(q, season, week):
     # is nine times; there have been nine weeks. What carries them is whether
     # the same manager keeps taking it, and how long it has been since this
     # one did.
+    #
+    # The whole record, not this season: a drought is only interesting when it
+    # is long, and the long ones cross a September. "Tom's first since week 7
+    # of 2024" is a fact about Tom; "Tom's first this season" in week two is
+    # a fact about the calendar.
     EVERY_WEEK = ("week_high", "week_rout")
     seen = {}
     for r in q("""
-        select cr.code, oc.week, o.username
+        select cr.code, oc.season_year, oc.week, o.username
         from owner_crests oc
         join crests cr on cr.crest_id = oc.crest_id
         join owners o on o.owner_id = oc.owner_id
-        where oc.season_year = %(y)s and oc.week is not null
-          and oc.week <= %(w)s and cr.code = any(%(codes)s)
-        order by oc.week
+        where oc.week is not null and cr.code = any(%(codes)s)
+          and (oc.season_year < %(y)s
+               or (oc.season_year = %(y)s and oc.week <= %(w)s))
+        order by oc.season_year, oc.week
     """, {"y": season, "w": week, "codes": list(EVERY_WEEK)}):
-        seen.setdefault(r["code"], []).append((r["week"], r["username"]))
+        seen.setdefault(r["code"], []).append(
+            (r["season_year"], r["week"], r["username"]))
 
     standing = {}
     for code, rows in seen.items():
-        if not rows or rows[-1][0] != week:
+        if not rows or rows[-1][:2] != (season, week):
             continue
-        who = rows[-1][1]
-        # Consecutive among the weeks the crest was awarded, not consecutive
-        # week numbers. They come to the same thing while every week settles
-        # one, and they stop coming to the same thing the first week that
-        # does not -- a tie nobody broke, or a week loaded out of order.
+        who = rows[-1][2]
+        # A run stays inside its season, where the drought does not. Weeks
+        # seventeen and one are consecutive in the record and are not three
+        # weeks running by any reading -- there is a draft and twelve new
+        # rosters between them.
         run = 0
-        for _, name in reversed(rows):
-            if name != who:
+        for yr, _, name in reversed(rows):
+            if name != who or yr != season:
                 break
             run += 1
         if run > 1:
             standing[code] = " -- %s has taken it %d weeks running" % (who, run)
+            continue
+        before = [(yr, w) for yr, w, name in rows[:-1] if name == who]
+        if not before:
+            standing[code] = " -- the first %s has taken" % who
+        elif before[-1][0] == season:
+            standing[code] = " -- %s's first since week %d" % (who, before[-1][1])
         else:
-            before = [w for w, name in rows[:-1] if name == who]
-            standing[code] = (
-                " -- %s's first since week %d" % (who, before[-1]) if before
-                else " -- %s's first this season" % who)
+            standing[code] = (" -- %s's first since week %d of %d"
+                              % (who, before[-1][1], before[-1][0]))
 
     # Everything else gets how often it has gone out, because for those
     # rarity is what separates a thing worth a sentence from a thing that
