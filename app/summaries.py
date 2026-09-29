@@ -964,19 +964,56 @@ def week_facts(q, season, week):
 
     facts["the_season_so_far"] = _season_so_far(q, season, week, facts["runs"])
 
-    # Each with how often that crest has gone out this season, because rarity
-    # is what separates a thing worth a sentence from a thing that happens
-    # every week. Spared by Inches once all year is a story; the fourth
-    # Favoured by the Gods is a Sunday.
-    # Each with how often that crest has gone out this season, because rarity
-    # is what separates a thing worth a sentence from a thing that happens
-    # every week. Spared by Inches once all year is a story; the fourth
-    # Favoured by the Gods is a Sunday.
+    # The Week's Banner and Put to the Sword are settled every week by
+    # definition -- somebody scores the most, somebody wins by the most -- so
+    # counting how often they have gone out says nothing at all. Of course it
+    # is nine times; there have been nine weeks. What carries them is whether
+    # the same manager keeps taking it, and how long it has been since this
+    # one did.
+    EVERY_WEEK = ("week_high", "week_rout")
+    seen = {}
+    for r in q("""
+        select cr.code, oc.week, o.username
+        from owner_crests oc
+        join crests cr on cr.crest_id = oc.crest_id
+        join owners o on o.owner_id = oc.owner_id
+        where oc.season_year = %(y)s and oc.week is not null
+          and oc.week <= %(w)s and cr.code = any(%(codes)s)
+        order by oc.week
+    """, {"y": season, "w": week, "codes": list(EVERY_WEEK)}):
+        seen.setdefault(r["code"], []).append((r["week"], r["username"]))
+
+    standing = {}
+    for code, rows in seen.items():
+        if not rows or rows[-1][0] != week:
+            continue
+        who = rows[-1][1]
+        # Consecutive among the weeks the crest was awarded, not consecutive
+        # week numbers. They come to the same thing while every week settles
+        # one, and they stop coming to the same thing the first week that
+        # does not -- a tie nobody broke, or a week loaded out of order.
+        run = 0
+        for _, name in reversed(rows):
+            if name != who:
+                break
+            run += 1
+        if run > 1:
+            standing[code] = " -- %s has taken it %d weeks running" % (who, run)
+        else:
+            before = [w for w, name in rows[:-1] if name == who]
+            standing[code] = (
+                " -- %s's first since week %d" % (who, before[-1]) if before
+                else " -- %s's first this season" % who)
+
+    # Everything else gets how often it has gone out, because for those
+    # rarity is what separates a thing worth a sentence from a thing that
+    # happens every week. Spared by Inches once all year is a story; the
+    # fourth Favoured by the Gods is a Sunday.
     facts["crests_settled_this_week"] = [
-        _crest_line(r, " (%s this season)"
+        _crest_line(r, standing.get(r["code"]) or (" (%s this season)"
                     % ("the first time this crest has gone out"
                        if r["so_far"] == 1 else
-                       "this crest has gone out %d times" % r["so_far"]))
+                       "this crest has gone out %d times" % r["so_far"])))
         for r in q("""
             select cr.code, cr.name, o.username, oc.detail,
                    (select count(*) from owner_crests p
