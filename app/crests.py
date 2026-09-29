@@ -169,7 +169,7 @@ def weekly(conn, seasons):
                 if g["projected"] is not None and g["points_for"] < g["projected"]:
                     out["lucky_win"].append(
                         (g["owner_id"], y, wk,
-                         f"{g['projected'] - g['points_for']:.1f} under projection", 0))
+                         f"{g['projected'] - g['points_for']:.2f} under projection", 0))
 
             for g in played:
                 if g["result"] == "W" or g["projected"] is None:
@@ -177,7 +177,7 @@ def weekly(conn, seasons):
                 edge = g["projected"] - g["opp_projected"]
                 if edge >= ROBBED_BY:
                     out["robbed"].append(
-                        (g["owner_id"], y, wk, f"favoured by {edge:.1f}", 0))
+                        (g["owner_id"], y, wk, f"favoured by {edge:.2f}", 0))
 
         # A streak lands in the week its fifth result arrives. A longer run
         # does not award again: seven straight is one streak, not three.
@@ -231,10 +231,10 @@ def season_long(conn, seasons):
         """, (y,))
         for t in leaders(totals, "points_for"):
             out["season_high_points"].append(
-                (t["owner_id"], y, None, f"{t['points_for']:.1f}", 0))
+                (t["owner_id"], y, None, f"{t['points_for']:.2f}", 0))
         for t in leaders(totals, "points_against"):
             out["points_against_king"].append(
-                (t["owner_id"], y, None, f"{t['points_against']:.1f} conceded", 0))
+                (t["owner_id"], y, None, f"{t['points_against']:.2f} conceded", 0))
 
         by_owner = collections.defaultdict(list)
         for g in games:
@@ -259,7 +259,7 @@ def season_long(conn, seasons):
             group by t.owner_id
         """, (y, y)), "over"):
             out["overachiever"].append(
-                (r["owner_id"], y, None, f"{r['over']:+.1f} over the season", 0))
+                (r["owner_id"], y, None, f"{r['over']:+.2f} over the season", 0))
     return out
 
 
@@ -618,7 +618,7 @@ def held(conn, season=None, week=None):
     for r in leaders(leaders(runs, "n"), "pts"):
         out["kingsguard"].append(
             (r["owner_id"], season, week,
-             f"{r['n']} straight, {r['pts']:.1f} scored", 0))
+             f"{r['n']} straight, {r['pts']:.2f} scored", 0))
 
     # The Fool is the mirror, and so is its tiebreak: fewest points scored,
     # not most. It is the one crest here where less is worse.
@@ -627,7 +627,7 @@ def held(conn, season=None, week=None):
     for r in lowest(leaders(runs, "n"), "pts"):
         out["court_fool"].append(
             (r["owner_id"], season, week,
-             f"{r['n']} straight, {r['pts']:.1f} scored", 0))
+             f"{r['n']} straight, {r['pts']:.2f} scored", 0))
 
     # Most games won, and lost, by under a point. Both come out as four-way
     # ties on two apiece, so a count alone cannot decide a crest only one
