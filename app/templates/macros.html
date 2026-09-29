@@ -315,8 +315,8 @@
         <td class="name">{{ t.team_name }}</td>
         <td>{{ t.wins }}</td>
         <td>{{ t.losses }}</td>
-        <td>{{ "%.1f"|format(t.points_for) }}</td>
-        <td>{{ "%.1f"|format(t.points_against) }}</td>
+        <td>{{ "%.2f"|format(t.points_for) }}</td>
+        <td>{{ "%.2f"|format(t.points_against) }}</td>
       </tr>
     {% endfor %}
     </tbody>

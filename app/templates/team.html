@@ -193,8 +193,8 @@
           <td class="name">{{ s.team_name }}</td>
           <td>{{ s.wins }}</td>
           <td>{{ s.losses }}</td>
-          <td>{{ "%.1f"|format(s.points_for) }}</td>
-          <td>{{ "%.1f"|format(s.points_against) }}</td>
+          <td>{{ "%.2f"|format(s.points_for) }}</td>
+          <td>{{ "%.2f"|format(s.points_against) }}</td>
           <td>{{ ordinal(s.final_rank) }}</td>
           <td class="{% if s.finish == 'Champion' %}win{% endif %}">{{ s.finish }}</td>
         </tr>
@@ -389,8 +389,8 @@
           </td>
           <td class="{% if r.wins > r.losses %}win{% elif r.wins < r.losses %}loss{% endif %}">{{ r.wins }}</td>
           <td>{{ r.losses }}</td>
-          <td>{{ "%.1f"|format(r.points_for) }}</td>
-          <td>{{ "%.1f"|format(r.points_against) }}</td>
+          <td>{{ "%.2f"|format(r.points_for) }}</td>
+          <td>{{ "%.2f"|format(r.points_against) }}</td>
         </tr>
       {% endfor %}
       </tbody>

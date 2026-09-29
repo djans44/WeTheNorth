@@ -62,8 +62,8 @@
           <td>{{ o.wins }}</td>
           <td>{{ o.losses }}</td>
           <td>{{ "%.3f"|format(o.win_pct) }}</td>
-          <td>{{ "%.1f"|format(o.points_for) }}</td>
-          <td>{{ "%.1f"|format(o.points_per_game) }}</td>
+          <td>{{ "%.2f"|format(o.points_for) }}</td>
+          <td>{{ "%.2f"|format(o.points_per_game) }}</td>
           <td>{{ o.playoff_appearances }}</td>
           <td>{{ ordinal(o.best_finish) }}</td>
           <td class="{% if o.titles %}win{% endif %}">{{ o.titles }}</td>
