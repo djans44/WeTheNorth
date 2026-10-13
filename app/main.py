@@ -3165,6 +3165,17 @@ async def admin_scores_save(request: Request):
         except Exception:
             log.exception("crest recompute failed for %s week %s", season, week)
             crested = "failed"
+        # A sigil's ring is a held crest, and owner_avatars caches it for five
+        # minutes. A recompute moves those rows, so without this the manager
+        # who just lost a title goes on wearing it for the rest of the window
+        # while /crests already names the new holder -- which is exactly how
+        # it was found, Tulio still ringed with Captain of the Kingsguard
+        # after losing it to Josh.
+        #
+        # Outside the except on purpose: a recompute that threw may still
+        # have written some of its rows before it did, so the cache is
+        # suspect whether or not the call succeeded.
+        bust_owner_caches()
 
     # The week's account, if this is the save that completed the week. Runs
     # off the request thread and is allowed to fail quietly -- see
@@ -3412,6 +3423,10 @@ async def admin_transactions_post(request: Request):
             log.exception("crest recompute failed after loading %s transactions",
                           season)
             crested = " The crests could not be recomputed."
+        # The two career titles this moves are held crests, so the rings go
+        # with them. See the score-entry call for why this sits outside the
+        # except rather than in the success path.
+        bust_owner_caches()
 
     told = "%d transaction%s stored" % (len(ctx["ready"]),
                                         "" if len(ctx["ready"]) == 1 else "s")
@@ -5465,6 +5480,9 @@ def refresh_keeper_crests(conn, season):
         crestrules.recompute(conn, season)
     except Exception:
         log.exception("keeper crest refresh failed for %s", season)
+    # Three Oaths Sworn is a held crest and rings a sigil, so the avatar
+    # registry has to be told. Outside the except, as with the other two.
+    bust_owner_caches()
 
 
 @app.post("/admin/keepers/resolve")
