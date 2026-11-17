@@ -3893,19 +3893,21 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
     if not one:
         who = "all"
 
-    # What each of them would cost to keep next season. Only for one squad:
-    # against twelve it was a column of numbers beside every player on the
-    # page, which is not a thing anybody reads, and the grid is for comparing
-    # shapes rather than prices.
+    # What each of them would cost to keep next season, for whichever squads
+    # are on screen. On the grid it was first tried as a fourth column beside
+    # the name and failed for want of width; it reads as a line of its own
+    # under each player, where the card has room it was not using.
     #
     # The rule is keeper_outlook in the database, the same one
     # keeper_eligibility calls -- that view reads `rosters`, the end-of-season
     # snapshot, which does not exist for a season being played, so the roster
     # goes to the rule rather than the rule being written out again here.
     outlook = {}
-    squad = squads.get(one["team_id"], []) if one else []
-    if squad:
-        ids = [r["player_id"] for r in squad]
+    shown = ([squads.get(one["team_id"], [])] if one
+             else list(squads.values()))
+    rostered = [r for t in shown for r in t]
+    if rostered:
+        ids = [r["player_id"] for r in rostered]
         with get_db() as conn:
             if source == "snapshot":
                 # A finished season already has its basis worked out, by the
@@ -3917,7 +3919,7 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
                     where season_year = %s and player_id = any(%s)
                 """, (season, ids))}
                 basis = [(r["player_id"], stored.get(r["player_id"]))
-                         for r in squad]
+                         for r in rostered]
             else:
                 # 13 for anyone picked up off waivers or free agency at any
                 # point this season, their draft round otherwise. A trade
@@ -3930,13 +3932,15 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
                 """, (season, ids))}
                 basis = [(r["player_id"],
                           13 if r["player_id"] in added else r["round"])
-                         for r in squad]
+                         for r in rostered]
             # A player with no draft round and no add has nothing honest to be
             # priced at, so he is left out and the column says so rather than
             # guessing 13.
             basis = [(pid, b) for pid, b in basis if b is not None]
             if basis:
-                # One round trip rather than one per player.
+                # One round trip rather than one per player. Twelve squads is
+                # about 170 of them and Neon is far enough away for that to
+                # be the difference between a page and a wait.
                 outlook = {r["player_id"]: r for r in query(conn, """
                     select v.player_id, o.*
                     from unnest(%s::int[], %s::int[]) as v(player_id, basis)

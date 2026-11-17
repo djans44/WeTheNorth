@@ -1445,7 +1445,16 @@ label.second { margin-top: var(--s4); }
 /* ---- rosters ---- */
 .squadteam { margin: 0 0 var(--s2); }
 .squad { margin: 0; padding: 0; list-style: none; font-size: var(--t-sm); }
-.squad li { display: flex; gap: 0.45rem; align-items: baseline; line-height: 1.7; }
+/* wrap, so the keeper line below can take a full basis and break. Without it
+   the row is nowrap and a full-width child is simply squeezed, which pushed
+   every player name onto two lines and still cut the keeper text off. */
+.squad li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: baseline;
+  line-height: 1.7;
+}
 /* A fixed column, so the positions line up and a squad can be read for its
    shape -- three running backs and no tight end -- without reading it. */
 .squad .pos {
@@ -1456,6 +1465,16 @@ label.second { margin-top: var(--s4); }
 .squad .who { flex: 1 1 auto; }
 .squad .tm { display: inline; flex: 0 0 auto; }
 .squad .tm.kept { color: var(--gold-deep); font-weight: 600; }
+/* The keeper price, on a line of its own under the player it is about. The
+   li is already a flex row, so a full basis is what breaks it -- and the
+   indent lines it up under the name rather than under the position, because
+   it is a fact about the player and not about the slot. */
+.squad .keepline {
+  flex: 0 0 100%;
+  margin: -0.2rem 0 0.35rem 2.6rem;
+  font-size: var(--t-xs);
+  line-height: 1.4;
+}
 
 /* One squad on its own, read rather than compared, so it takes the base
    size instead of the small one the twelve cards use. */

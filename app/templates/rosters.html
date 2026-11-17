@@ -7,19 +7,19 @@
    player who must be kept, or who cannot be, reads as a choice that is not
    one.
 
-   Only the single-squad table shows this. Against twelve squads it was a
-   column of numbers beside every player on the page, which nobody reads --
-   the grid is for comparing shapes, and this is a question about one. #}
+   The table of one squad gives it a column. The grid of twelve gives it a
+   line of its own under each player: as a fourth column it had no width to
+   live in and was cut off, and under the name there is room going spare. #}
 {% macro keepcell(k, next_season) %}
   {%- if not k %}<span class="tm">&mdash;</span>
   {%- elif k.state == "contract" %}<span class="keep must">R{{ k.cost_round }}</span>
-    <span class="tm">must keep, through {{ k.final_season }}</span>
+    <span class="tm">&middot; must keep, through {{ k.final_season }}</span>
   {%- elif k.state == "ineligible_expired" %}<span class="keep out">Ineligible</span>
-    <span class="tm">contract ends with {{ next_season - 1 }}</span>
+    <span class="tm">&middot; contract ends with {{ next_season - 1 }}</span>
   {%- elif k.state == "ineligible_max" %}<span class="keep out">Ineligible</span>
-    <span class="tm">kept four times</span>
+    <span class="tm">&middot; kept four times</span>
   {%- elif k.state == "must_sign" %}<span class="keep sign">R{{ k.cost_round }}</span>
-    <span class="tm">needs a contract</span>
+    <span class="tm">&middot; needs a contract</span>
   {%- else %}<span class="keep">R{{ k.cost_round }}</span>
   {%- endif %}
 {% endmacro %}
@@ -77,8 +77,6 @@
       <a href="/rosters?season={{ season }}&who=all"
          {% if not one %}class="on"{% endif %}>Everyone</a>
     </p>
-    {# With the column it explains, so it is absent from the grid. #}
-    {% if one %}
     <p class="note">The round against each player is what he would cost to
       keep in <b>{{ next_season }}</b> &mdash; his draft round, or 13 for
       anyone picked up off waivers or free agency at any point this season.
@@ -88,7 +86,6 @@
       record stands today: keeper rules read the roster at the end of the
       season, so a player dropped and re-added between now and then comes
       back at 13.{% endif %}</p>
-    {% endif %}
   </section>
 
   {% if one %}
@@ -142,6 +139,8 @@
                 {% elif p.how == "traded" %}<span class="tm">traded</span>
                 {% elif p.how == "added" %}<span class="tm">added</span>
                 {% elif p.how %}<span class="tm">{{ p.how }}</span>{% endif %}
+                {# Its own line, under the name rather than beside it. #}
+                <span class="keepline">{{ keepcell(p.keep, next_season) }}</span>
               </li>
             {% endfor %}
           </ul>
