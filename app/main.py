@@ -3875,7 +3875,58 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
         source = "none"
         squads = {}
 
+    # What each of them would cost to keep next season. The rule is
+    # keeper_outlook in the database, the same one keeper_eligibility calls --
+    # that view reads , which is the end-of-season snapshot and does
+    # not exist for a season being played, so the roster goes to the rule
+    # rather than the rule being written out again here.
+    #
+    # The basis is the one part a caller has to supply, and it is the one part
+    # that genuinely differs: 13 for anyone added off waivers or free agency
+    # at any point this season, their draft round otherwise. A trade carries
+    # the basis with the player, so a drafted-then-traded player keeps his
+    # round -- which falls out of asking only whether an add exists.
+    outlook = {}
+    if squads:
+        ids = [r["player_id"] for t in squads.values() for r in t]
+        with get_db() as conn:
+            if source == "snapshot":
+                # A finished season already has its basis worked out, by the
+                # same view keeper_eligibility reads. Deriving it again from
+                # the draft would be a second opinion on a settled question --
+                # and the snapshot carries no round to derive it from.
+                stored = {r["player_id"]: r["basis_round"] for r in query(conn, """
+                    select player_id, basis_round from keeper_cost_basis
+                    where season_year = %s and player_id = any(%s)
+                """, (season, ids))}
+                basis = [(r["player_id"], stored.get(r["player_id"]))
+                         for t in squads.values() for r in t]
+            else:
+                added = {r["player_id"] for r in query(conn, """
+                    select distinct player_id from transactions
+                    where season_year = %s and kind = 'add' and player_id = any(%s)
+                """, (season, ids))}
+                basis = [(r["player_id"],
+                          13 if r["player_id"] in added else r["round"])
+                         for t in squads.values() for r in t]
+            # A player with no draft round and no add has nothing honest to be
+            # priced at, so he is left out and the column says so rather than
+            # guessing 13.
+            basis = [(pid, b) for pid, b in basis if b is not None]
+            if basis:
+                # One round trip, not one per player. Twelve squads is about
+                # 170 of them, and Neon is far enough away that the difference
+                # is seconds -- the same lesson the crest recompute learned.
+                outlook = {r["player_id"]: r for r in query(conn, """
+                    select v.player_id, o.*
+                    from unnest(%s::int[], %s::int[]) as v(player_id, basis)
+                    cross join lateral
+                         keeper_outlook(v.player_id, %s, v.basis) o
+                """, ([p for p, _ in basis], [b for _, b in basis], season + 1))}
+
     for team in squads.values():
+        for r in team:
+            r["keep"] = outlook.get(r["player_id"])
         team.sort(key=lambda r: (POSITION_ORDER.get(r["position"], 9),
                                  r["full_name"] or ""))
 
@@ -3890,7 +3941,8 @@ def rosters_page(request: Request, season: int = 0, who: str = ""):
         request=request, name="rosters.html",
         context={"years": years, "season": season, "source": source,
                  "sides": sides, "squads": squads, "who": who, "one": one,
-                 "moves": len(moves), "picks": len(picks)})
+                 "moves": len(moves), "picks": len(picks),
+                 "next_season": season + 1})
 
 
 # The playoff rounds a week can hold, most significant first. A week's label

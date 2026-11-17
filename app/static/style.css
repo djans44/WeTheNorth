@@ -1474,6 +1474,20 @@ label.second { margin-top: var(--s4); }
   color: var(--ink-soft);
 }
 .squadtable .got .kept { color: var(--gold-deep); font-weight: 600; }
+
+/* What a player would cost to keep next season. The round is the answer and
+   carries the weight; the words beside it are the exception that makes a bare
+   round misleading, so they stay quiet. */
+.keeps { white-space: nowrap; }
+.squadtable .keeps { width: 11rem; font-size: var(--t-sm); }
+.keep { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Gold for an obligation, because it is a thing you are held to rather than
+   a thing gone wrong -- the same reading the assembly badge has. Muted for
+   ineligible: nothing is broken, the player is simply not available. */
+.keep.must { color: var(--gold-deep); }
+.keep.sign { color: var(--accent); }
+.keep.out  { color: var(--ink-soft); font-weight: 400; }
+.squad .keeps { flex: 0 0 auto; font-size: var(--t-xs); }
 /* A rule between position blocks, so the shape of a squad is still legible
    in a single list. */
 .squadtable tbody tr td { border-bottom: 1px solid var(--rule); }
@@ -2997,6 +3011,14 @@ button.seal.working::before {
 /* ---- narrow screens ---- */
 
 @media (max-width: 48rem) {
+  /* Four columns of squad do not fit a phone, and the one that was being cut
+     is the keeper price -- which is the column people open this page for.
+     How a player arrived is context and goes instead; R13 says "added" on its
+     own most of the time anyway. The price is then allowed to wrap, because
+     "must keep, through 2028" on one line is wider than the screen. */
+  .squadtable .got { display: none; }
+  .squadtable .keeps { width: auto; white-space: normal; }
+
   /* The shape table is label and value, and three columns of it do not fit a
      phone -- "Thu 17 Sep, 9:45am - 10:00am" is most of a 390px line on its
      own, and right-aligning it pushed the short answers off the edge

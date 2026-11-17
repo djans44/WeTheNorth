@@ -1,5 +1,29 @@
 {% extends "base.html" %}
 {% from "macros.html" import leaf %}
+
+{# What this player would cost to keep next season, in as few words as the
+   case allows. A plain round is the common answer and gets no comment; the
+   four that are not plain earn their words, because a bare round beside a
+   player who must be kept, or who cannot be, reads as a choice that is not
+   one.
+
+   `long` is the single-squad table, which has room for the reason. The grid
+   of twelve does not, so it says the same thing shorter. #}
+{% macro keepcell(k, next_season, long=false) %}
+  {%- if not k %}<span class="tm">&mdash;</span>
+  {%- elif k.state == "contract" %}<span class="keep must">R{{ k.cost_round }}</span>
+    <span class="tm">{% if long %}must keep, through {{ k.final_season }}
+      {%- else %}held{% endif %}</span>
+  {%- elif k.state == "ineligible_expired" %}<span class="keep out">&mdash;</span>
+    <span class="tm">{% if long %}contract ends with {{ next_season - 1 }}
+      {%- else %}year off{% endif %}</span>
+  {%- elif k.state == "ineligible_max" %}<span class="keep out">&mdash;</span>
+    <span class="tm">kept four times</span>
+  {%- elif k.state == "must_sign" %}<span class="keep sign">R{{ k.cost_round }}</span>
+    <span class="tm">{% if long %}needs a contract{% else %}sign{% endif %}</span>
+  {%- else %}<span class="keep">R{{ k.cost_round }}</span>
+  {%- endif %}
+{% endmacro %}
 {% block title %}Rosters {{ season }} | We the North{% endblock %}
 
 {% block content %}
@@ -52,6 +76,17 @@
            {% if who and who.lower() == s.username.lower() %}class="on"{% endif %}>{{ s.username }}</a>
       {% endfor %}
     </p>
+    {# The table of one squad has a column heading for this; the grid of
+       twelve has no room for one, so the number is explained once here. #}
+    <p class="note">The round against each player is what he would cost to
+      keep in <b>{{ next_season }}</b> &mdash; his draft round, or 13 for
+      anyone picked up off waivers or free agency at any point this season.
+      A contract overrides it, and a contract ending with {{ season }} means
+      a year out before he can be kept again.
+      {%- if source == "derived" %} Both the roster and the price are as the
+      record stands today: keeper rules read the roster at the end of the
+      season, so a player dropped and re-added between now and then comes
+      back at 13.{% endif %}</p>
   </section>
 
   {% if one %}
@@ -63,7 +98,8 @@
     <p class="note">{{ squad|length }} rostered.</p>
     <table class="keepers squadtable">
       <thead>
-        <tr><th class="pos">Pos</th><th>Player</th><th class="got">How</th></tr>
+        <tr><th class="pos">Pos</th><th>Player</th><th class="got">How</th>
+            <th class="keeps">{{ next_season }}</th></tr>
       </thead>
       <tbody>
       {% for p in squad %}
@@ -78,6 +114,7 @@
             {% elif p.how == "added" %}Added
             {% else %}{{ p.how|capitalize }}{% endif %}
           </td>
+          <td class="keeps">{{ keepcell(p.keep, next_season, long=true) }}</td>
         </tr>
       {% endfor %}
       </tbody>
@@ -103,6 +140,7 @@
                 {% elif p.how == "traded" %}<span class="tm">traded</span>
                 {% elif p.how == "added" %}<span class="tm">added</span>
                 {% elif p.how %}<span class="tm">{{ p.how }}</span>{% endif %}
+                <span class="keeps">{{ keepcell(p.keep, next_season) }}</span>
               </li>
             {% endfor %}
           </ul>
