@@ -8405,6 +8405,16 @@ async def admin_create_season(request: Request):
                           dates["trade_deadline"], dates["draft_at"]))
             if not err:
                 conn.commit()
+                # nav_seasons caches the year list for five minutes and
+                # nothing clears it, so without this the season just created
+                # is missing from the nav, the season page's year picker and
+                # the calendar until the window runs out. Which does not read
+                # as a stale list -- it reads as the create having failed, on
+                # the one page whose whole job is saying what exists.
+                #
+                # Only here. The dates route changes columns this query does
+                # not select, and reset_season.py runs in its own process.
+                _season_cache["at"] = 0.0
 
     if err:
         return RedirectResponse(url=back + "&error=" + quote(err), status_code=303)
