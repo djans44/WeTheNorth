@@ -1487,7 +1487,6 @@ label.second { margin-top: var(--s4); }
 .keep.must { color: var(--gold-deep); }
 .keep.sign { color: var(--accent); }
 .keep.out  { color: var(--ink-soft); font-weight: 400; }
-.squad .keeps { flex: 0 0 auto; font-size: var(--t-xs); }
 /* A rule between position blocks, so the shape of a squad is still legible
    in a single list. */
 .squadtable tbody tr td { border-bottom: 1px solid var(--rule); }
