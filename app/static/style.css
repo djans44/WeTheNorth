@@ -1466,14 +1466,19 @@ label.second { margin-top: var(--s4); }
 .squad .tm { display: inline; flex: 0 0 auto; }
 .squad .tm.kept { color: var(--gold-deep); font-weight: 600; }
 /* The keeper price, on a line of its own under the player it is about. The
-   li is already a flex row, so a full basis is what breaks it -- and the
-   indent lines it up under the name rather than under the position, because
-   it is a fact about the player and not about the slot. */
+   li is already a flex row, so a full basis is what breaks it.
+   
+   Right and italic, so it does not read as a third thing about the player
+   alongside the position and how he arrived. It is a different kind of fact
+   -- about next season rather than this one -- and it lines up under the
+   "rd 5" and "added" it is the consequence of. */
 .squad .keepline {
   flex: 0 0 100%;
-  margin: -0.2rem 0 0.35rem 2.6rem;
+  margin: -0.2rem 0 0.35rem;
   font-size: var(--t-xs);
+  font-style: italic;
   line-height: 1.4;
+  text-align: right;
 }
 
 /* One squad on its own, read rather than compared, so it takes the base
